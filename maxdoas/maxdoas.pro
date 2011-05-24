@@ -13,9 +13,14 @@ LIBS += -lqserialdevice
 LIBS += -lqwt
 SOURCES += main.cpp \
     mainwindow.cpp \
-    tfrmtempctrl.cpp
+    tfrmtempctrl.cpp \
+    qwtsymbolarrow.cpp \
+    qwtmarkerarrow.cpp \
+    thwdriver.cpp
 HEADERS += mainwindow.h \
-    tfrmtempctrl.h
+    tfrmtempctrl.h \
+    qwtsymbolarrow.h \
+    qwtmarkerarrow.h \
+    thwdriver.h
 FORMS += mainwindow.ui \
-    TfrmTempctrl.ui \
     tfrmtempctrl.ui

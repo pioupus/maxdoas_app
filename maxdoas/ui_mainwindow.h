@@ -1,8 +1,8 @@
 /********************************************************************************
 ** Form generated from reading UI file 'mainwindow.ui'
 **
-** Created: Thu May 19 23:27:00 2011
-**      by: Qt User Interface Compiler version 4.6.2
+** Created: Mon May 23 19:06:57 2011
+**      by: Qt User Interface Compiler version 4.7.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -20,7 +20,6 @@
 #include <QtGui/QMenu>
 #include <QtGui/QMenuBar>
 #include <QtGui/QStatusBar>
-#include <QtGui/QToolBar>
 #include <QtGui/QWidget>
 
 QT_BEGIN_NAMESPACE
@@ -31,32 +30,33 @@ public:
     QAction *actionTempctrler;
     QAction *actionSensors;
     QAction *actionClose;
+    QAction *actionHjkjhkj;
     QWidget *centralWidget;
     QWidget *horizontalLayoutWidget;
     QHBoxLayout *hbox;
     QMenuBar *menuBar;
     QMenu *menuFile;
     QMenu *menuConfiguration;
-    QToolBar *mainToolBar;
     QStatusBar *statusBar;
-    QToolBar *toolBar;
 
     void setupUi(QMainWindow *MainWindow)
     {
         if (MainWindow->objectName().isEmpty())
             MainWindow->setObjectName(QString::fromUtf8("MainWindow"));
-        MainWindow->resize(424, 345);
+        MainWindow->resize(936, 508);
         actionTempctrler = new QAction(MainWindow);
         actionTempctrler->setObjectName(QString::fromUtf8("actionTempctrler"));
         actionSensors = new QAction(MainWindow);
         actionSensors->setObjectName(QString::fromUtf8("actionSensors"));
         actionClose = new QAction(MainWindow);
         actionClose->setObjectName(QString::fromUtf8("actionClose"));
+        actionHjkjhkj = new QAction(MainWindow);
+        actionHjkjhkj->setObjectName(QString::fromUtf8("actionHjkjhkj"));
         centralWidget = new QWidget(MainWindow);
         centralWidget->setObjectName(QString::fromUtf8("centralWidget"));
         horizontalLayoutWidget = new QWidget(centralWidget);
         horizontalLayoutWidget->setObjectName(QString::fromUtf8("horizontalLayoutWidget"));
-        horizontalLayoutWidget->setGeometry(QRect(-10, 0, 401, 241));
+        horizontalLayoutWidget->setGeometry(QRect(10, 30, 911, 421));
         hbox = new QHBoxLayout(horizontalLayoutWidget);
         hbox->setSpacing(6);
         hbox->setContentsMargins(11, 11, 11, 11);
@@ -66,21 +66,15 @@ public:
         MainWindow->setCentralWidget(centralWidget);
         menuBar = new QMenuBar(MainWindow);
         menuBar->setObjectName(QString::fromUtf8("menuBar"));
-        menuBar->setGeometry(QRect(0, 0, 424, 25));
+        menuBar->setGeometry(QRect(0, 0, 936, 25));
         menuFile = new QMenu(menuBar);
         menuFile->setObjectName(QString::fromUtf8("menuFile"));
         menuConfiguration = new QMenu(menuBar);
         menuConfiguration->setObjectName(QString::fromUtf8("menuConfiguration"));
         MainWindow->setMenuBar(menuBar);
-        mainToolBar = new QToolBar(MainWindow);
-        mainToolBar->setObjectName(QString::fromUtf8("mainToolBar"));
-        MainWindow->addToolBar(Qt::TopToolBarArea, mainToolBar);
         statusBar = new QStatusBar(MainWindow);
         statusBar->setObjectName(QString::fromUtf8("statusBar"));
         MainWindow->setStatusBar(statusBar);
-        toolBar = new QToolBar(MainWindow);
-        toolBar->setObjectName(QString::fromUtf8("toolBar"));
-        MainWindow->addToolBar(Qt::TopToolBarArea, toolBar);
 
         menuBar->addAction(menuFile->menuAction());
         menuBar->addAction(menuConfiguration->menuAction());
@@ -99,9 +93,9 @@ public:
         actionTempctrler->setText(QApplication::translate("MainWindow", "Temperaturecontroller", 0, QApplication::UnicodeUTF8));
         actionSensors->setText(QApplication::translate("MainWindow", "Motion controll sensors", 0, QApplication::UnicodeUTF8));
         actionClose->setText(QApplication::translate("MainWindow", "Close", 0, QApplication::UnicodeUTF8));
+        actionHjkjhkj->setText(QApplication::translate("MainWindow", "hjkjhkj", 0, QApplication::UnicodeUTF8));
         menuFile->setTitle(QApplication::translate("MainWindow", "File", 0, QApplication::UnicodeUTF8));
         menuConfiguration->setTitle(QApplication::translate("MainWindow", "Configuration", 0, QApplication::UnicodeUTF8));
-        toolBar->setWindowTitle(QApplication::translate("MainWindow", "toolBar", 0, QApplication::UnicodeUTF8));
     } // retranslateUi
 
 };

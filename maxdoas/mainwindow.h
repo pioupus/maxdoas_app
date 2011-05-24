@@ -2,6 +2,8 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <qwt_plot.h>
+#include <qwt_plot_spectrogram.h>
 
 namespace Ui {
     class MainWindow;
@@ -17,6 +19,9 @@ public:
 
 private:
     Ui::MainWindow *ui;
+
+    QwtPlot *plot;
+    QwtPlotSpectrogram *d_spectrogram;
 
 private slots:
 
