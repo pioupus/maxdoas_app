@@ -1,6 +1,10 @@
 #ifndef TRETRIEVALIMAGE_H
 #define TRETRIEVALIMAGE_H
 
+//TRetrievedImage
+//    array[x][y] of TRetrieval
+//
+
 class TRetrievalImage
 {
 public:

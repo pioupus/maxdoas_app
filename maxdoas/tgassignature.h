@@ -1,17 +1,7 @@
 #ifndef TGASSIGNATURE_H
 #define TGASSIGNATURE_H
 #include <QString>
-//
-//TGasSignature
-//    wlstart
-//    wlend
-//    SignatureWl
-//    SignatureSpec
-//
-//    Measuredppmm
-//    MeasuredCorrelation
-//
-//
+
 class TGasSignatureSpectr
 {
 public:
