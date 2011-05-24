@@ -17,6 +17,11 @@ QwtSymbolArrow::QwtSymbolArrow( QwtSymbol::Style style, const QBrush &brush,
     //d_data = new PrivateData( style, brush, pen, size );
 }
 
+QwtSymbolArrow::~QwtSymbolArrow()
+{
+
+}
+
 static inline float sign(float const x){
     if (x < 0)
         return -1;

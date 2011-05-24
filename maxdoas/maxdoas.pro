@@ -16,11 +16,19 @@ SOURCES += main.cpp \
     tfrmtempctrl.cpp \
     qwtsymbolarrow.cpp \
     qwtmarkerarrow.cpp \
-    thwdriver.cpp
+    thwdriver.cpp \
+    tspectrum.cpp \
+    tretrieval.cpp \
+    tretrievalimage.cpp \
+    tgassignature.cpp
 HEADERS += mainwindow.h \
     tfrmtempctrl.h \
     qwtsymbolarrow.h \
     qwtmarkerarrow.h \
-    thwdriver.h
+    thwdriver.h \
+    tspectrum.h \
+    tretrieval.h \
+    tretrievalimage.h \
+    tgassignature.h
 FORMS += mainwindow.ui \
     tfrmtempctrl.ui

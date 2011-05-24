@@ -72,8 +72,8 @@ MainWindow::MainWindow(QWidget *parent) :
     d_spectrogram->setData(new RasterData());
     d_spectrogram->attach(plot);
     QwtMarkerArrow *d_marker2;
-    for (int i=0;i<32;i++){
-        for (int j=0;j<32;j++){
+    for (int i=0;i<5;i++){
+        for (int j=0;j<5;j++){
 
             d_marker2 = new QwtMarkerArrow();
 
