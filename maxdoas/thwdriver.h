@@ -8,7 +8,33 @@
 enum THWTempSensorID {tsNone,tsPeltier=0,tsHeatSink=1,tsSpectrometer=2};
 enum THWDriverState {tsIDLE,tsGettingSensorData,tsMotorsCalibrating,tsMeasuringScanPixel,tsMeasuringSpectrum};
 enum THWShutterCMD {scNone,scClose,scOpen};
-
+//
+//classes:
+//TSpectrum
+//    ARRAY of double
+//    position
+//    type(darkoffset,darknoise,sunspec,measurement)
+//    integtime
+//    avg
+//
+//TSignature
+//    start
+//    end
+//    wl
+//    spec
+//
+//    ppmm
+//    correlation
+//
+//
+//TRetrieval
+//    list of TSignatures
+//    correlation
+//    TSpectrum
+//
+//TRetrievedImage
+//    array[x][y] of TRetrieval
+//
 class THWDriver
 {
 public:
