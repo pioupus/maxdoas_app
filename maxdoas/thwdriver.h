@@ -5,6 +5,8 @@
 #include <QPointF>
 
 enum THWTempSensorID {tsNone,tsPeltier=0,tsHeatSink=1,tsSpectrometer=2};
+enum THWDriverState {tsNone,tsGettingSensorData,tsMeasuringScanPixel,tsMeasuringSpectrum};
+enum THWShutterCMD {scNone,scClose,scOpen};
 
 class THWDriver
 {
@@ -15,19 +17,25 @@ public:
 
     float hwdGetTemperature(THWTempSensorID sensorID);
     void hwdAskTemperature(THWTempSensorID sensorID);
+    void hwdSetTargetTemperature(int temperature);
 
     QPointF hwdGetTilt(void);
     void hwdAskTilt();
 
     float hwdCompass(void);
     void hwdAskCompass();
+    void hwdStartCompassCal();
+    void hwdStopCompassCal();
 
     void hwdGoMotorHome(void);
 
-    void hwdMeasureDarkEffects();
+    void hwdSetShutter(bool close);
+
+    void hwdMeasureDarkEffects(THWShutterCMD shutterCMD);
 
     void hwdMeasureScanPixel(QPoint pos,uint avg, uint integrTime);
 
+    void hwdMeasureSpectrum(uint avg, uint integrTime,THWShutterCMD shutterCMD);
 private:
 };
 
