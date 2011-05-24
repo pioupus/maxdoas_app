@@ -3,9 +3,10 @@
 
 #include <QString>
 #include <QPointF>
+#include <QList>
 
 enum THWTempSensorID {tsNone,tsPeltier=0,tsHeatSink=1,tsSpectrometer=2};
-enum THWDriverState {tsNone,tsGettingSensorData,tsMeasuringScanPixel,tsMeasuringSpectrum};
+enum THWDriverState {tsIDLE,tsGettingSensorData,tsMotorsCalibrating,tsMeasuringScanPixel,tsMeasuringSpectrum};
 enum THWShutterCMD {scNone,scClose,scOpen};
 
 class THWDriver
@@ -21,11 +22,13 @@ public:
 
     QPointF hwdGetTilt(void);
     void hwdAskTilt();
+    void hwdSetTiltZero();
 
     float hwdCompass(void);
     void hwdAskCompass();
     void hwdStartCompassCal();
     void hwdStopCompassCal();
+    void hwdSetCompassRealValue();
 
     void hwdGoMotorHome(void);
 
@@ -36,6 +39,10 @@ public:
     void hwdMeasureScanPixel(QPoint pos,uint avg, uint integrTime);
 
     void hwdMeasureSpectrum(uint avg, uint integrTime,THWShutterCMD shutterCMD);
+
+    QList<QString> hwdGetListSpectrometer();
+    void hwdOpenSpectrometer(uint index);
+    void hwdCloseSpectrometer();
 private:
 };
 
