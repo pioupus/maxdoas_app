@@ -6,6 +6,7 @@
 #include <QList>
 #include <QThread>
 #include <QReadWriteLock>
+#include <abstractserial.h>
 
 #include "tspectrum.h"
 
@@ -33,12 +34,13 @@ class THWDriverThread : public QObject
 public:
     THWDriverThread();
 
-    void hwdtSetComPort(QString name);
-    void hwdtSetBaud(int baud);
 
     void hwdtGetLastSpectrumBuffer(double *Spectrum, uint size);
 
 public slots:
+    void hwdtSloSetComPort(QString name);
+    void hwdtSloSetBaud(AbstractSerial::BaudRate baud);
+
     void hwdtSloAskTemperature(THWTempSensorID sensorID);
     void hwdtSloSetTargetTemperature(int temperature);
 
@@ -48,13 +50,15 @@ public slots:
     void hwdtSloStartCompassCal();
     void hwdtSloStopCompassCal();
 
-    void hwdtSloGoMotorHome(void);
+    void hwdtSloGoMotorHome();
 
     void hwdtSloSetShutter(THWShutterCMD ShutterCMD);
 
     void hwdtSloMeasureScanPixel(QPoint pos,uint avg, uint integrTime);
 
     void hwdtSloMeasureSpectrum(uint avg, uint integrTime,THWShutterCMD shutterCMD);
+
+    void hwdtSloAskWLCoefficients();
 
     void hwdtSloOpenSpectrometer(uint index);
     void hwdtSloCloseSpectrometer();
@@ -67,15 +71,17 @@ signals:
     void hwdtSigMotorIsHome();
     void hwdtSigShutterStateChanged(THWShutterCMD LastShutterCMD);
     void hwdtSigScanPixelMeasured();
+
+    void hwdtSigGotWLCoefficients();
     void hwdtSigGotSpectrum();
     void hwdtSigSpectrumeterOpened();
-
 private:
     QReadWriteLock MutexSpectrBuffer;
     double LastSpectr[MAXWAVELEGNTH_BUFFER_ELEMTENTS];
     uint SpectrBufferSize;
     uint integTimer;
     uint SpectrAvgCount;
+    AbstractSerial *serial;
 };
 
 
@@ -92,23 +98,23 @@ public:
     TSPectrWLCoefficients hwdGetWLCoefficients();
 
     void hwdSetComPort(QString name);
-    void hwdSetBaud(int baud);
+    void hwdSetBaud(AbstractSerial::BaudRate baud);
 
     float hwdGetTemperature(THWTempSensorID sensorID);
     void hwdAskTemperature(THWTempSensorID sensorID);
     void hwdSetTargetTemperature(int temperature);
 
-    QPointF hwdGetTilt(void);
+    QPointF hwdGetTilt();
     void hwdAskTilt();
     void hwdSetTiltZero();
 
-    float hwdGetCompassHeading(void);
+    float hwdGetCompassHeading();
     void hwdAskCompass();
     void hwdStartCompassCal();
     void hwdStopCompassCal();
     void hwdSetCompassRealValue();
 
-    void hwdGoMotorHome(void);
+    void hwdGoMotorHome();
 
     void hwdSetShutter(THWShutterCMD ShutterCMD);
 
@@ -123,7 +129,7 @@ public:
     void hwdOpenSpectrometer(uint index);
     void hwdCloseSpectrometer();
 
-private slots:
+private slots:  //coming from thread
     void hwdSloGotTemperature(THWTempSensorID sensorID, float Temperature);
     void hwdSloGotCompassHeading(float Heading);
     void hwdSloCompassStartedCalibrating();
@@ -133,8 +139,8 @@ private slots:
     void hwdSloScanPixelMeasured();
     void hwdSloGotSpectrum();
     void hwdSloSpectrumeterOpened();
-
-signals:
+    void hwdSloGotWLCoefficients();
+signals: //thread -> outside
     void hwdSigGotTemperature(THWTempSensorID sensorID, float Temperature);
     void hwdSigGotCompassHeading(float Heading);
     void hwdSigCompassStartedCalibrating();
@@ -145,12 +151,38 @@ signals:
     void hwdSigGotSpectrum();
     void hwdSigSpectrumeterOpened();
 
+
+    //commands for controlling thread
+    void hwdtSigSetComPort(QString name);
+    void hwdtSigSetBaud(AbstractSerial::BaudRate baud);
+
+    void hwdtSigAskTemperature(THWTempSensorID sensorID);
+    void hwdtSigSetTargetTemperature(int temperature);
+
+    void hwdtSigAskTilt();
+
+    void hwdtSigAskCompass();
+    void hwdtSigStartCompassCal();
+    void hwdtSigStopCompassCal();
+
+    void hwdtSigGoMotorHome();
+
+    void hwdtSigSetShutter(THWShutterCMD ShutterCMD);
+
+    void hwdtSigMeasureScanPixel(QPoint pos,uint avg, uint integrTime);
+
+    void hwdtSigMeasureSpectrum(uint avg, uint integrTime,THWShutterCMD shutterCMD);
+    void hwdtSigAskWLCoefficients();
+    void hwdtSigOpenSpectrometer(uint index);
+    void hwdtSigCloseSpectrometer();
 private:
 
     THWDriverThread *HWDriverObject;
     QThreadEx *HWDriverThread;
     TSPectrWLCoefficients SpectrCoefficients;
 
+    double *WavelengthBuffer; //for storing inside TSpectrum
+    uint WavelengthBufferSize;
     float Temperatures[3];
     float CompassHeading;
     float TiltOffset;
