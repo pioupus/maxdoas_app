@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "tfrmtempctrl.h"
+#include "thwdriver.h"
 
 #include <qwt_color_map.h>
 #include <qwt_plot_spectrogram.h>
@@ -72,8 +73,8 @@ MainWindow::MainWindow(QWidget *parent) :
     d_spectrogram->setData(new RasterData());
     d_spectrogram->attach(plot);
     QwtMarkerArrow *d_marker2;
-    for (int i=0;i<5;i++){
-        for (int j=0;j<5;j++){
+    for (int i=0;i<32;i++){
+        for (int j=0;j<32;j++){
 
             d_marker2 = new QwtMarkerArrow();
 

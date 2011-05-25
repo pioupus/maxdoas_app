@@ -2,6 +2,7 @@
 #define TSPECTRUM_H
 #include <QPoint>
 
+
 struct TSPectrWLCoefficients{
     double Offset;
     double Coeff0;
