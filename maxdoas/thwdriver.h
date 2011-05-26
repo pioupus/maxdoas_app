@@ -50,6 +50,8 @@ public slots:
     void hwdtSloStartCompassCal();
     void hwdtSloStopCompassCal();
 
+    //void hwdtSloAskLightSensor();
+
     void hwdtSloGoMotorHome();
 
     void hwdtSloSetShutter(THWShutterCMD ShutterCMD);
@@ -83,11 +85,23 @@ private:
     float sensorTempToCelsius(short int Temperature);
     short int CelsiusToSensorTemp(float Temperature);
     int CRCError;
+
+    float HeadingOffset;
+
+    uint TiltADC_Steps;
+    uint TiltADC_Gain;
+    float TiltADC_RefVoltage;
+    float TiltCalValNegGX;
+    float TiltCalValPosGX;
+    float TiltCalValNegGY;
+    float TiltCalValPosGY;
+
     QReadWriteLock MutexSpectrBuffer;
     double LastSpectr[MAXWAVELEGNTH_BUFFER_ELEMTENTS];
     uint SpectrBufferSize;
     uint integTimer;
     uint SpectrAvgCount;
+
     AbstractSerial *serial;
 };
 

@@ -1,10 +1,10 @@
 #include "thwdriver.h"
 #include "crc8.h"
 #include <QString>
-#include <QElapsedTimer>
+#include <QTime>
 #include <QWaitCondition>
 #include <stdint.h>
-
+#include <qmath.h>
 #define P0	2
 #define P1	3
 #define P2	4
@@ -96,6 +96,15 @@ THWDriverThread::THWDriverThread()
     if (!serial->setFlowControl(AbstractSerial::FlowControlOff)) {
         qDebug() << "Set flow " <<  AbstractSerial::FlowControlOff << " error.";
     }
+    TiltADC_Steps = 2<<17;  //lets calculate with 18 = 17 + sign bits;
+    TiltADC_Gain = 1;  //1,2,4,8 Gains available
+    TiltADC_RefVoltage = 2.5;
+    TiltCalValNegGX = -1;
+    TiltCalValPosGX = 1;
+    TiltCalValNegGY = -1;
+    TiltCalValPosGY = 1;
+
+    HeadingOffset = 0;
 }
 
 void THWDriverThread::hwdtSloSetComPort(QString name)
@@ -122,7 +131,7 @@ bool THWDriverThread::sendBuffer(char *TXBuffer,char *RXBuffer,uint size,uint ti
 }
 
 bool THWDriverThread::waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,uint timeout , bool TempCtrler){
-    QElapsedTimer timer;
+    QTime timer;
     bool TransmissionOK = false;
     bool TransmissionError = false;
     uint RetransmissionCounter = 0;
@@ -130,13 +139,14 @@ bool THWDriverThread::waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,uint
     uint BufferIndex = 0;
     timer.start();
     if (!TempCtrler){//for motion controller we have to controll dir pin
-        while(!timer.hasExpired(5)){//lets be sure that send buffer sent completly
+        while(timer.elapsed() <= 5){//lets be sure that send buffer sent completly
 
         }
         serial->setRts(false);//for receiving
     }
+    timer.restart();
     do{
-        while(!timer.hasExpired(10) || (!TransmissionOK)){
+        while((timer.elapsed() <= 10) || (!TransmissionOK)){
             if (serial->bytesAvailable() > 0)  {
                 serial->read(&RXBuffer[0], 1);
                 if ((unsigned char)RXBuffer[0] == CMD_TRNSMIT_OK)
@@ -153,8 +163,8 @@ bool THWDriverThread::waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,uint
     }while(!TransmissionOK || !TransmissionError);
 
     if (TransmissionOK){
-        timer.start();
-        while(!timer.hasExpired(timeout) || (BufferIndex < 9)){
+        timer.restart();
+        while((timer.elapsed() <= timeout) || (BufferIndex < 9)){
             if (serial->bytesAvailable() > 0)  {
                 serial->read(&RXBuffer[BufferIndex], 1);
                 BufferIndex++;
@@ -225,79 +235,156 @@ void THWDriverThread::hwdtSloAskTilt()
     char rxBuffer[Bufferlength];
     txBuffer[0] =  0;
     txBuffer[1] =  CMD_MOT_INCLIN_READ;
-    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,true)){
+    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false)){
         float TiltX,TiltY;
+        float XCalOffset,YCalOffset;
+        float XCalGain,YCalGain;
         int32_t liTiltX,liTiltY;
 
         //canal 0
-        rxBuffer[P1] = liTiltX;
-        rxBuffer[P2] = (liTiltX >> 8);
-        rxBuffer[P3] = (liTiltX >> 16);
+        liTiltX = rxBuffer[P1];
+        liTiltX += rxBuffer[P2] << 8;
+        liTiltX += rxBuffer[P3] << 16;
+        if(liTiltX & 0x00800000)//sign bit set
+            liTiltX |= 0xFF000000;
         //canal 1
-        rxBuffer[P4] = liTiltY;
-        rxBuffer[P5] = (liTiltY >> 8);
-        rxBuffer[P6] = (liTiltY >> 16);
+        liTiltY = rxBuffer[P4];
+        liTiltY += rxBuffer[P5] << 8;
+        liTiltY += rxBuffer[P6] << 16;
+        if(liTiltY & 0x00800000)//sign bit set
+            liTiltY |= 0xFF000000;
 
+        TiltX = TiltADC_RefVoltage*(float)liTiltX/((float)TiltADC_Steps*(float)TiltADC_Gain);
+        TiltY = TiltADC_RefVoltage*(float)liTiltY/((float)TiltADC_Steps*(float)TiltADC_Gain);
+
+        XCalOffset  = (TiltCalValPosGX + TiltCalValNegGX)/2;
+        XCalGain    = (TiltCalValPosGX - TiltCalValNegGX)/2;
+        YCalOffset  = (TiltCalValPosGY + TiltCalValNegGY)/2;
+        XCalGain    = (TiltCalValPosGY - TiltCalValNegGY)/2;
+
+        TiltX = XCalGain*TiltX+XCalOffset;
+        TiltY = YCalGain*TiltY+YCalOffset;
+
+        if(TiltX > 1)
+            TiltX = 1.0;
+        if(TiltX < -1)
+            TiltX = -1.0;
+
+        if(TiltY > 1)
+            TiltY = 1.0;
+        if(TiltY < -1)
+            TiltY = -1.0;
+
+        TiltX=asin((float)TiltX);
+        TiltY=asin((float)TiltY);
 
         emit hwdtSigGotTilt(TiltX,TiltY);
     }
-
-
-
-
 }
-
 
 void THWDriverThread::hwdtSloAskCompass()
 {
 
 
-// CMD_MOT_COMPASS_READ		0x88
+    const uint Bufferlength = 9;
+    char txBuffer[Bufferlength];
+    char rxBuffer[Bufferlength];
+    txBuffer[0] =  0;
+    txBuffer[1] =  CMD_MOT_COMPASS_READ;
+    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false)){
 
+        float Heading;
+        int16_t siHeading;
+
+        siHeading = rxBuffer[P1];
+        siHeading += rxBuffer[P2] << 8;
+
+        Heading = siHeading;
+        Heading /= 10;
+        Heading += HeadingOffset;
+
+        emit hwdtSigGotCompassHeading(Heading);
+    }
 }
 
 void THWDriverThread::hwdtSloStartCompassCal()
 {
-
-
-// CMD_MOT_COMPASS_CAL_ENTER	0x89
-
+    const uint Bufferlength = 9;
+    char txBuffer[Bufferlength];
+    char rxBuffer[Bufferlength];
+    txBuffer[0] =  0;
+    txBuffer[1] =  CMD_MOT_COMPASS_CAL_ENTER;
+    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false)){
+        emit hwdtSigCompassStartedCalibrating();
+    }
 }
 
 void THWDriverThread::hwdtSloStopCompassCal()
 {
-
-
-// CMD_MOT_COMPASS_CAL_EXIT	0x8A
-
+    const uint Bufferlength = 9;
+    char txBuffer[Bufferlength];
+    char rxBuffer[Bufferlength];
+    txBuffer[0] =  0;
+    txBuffer[1] =  CMD_MOT_COMPASS_CAL_EXIT;
+    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false)){
+        emit hwdtSigCompassStoppedCalibrating();
+    }
 }
 
 
 void THWDriverThread::hwdtSloGoMotorHome(void)
 {
-
-
-// CMD_MOT_CALIBRATION 		0x22
-
+    const uint Bufferlength = 9;
+    char txBuffer[Bufferlength];
+    char rxBuffer[Bufferlength];
+    txBuffer[0] =  0;
+    txBuffer[1] =  CMD_MOT_CALIBRATION;
+    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutMotion,false)){
+        emit hwdtSigCompassStoppedCalibrating();
+    }
 }
 
 
 void THWDriverThread::hwdtSloSetShutter(THWShutterCMD ShutterCMD)
 {
-
-
-// CMD_MOT_CLOSESHUTTER		0x60
-// CMD_MOT_OPENSHUTTER		0x61
-
+    const uint Bufferlength = 9;
+    char txBuffer[Bufferlength];
+    char rxBuffer[Bufferlength];
+    txBuffer[0] =  0;
+    if (ShutterCMD == scClose){
+        txBuffer[1] =  CMD_MOT_CLOSESHUTTER;
+    }else{
+        txBuffer[1] =  CMD_MOT_OPENSHUTTER;
+    }
+    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutMotion,false)){
+        emit hwdtSigShutterStateChanged(ShutterCMD);
+    }
 }
 
 
 void THWDriverThread::hwdtSloMeasureScanPixel(QPoint pos,uint avg, uint integrTime)
 {
+    const uint Bufferlength = 9;
+    char txBuffer[Bufferlength];
+    char rxBuffer[Bufferlength];
+    int32_t PosStationary = pos.x();
+    int32_t PosMirror = pos.y();
+    txBuffer[0] =  0;
+    txBuffer[1] =  CMD_MOT_RAMP;
 
+    txBuffer[P1] = PosMirror & 0xFF;
+    txBuffer[P2] = (PosMirror >> 8) & 0xFF;
+    txBuffer[P3] = (PosMirror >> 16) & 0xFF;
 
-// CMD_MOT_RAMP		 	0x23
+    txBuffer[P4] = PosStationary & 0xFF;
+    txBuffer[P5] = (PosStationary >> 8) & 0xFF;
+    txBuffer[P6] = (PosStationary >> 16) & 0xFF;
 
+    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutMotion,false)){
+        //now we should measure;
+
+        emit hwdtSigScanPixelMeasured();
+    }
 }
 
 
