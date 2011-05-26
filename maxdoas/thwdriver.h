@@ -65,6 +65,8 @@ public slots:
 
 signals:
     void hwdtSigGotTemperature(THWTempSensorID sensorID, float Temperature);
+    void hwdtSigGotTilt(float TiltX,float TiltY);
+
     void hwdtSigGotCompassHeading(float Heading);
     void hwdtSigCompassStartedCalibrating();
     void hwdtSigCompassStoppedCalibrating();
@@ -76,6 +78,11 @@ signals:
     void hwdtSigGotSpectrum();
     void hwdtSigSpectrumeterOpened();
 private:
+    bool sendBuffer(char *TXBuffer,char *RXBuffer,uint size,uint timeout , bool TempCtrler); //returns true if ok
+    bool waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,uint timeout, bool TempCtrler); //returns true if ok
+    float sensorTempToCelsius(short int Temperature);
+    short int CelsiusToSensorTemp(float Temperature);
+    int CRCError;
     QReadWriteLock MutexSpectrBuffer;
     double LastSpectr[MAXWAVELEGNTH_BUFFER_ELEMTENTS];
     uint SpectrBufferSize;
@@ -131,6 +138,7 @@ public:
 
 private slots:  //coming from thread
     void hwdSloGotTemperature(THWTempSensorID sensorID, float Temperature);
+    void hwdSloGotTilt(float TiltX,float TiltY);
     void hwdSloGotCompassHeading(float Heading);
     void hwdSloCompassStartedCalibrating();
     void hwdSloCompassStoppedCalibrating();
@@ -142,6 +150,7 @@ private slots:  //coming from thread
     void hwdSloGotWLCoefficients();
 signals: //thread -> outside
     void hwdSigGotTemperature(THWTempSensorID sensorID, float Temperature);
+    void hwdSigGotTilt(float TiltX,float TiltY);
     void hwdSigGotCompassHeading(float Heading);
     void hwdSigCompassStartedCalibrating();
     void hwdSigCompassStoppedCalibrating();

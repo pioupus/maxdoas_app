@@ -20,7 +20,8 @@ SOURCES += main.cpp \
     tspectrum.cpp \
     tretrieval.cpp \
     tretrievalimage.cpp \
-    tgassignature.cpp
+    tgassignature.cpp \
+    crc8.c
 HEADERS += mainwindow.h \
     tfrmtempctrl.h \
     qwtsymbolarrow.h \
@@ -29,6 +30,7 @@ HEADERS += mainwindow.h \
     tspectrum.h \
     tretrieval.h \
     tretrievalimage.h \
-    tgassignature.h
+    tgassignature.h \
+    crc8.h
 FORMS += mainwindow.ui \
     tfrmtempctrl.ui
