@@ -62,6 +62,7 @@ static int sensorIDtoInt(THWTempSensorID id){
     case tsHeatSink:        return 1;
     case tsSpectrometer:    return 2;
     }
+    return 0;
 }
 
 THWDriverThread::THWDriverThread()
@@ -96,7 +97,7 @@ THWDriverThread::THWDriverThread()
     if (!serial->setFlowControl(AbstractSerial::FlowControlOff)) {
         qDebug() << "Set flow " <<  AbstractSerial::FlowControlOff << " error.";
     }
-    TiltADC_Steps = 2<<17;  //lets calculate with 18 = 17 + sign bits;
+    TiltADC_Steps = 1<<12;  //lets calculate with 12 bits;
     TiltADC_Gain = 1;  //1,2,4,8 Gains available
     TiltADC_RefVoltage = 2.5;
     TiltCalValNegGX = -1;
@@ -105,6 +106,8 @@ THWDriverThread::THWDriverThread()
     TiltCalValPosGY = 1;
 
     HeadingOffset = 0;
+
+    LastShutterCMD = scNone;
 }
 
 void THWDriverThread::hwdtSloSetComPort(QString name)
@@ -130,7 +133,7 @@ bool THWDriverThread::sendBuffer(char *TXBuffer,char *RXBuffer,uint size,uint ti
     return waitForAnswer(TXBuffer,RXBuffer,size,timeout,TempCtrler);
 }
 
-bool THWDriverThread::waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,uint timeout , bool TempCtrler){
+bool THWDriverThread::waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,int timeout , bool TempCtrler){
     QTime timer;
     bool TransmissionOK = false;
     bool TransmissionError = false;
@@ -194,7 +197,7 @@ short int THWDriverThread::CelsiusToSensorTemp(float Temperature){
     return Temperature;
 }
 
-void THWDriverThread::hwdtSloAskTemperature(THWTempSensorID sensorID)
+void THWDriverThread::hwdtSloAskTemperature(THWTempSensorID sensorID, bool byTimer)
 {
     const uint Bufferlength = 9;
     char txBuffer[Bufferlength];
@@ -206,12 +209,12 @@ void THWDriverThread::hwdtSloAskTemperature(THWTempSensorID sensorID)
         int16_t Temperature;
         Temperature = rxBuffer[P2];
         Temperature += rxBuffer[P1]>>8;
-        emit hwdtSigGotTemperature(sensorID, sensorTempToCelsius(Temperature));
+        emit hwdtSigGotTemperature(sensorID, sensorTempToCelsius(Temperature),byTimer);
     }
 
 }
 
-void THWDriverThread::hwdtSloSetTargetTemperature(int temperature)
+void THWDriverThread::hwdtSloSetTargetTemperature(float temperature)
 {
     const uint Bufferlength = 9;
     char txBuffer[Bufferlength];
@@ -226,6 +229,49 @@ void THWDriverThread::hwdtSloSetTargetTemperature(int temperature)
     }
 }
 
+static int TiltResolutionToConfBit(TTiltConfigRes Resolution){
+    switch(Resolution){
+    case tcr12Bit:  return 0;
+    case tcr14Bit:  return 1;
+    case tcr16Bit:  return 2;
+    case tcr18Bit:  return 3;
+    }
+    return 0;
+}
+
+static int TiltGainToConfBit(TTiltConfigGain Gain){
+    switch(Gain){
+    case tcGain1:  return 0;
+    case tcGain2:  return 1;
+    case tcGain4:  return 2;
+    case tcGain8:  return 3;
+    }
+    return 0;
+}
+
+void THWDriverThread::hwdtSloOffsetTilt(float TiltX, float TiltY){
+    TiltX = sin(TiltX);
+    TiltY = sin(TiltY);
+    TiltCalValPosGX = 1 + TiltX;
+    TiltCalValNegGX = -1 + TiltX;
+    TiltCalValPosGY = 1 + TiltY;
+    TiltCalValNegGY = -1 + TiltY;
+}
+
+
+void THWDriverThread::hwdtSloConfigTilt(TTiltConfigRes Resolution,TTiltConfigGain Gain){
+    const uint Bufferlength = 9;
+    char txBuffer[Bufferlength];
+    char rxBuffer[Bufferlength];
+    txBuffer[0] =  0;
+    txBuffer[1] =  CMD_MOT_INCLIN_SET_INIT;
+    txBuffer[P1] = TiltGainToConfBit(Gain);//gain
+    txBuffer[P2] = TiltResolutionToConfBit(Resolution);//resolution
+    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false)){
+        TiltADC_Gain = (int) Gain;
+        TiltADC_Steps = 1 << (int) Resolution;
+    }
+}
 
 void THWDriverThread::hwdtSloAskTilt()
 {
@@ -254,13 +300,14 @@ void THWDriverThread::hwdtSloAskTilt()
         if(liTiltY & 0x00800000)//sign bit set
             liTiltY |= 0xFF000000;
 
-        TiltX = TiltADC_RefVoltage*(float)liTiltX/((float)TiltADC_Steps*(float)TiltADC_Gain);
-        TiltY = TiltADC_RefVoltage*(float)liTiltY/((float)TiltADC_Steps*(float)TiltADC_Gain);
+        //steps are with including sign bit -> range is -refvolt till +refvolt -> factor 2
+        TiltX = 2*TiltADC_RefVoltage*(float)liTiltX/((float)TiltADC_Steps*(float)TiltADC_Gain);
+        TiltY = 2*TiltADC_RefVoltage*(float)liTiltY/((float)TiltADC_Steps*(float)TiltADC_Gain);
 
         XCalOffset  = (TiltCalValPosGX + TiltCalValNegGX)/2;
         XCalGain    = (TiltCalValPosGX - TiltCalValNegGX)/2;
         YCalOffset  = (TiltCalValPosGY + TiltCalValNegGY)/2;
-        XCalGain    = (TiltCalValPosGY - TiltCalValNegGY)/2;
+        YCalGain    = (TiltCalValPosGY - TiltCalValNegGY)/2;
 
         TiltX = XCalGain*TiltX+XCalOffset;
         TiltY = YCalGain*TiltY+YCalOffset;
@@ -331,22 +378,58 @@ void THWDriverThread::hwdtSloStopCompassCal()
     }
 }
 
+void THWDriverThread::hwdtSloConfigLightSensor(TLightSensorGain Gain, TLightSensorIntegTime LightSensorIntegTime){
+    const uint Bufferlength = 9;
+    char txBuffer[Bufferlength];
+    char rxBuffer[Bufferlength];
+    txBuffer[0] =  0;
+    txBuffer[1] =  CMD_MOT_LIGHT_INIT;
+    txBuffer[P1] =  1; //switch on
+    txBuffer[P2] =  (int)Gain; //switch on
+    txBuffer[P3] =  (int)LightSensorIntegTime; //switch on
+    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false)){
+        LightSensorGain = Gain;
+        this->LightSensorIntegTime = LightSensorIntegTime;
+    }
+}
+
+void THWDriverThread::hwdtSloAskLightSensor(){
+    const uint Bufferlength = 9;
+    char txBuffer[Bufferlength];
+    char rxBuffer[Bufferlength];
+    txBuffer[0] =  0;
+    txBuffer[1] =  CMD_MOT_LIGHT_READ;
+    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false)){
+        uint16_t sivalue;
+        float value;
+        sivalue = rxBuffer[P2];
+        sivalue += rxBuffer[P3] << 8;
+        value = sivalue;
+        switch(LightSensorIntegTime){
+        case lsInteg13_7ms: value *= 29.34; break;
+        case lsInteg101ms:  value *= 3.98;  break;
+        case lsInteg402ms:  value *= 1;     break;
+        }
+
+        if (LightSensorGain == lsGain16)
+            value /= 16;
+        emit hwdtSigGotLightSensorValue(value);
+    }
+}
 
 void THWDriverThread::hwdtSloGoMotorHome(void)
 {
     const uint Bufferlength = 9;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
-    txBuffer[0] =  0;
-    txBuffer[1] =  CMD_MOT_CALIBRATION;
+    txBuffer[0] = 0;
+    txBuffer[1] = CMD_MOT_CALIBRATION;
     if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutMotion,false)){
         emit hwdtSigCompassStoppedCalibrating();
     }
 }
 
-
-void THWDriverThread::hwdtSloSetShutter(THWShutterCMD ShutterCMD)
-{
+bool THWDriverThread::SetShutter(THWShutterCMD ShutterCMD){
     const uint Bufferlength = 9;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
@@ -357,18 +440,28 @@ void THWDriverThread::hwdtSloSetShutter(THWShutterCMD ShutterCMD)
         txBuffer[1] =  CMD_MOT_OPENSHUTTER;
     }
     if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutMotion,false)){
+        return true;
+    }else{
+        return false;
+    }
+}
+
+void THWDriverThread::hwdtSloSetShutter(THWShutterCMD ShutterCMD)
+{
+    if (SetShutter(ShutterCMD)){
         emit hwdtSigShutterStateChanged(ShutterCMD);
+        LastShutterCMD = ShutterCMD;
     }
 }
 
 
-void THWDriverThread::hwdtSloMeasureScanPixel(QPoint pos,uint avg, uint integrTime)
+void THWDriverThread::hwdtSloMeasureScanPixel(int PosX, int PosY ,uint avg, uint integrTime)
 {
     const uint Bufferlength = 9;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
-    int32_t PosStationary = pos.x();
-    int32_t PosMirror = pos.y();
+    int32_t PosStationary = PosX;
+    int32_t PosMirror = PosY;
     txBuffer[0] =  0;
     txBuffer[1] =  CMD_MOT_RAMP;
 
@@ -382,7 +475,8 @@ void THWDriverThread::hwdtSloMeasureScanPixel(QPoint pos,uint avg, uint integrTi
 
     if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutMotion,false)){
         //now we should measure;
-
+        (void)avg;
+        (void)integrTime;
         emit hwdtSigScanPixelMeasured();
     }
 }
@@ -390,6 +484,16 @@ void THWDriverThread::hwdtSloMeasureScanPixel(QPoint pos,uint avg, uint integrTi
 
 void THWDriverThread::hwdtSloMeasureSpectrum(uint avg, uint integrTime,THWShutterCMD shutterCMD)
 {
+
+    if (SetShutter(shutterCMD)){
+        emit hwdtSigShutterStateChanged(shutterCMD);
+        //Measure Spectr;
+        (void)avg;
+        (void)integrTime;
+        if (SetShutter(LastShutterCMD)){
+            emit hwdtSigShutterStateChanged(LastShutterCMD);
+        }
+    }
 }
 
 void THWDriverThread::hwdtSloAskWLCoefficients()
@@ -399,21 +503,29 @@ void THWDriverThread::hwdtSloAskWLCoefficients()
 
 void THWDriverThread::hwdtSloOpenSpectrometer(uint index)
 {
+    (void)index;
 }
 
 void THWDriverThread::hwdtSloCloseSpectrometer()
 {
+
 }
 
 
 
 THWDriver::THWDriver()
 {
+    TemperatureTimer = new QTimer();
+    ActualTilt = new QPointF(100,100);
     HWDriverObject = new THWDriverThread();
+    CompassState = csNone;
+    CompassHeading = INVALID_COMPASS_HEADING;
+    CompassOffset = 0;
+    LightSensorVal = INVALID_LIGHTSENSOR_VAL;
     //Connection of outgoing signals..
     {
-        connect(HWDriverObject,SIGNAL(hwdSigGotTemperature(THWTempSensorID , float )),
-                    this,SLOT (hwdSloGotTemperature(THWTempSensorID , float )),Qt::QueuedConnection);
+        connect(HWDriverObject,SIGNAL(hwdSigGotTemperature(THWTempSensorID , float ,bool)),
+                    this,SLOT (hwdSloGotTemperature(THWTempSensorID , float ,bool)),Qt::QueuedConnection);
         connect(HWDriverObject,SIGNAL(hwdSigGotTemperature(THWTempSensorID , float )),
                     this,SIGNAL (hwdSigGotTemperature(THWTempSensorID , float )),Qt::QueuedConnection);
 
@@ -436,6 +548,11 @@ THWDriver::THWDriver()
                     this,SLOT (hwdSloCompassStoppedCalibrating( )),Qt::QueuedConnection);
         connect(HWDriverObject,SIGNAL(hwdtSigCompassStoppedCalibrating( )),
                     this,SIGNAL (hwdSigCompassStoppedCalibrating( )),Qt::QueuedConnection);
+
+        connect(HWDriverObject,SIGNAL(hwdtSigGotLightSensorValue( float )),
+                    this,SLOT (hwdSloGotLightSensorValue( float )),Qt::QueuedConnection);
+        connect(HWDriverObject,SIGNAL(hwdtSigGotLightSensorValue( float)),
+                    this,SIGNAL (hwdSigGotLightSensorValue( float)),Qt::QueuedConnection);
 
         connect(HWDriverObject,SIGNAL(hwdtSigMotorIsHome( )),
                     this,SLOT (hwdSloMotorIsHome( )),Qt::QueuedConnection);
@@ -471,16 +588,22 @@ THWDriver::THWDriver()
                     HWDriverObject,SLOT (hwdtSloSetComPort(QString )),Qt::QueuedConnection);
 
         connect(this,SIGNAL(hwdtSigSetBaud(AbstractSerial::BaudRate )),
-                    HWDriverObject,SLOT (hwdtSloSetBaud(QString )),Qt::QueuedConnection);
+                    HWDriverObject,SLOT (hwdtSloSetBaud(AbstractSerial::BaudRate  )),Qt::QueuedConnection);
 
         connect(this,SIGNAL(hwdtSigAskTemperature(THWTempSensorID )),
-                    HWDriverObject,SLOT (hwdtSloAskTemperature(QString )),Qt::QueuedConnection);
+                    HWDriverObject,SLOT (hwdtSloAskTemperature(THWTempSensorID )),Qt::QueuedConnection);
 
-        connect(this,SIGNAL(hwdtSigSetTargetTemperature(int )),
-                    HWDriverObject,SLOT (hwdtSloSetTargetTemperature(QString )),Qt::QueuedConnection);
+        connect(this,SIGNAL(hwdtSigSetTargetTemperature(float )),
+                    HWDriverObject,SLOT (hwdtSloSetTargetTemperature(float )),Qt::QueuedConnection);
+
+        connect(this,SIGNAL(hwdtSigConfigTilt(TTiltConfigRes, TTiltConfigGain)),
+                    HWDriverObject,SLOT (hwdtSloConfigTilt(TTiltConfigRes, TTiltConfigGain)),Qt::QueuedConnection);
 
         connect(this,SIGNAL(hwdtSigAskTilt( )),
                     HWDriverObject,SLOT (hwdtSloAskTilt( )),Qt::QueuedConnection);
+
+        connect(this,SIGNAL(hwdtSigOffsetTilt(float,float)),
+                    HWDriverObject,SLOT (hwdtSloOffsetTilt(float,float)),Qt::QueuedConnection);
 
         connect(this,SIGNAL(hwdtSigAskCompass( )),
                     HWDriverObject,SLOT (hwdtSloAskCompass( )),Qt::QueuedConnection);
@@ -491,17 +614,20 @@ THWDriver::THWDriver()
         connect(this,SIGNAL(hwdtSigStopCompassCal( )),
                     HWDriverObject,SLOT (hwdtSloStopCompassCal( )),Qt::QueuedConnection);
 
+        connect(this,SIGNAL(hwdtSigAskLightSensor( )),
+                    HWDriverObject,SLOT (hwdtSloAskLightSensor( )),Qt::QueuedConnection);
+
         connect(this,SIGNAL(hwdtSigGoMotorHome( )),
                     HWDriverObject,SLOT (hwdtSloGoMotorHome( )),Qt::QueuedConnection);
 
         connect(this,SIGNAL(hwdtSigSetShutter(THWShutterCMD )),
                     HWDriverObject,SLOT (hwdtSloSetShutter(THWShutterCMD )),Qt::QueuedConnection);
 
-        connect(this,SIGNAL(hwdtSigMeasureScanPixel(QPoint,uint,uint )),
-                    HWDriverObject,SLOT (hwdtSloMeasureScanPixel(QPoint,uint,uint )),Qt::QueuedConnection);
+        connect(this,SIGNAL(hwdtSigMeasureScanPixel(int , int  ,uint , uint)),
+                    HWDriverObject,SLOT (hwdtSloMeasureScanPixel(int , int  ,uint , uint)),Qt::QueuedConnection);
 
-        connect(this,SIGNAL(hwdtSigMeasureScanPixel(uint,uint,THWShutterCMD )),
-                    HWDriverObject,SLOT (hwdtSloMeasureScanPixel(uint,uint,THWShutterCMD )),Qt::QueuedConnection);
+        connect(this,SIGNAL(hwdtSigMeasureSpectrum(uint , uint ,THWShutterCMD  )),
+                    HWDriverObject,SLOT (hwdtSloMeasureSpectrum(uint , uint ,THWShutterCMD )),Qt::QueuedConnection);
 
         connect(this,SIGNAL(hwdtSigAskWLCoefficients( )),
                     HWDriverObject,SLOT (hwdtSloAskWLCoefficients( )),Qt::QueuedConnection);
@@ -511,11 +637,17 @@ THWDriver::THWDriver()
 
         connect(this,SIGNAL(hwdtSigCloseSpectrometer( )),
                     HWDriverObject,SLOT (hwdtSloCloseSpectrometer( )),Qt::QueuedConnection);
+
+        connect(TemperatureTimer,SIGNAL(timeout()),
+                    this,SLOT (hwdSlotTemperatureTimer( )));
+
     }
     HWDriverThread = new QThreadEx();
     HWDriverObject->moveToThread(HWDriverThread);
     HWDriverThread->start();
+    TemperatureTimer->start(200);
 }
+
 
 
 void THWDriver::hwdSetWavelengthBuffer(double* wlBuffer,uint Bufferlength)
@@ -526,12 +658,13 @@ void THWDriver::hwdSetWavelengthBuffer(double* wlBuffer,uint Bufferlength)
 
 void THWDriver::hwdOverwriteWLCoefficients(TSPectrWLCoefficients* SpectrCoefficients)
 {
-
+    (void)SpectrCoefficients;
 }
 
 TSPectrWLCoefficients THWDriver::hwdGetWLCoefficients()
 {
-
+    TSPectrWLCoefficients Coefficients;
+    return Coefficients;
 }
 
 
@@ -548,90 +681,153 @@ void THWDriver::hwdSetBaud(AbstractSerial::BaudRate baud)
 
 float THWDriver::hwdGetTemperature(THWTempSensorID sensorID)
 {
+    int i = sensorIDtoInt(sensorID);
+    return Temperatures[i];
+}
 
+void THWDriver::hwdSlotTemperatureTimer(){
+    emit hwdtSigAskTemperature(tsPeltier,true);
+}
+
+void THWDriver::hwdSloGotTemperature(THWTempSensorID sensorID, float Temperature, bool byTimer)
+{
+    int i = sensorIDtoInt(sensorID);
+    Temperatures[i] = Temperature;
+    if (byTimer){
+        if (sensorID != tsSpectrometer){
+            if (sensorID == tsHeatSink)
+                sensorID = tsSpectrometer;
+            if (sensorID == tsPeltier)
+                sensorID = tsHeatSink;
+            emit hwdtSigAskTemperature(sensorID,byTimer);
+        }
+    }
 }
 
 void THWDriver::hwdAskTemperature(THWTempSensorID sensorID)
 {
-
+    emit hwdtSigAskTemperature(sensorID,false);
 }
 
-void THWDriver::hwdSetTargetTemperature(int temperature)
+void THWDriver::hwdSetTargetTemperature(float temperature)
 {
-
+    emit hwdtSigSetTargetTemperature(temperature);
 }
 
 
 QPointF THWDriver::hwdGetTilt(void)
 {
-
+    return QPointF(*ActualTilt);
 }
 
 void THWDriver::hwdAskTilt()
 {
+    emit hwdtSigAskTilt();
+}
 
+void THWDriver::hwdSloGotTilt(float TiltX,float TiltY){
+    ActualTilt->setX(TiltX);
+    ActualTilt->setY(TiltY);
 }
 
 void THWDriver::hwdSetTiltZero()
 {
-
+    emit hwdtSigOffsetTilt(ActualTilt->x(),ActualTilt->y());
 }
 
 
 float THWDriver::hwdGetCompassHeading(void)
 {
-
+    return CompassHeading;
 }
 
 void THWDriver::hwdAskCompass()
 {
+    emit hwdtSigAskCompass();
+}
 
+void THWDriver::hwdSloGotCompassHeading(float Heading)
+{
+    CompassHeading = Heading - CompassOffset;
+    CompassHeading = fmod(CompassHeading , 360.0);
+    CompassState = csReady;
 }
 
 void THWDriver::hwdStartCompassCal()
 {
+    emit hwdtSigStartCompassCal();
+}
 
+void THWDriver::hwdSloCompassStartedCalibrating()
+{
+    CompassState = csCalibrating;
 }
 
 void THWDriver::hwdStopCompassCal()
 {
-
+    emit hwdtSigStopCompassCal();
 }
 
-void THWDriver::hwdSetCompassRealValue()
+void THWDriver::hwdSloCompassStoppedCalibrating()
 {
+    if (CompassHeading == INVALID_COMPASS_HEADING)
+        CompassState = csNone;
+    else
+        CompassState = csReady;
+}
 
+void THWDriver::hwdSetCompassRealValue(float RealHeading)
+{
+    float Offset = CompassHeading-RealHeading;
+    CompassOffset = fmod(Offset , 360.0);
+}
+
+THWCompassState THWDriver::hwdGetCompassState(){
+    return CompassState;
+}
+
+void THWDriver::hwdSloGotLightSensorValue(float lightValue){
+    LightSensorVal = lightValue;
+}
+
+void THWDriver::hwdAskLightSensor(){
+    emit hwdAskLightSensor();
+}
+
+float THWDriver::hwdGetLightsensorValue(){
+    return LightSensorVal;
 }
 
 
 void THWDriver::hwdGoMotorHome(void)
 {
-
+    emit hwdtSigGoMotorHome();
 }
 
 
 void THWDriver::hwdSetShutter(THWShutterCMD ShutterCMD)
 {
-
+    emit hwdtSigSetShutter(ShutterCMD);
 }
 
 
 
 void THWDriver::hwdMeasureScanPixel(QPoint pos,uint avg, uint integrTime)
 {
-
+    emit hwdtSigMeasureScanPixel(pos.x(),pos.y(),avg,integrTime);
 }
 
 
 void THWDriver::hwdMeasureSpectrum(uint avg, uint integrTime,THWShutterCMD shutterCMD)
 {
-
+    emit hwdtSigMeasureSpectrum(avg,integrTime,shutterCMD);
 }
 
 
 uint THWDriver::hwdGetSpectrum(TSpectrum *Spectrum)
 {
-
+    (void)Spectrum;
+    return 0;
 }
 
 
@@ -642,38 +838,14 @@ QList<QString> THWDriver::hwdGetListSpectrometer()
 
 void THWDriver::hwdOpenSpectrometer(uint index)
 {
-
+    emit hwdOpenSpectrometer(index);
 }
 
 void THWDriver::hwdCloseSpectrometer()
 {
-
+    emit hwdCloseSpectrometer();
 }
 
-
-void THWDriver::hwdSloGotTemperature(THWTempSensorID sensorID, float Temperature)
-{
-
-}
-
-void THWDriver::hwdSloGotTilt(float TiltX,float TiltY){
-
-}
-
-void THWDriver::hwdSloGotCompassHeading(float Heading)
-{
-
-}
-
-void THWDriver::hwdSloCompassStartedCalibrating()
-{
-
-}
-
-void THWDriver::hwdSloCompassStoppedCalibrating()
-{
-
-}
 
 void THWDriver::hwdSloMotorIsHome()
 {
@@ -682,7 +854,7 @@ void THWDriver::hwdSloMotorIsHome()
 
 void THWDriver::hwdSloShutterStateChanged(THWShutterCMD LastShutterCMD)
 {
-
+    (void)LastShutterCMD;
 }
 
 void THWDriver::hwdSloScanPixelMeasured()
