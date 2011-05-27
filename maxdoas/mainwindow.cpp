@@ -18,7 +18,11 @@
 #include <qfiledialog.h>
 #include <qimagewriter.h>
 #include <qwt_plot_marker.h>
+#include <QSettings>
 
+#include "log4qt/consoleappender.h"
+#include "log4qt/logger.h"
+#include "log4qt/ttcclayout.h"
 
 class RasterData: public QwtMatrixRasterData
 {
@@ -56,6 +60,24 @@ public:
     }
 };
 
+void MainWindow::setupLog4Qt()
+{
+    QSettings s;
+
+    // Set logging level for Log4Qt to TRACE
+    s.beginGroup("Log4Qt");
+    s.setValue("Debug", "TRACE");
+
+    // Configure logging to log to the file C:/myapp.log using the level TRACE
+    s.beginGroup("Properties");
+    s.setValue("log4j.appender.A1", "org.apache.log4j.FileAppender");
+    s.setValue("log4j.appender.A1.file", "log4qt.log");
+    s.setValue("log4j.appender.A1.layout", "org.apache.log4j.TTCCLayout");
+    s.setValue("log4j.appender.A1.layout.DateFormat", "ISO8601");
+    s.setValue("log4j.rootLogger", "TRACE, A1");
+
+    // Settings will become active on next application startup
+}
 
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -63,6 +85,17 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    // Create a layout
+//    setApplicationName("MyApplication");
+//    setOrganisationName("MyOrganisation");
+//    setOrganizationDomain("www.myorganisation.com");
+
+    // Log first message, which initialises Log4Qt
+    setupLog4Qt();
+    Log4Qt::Logger::logger("MyApplication")->info("Hello World");
+
+
+
     plot = new QwtPlot(this);
     ui->hbox->addWidget(plot);
     d_spectrogram = new QwtPlotSpectrogram();
@@ -84,6 +117,8 @@ MainWindow::MainWindow(QWidget *parent) :
             d_marker2->attach(plot);
         }
     }
+    ;
+    Log4Qt::Logger::logger("MyApplication")->warn(QString("Transmission: Checksum error! tries: %1 ").arg(5.877));
 }
 
 void MainWindow::on_actionTempctrler_triggered(){

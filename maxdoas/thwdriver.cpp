@@ -5,6 +5,7 @@
 #include <QWaitCondition>
 #include <stdint.h>
 #include <qmath.h>
+
 #define P0	2
 #define P1	3
 #define P2	4
@@ -67,35 +68,28 @@ static int sensorIDtoInt(THWTempSensorID id){
 
 THWDriverThread::THWDriverThread()
 {
+    QTextStream error;
     serial = new AbstractSerial(this);
-    /*
-        Here using the open flag "Unbuffered".
-        This flag disables the internal buffer class,
-        and also disables the automatic data acquisition (disables asynchronous mode).
-        In this case, we have disabled the asynchronous mode to read from port data using timeouts on the packet.
-        Ie if we call, for example, read(5) and in buffer UART
-        not yet available - then the method will wait for a time (total read timeout and/or char interval timeout) until the data arrive.
 
-        Note: Behavior would be different if you open a port without a flag "Unbuffered".
-              I will not describe it - test/check it yourself. ;)
-    */
-    if ( !serial->open(AbstractSerial::ReadWrite | AbstractSerial::Unbuffered) ) {
-        qDebug() << "Serial device by default: " << serial->deviceName() << " open fail.";
-    }
     if (!serial->setBaudRate(AbstractSerial::BaudRate19200)) {
-        qDebug() << "Set baud rate " <<  AbstractSerial::BaudRate19200 << " error.";
+        error << "Set baud rate "  << AbstractSerial::BaudRate19200 << " error.";
+        logger()->error(* error.string() );
     };
     if (!serial->setDataBits(AbstractSerial::DataBits8)) {
-        qDebug() << "Set data bits " <<  AbstractSerial::DataBits8 << " error.";
+        error << "Set data bits " <<  AbstractSerial::DataBits8 << " error.";
+        logger()->error(* error.string() );
     }
     if (!serial->setParity(AbstractSerial::ParityNone)) {
-        qDebug() << "Set parity " <<  AbstractSerial::ParityNone << " error.";
+        error << "Set parity " <<  AbstractSerial::ParityNone << " error.";
+        logger()->error(* error.string() );
     }
     if (!serial->setStopBits(AbstractSerial::StopBits1)) {
-        qDebug() << "Set stop bits " <<  AbstractSerial::StopBits1 << " error.";
+        error << "Set stop bits " <<  AbstractSerial::StopBits1 << " error.";
+        logger()->error(* error.string() );
     }
     if (!serial->setFlowControl(AbstractSerial::FlowControlOff)) {
-        qDebug() << "Set flow " <<  AbstractSerial::FlowControlOff << " error.";
+        error << "Set flow " <<  AbstractSerial::FlowControlOff << " error.";
+        logger()->error(* error.string() );
     }
     TiltADC_Steps = 1<<12;  //lets calculate with 12 bits;
     TiltADC_Gain = 1;  //1,2,4,8 Gains available
@@ -105,31 +99,74 @@ THWDriverThread::THWDriverThread()
     TiltCalValNegGY = -1;
     TiltCalValPosGY = 1;
 
-    HeadingOffset = 0;
+    //HeadingOffset = 0;
 
     LastShutterCMD = scNone;
 }
 
 void THWDriverThread::hwdtSloSetComPort(QString name)
 {
+    hwdtSloSerOpenClose(false);
     serial->setDeviceName(name);
+    hwdtSloSerOpenClose(true);
 }
 
 void THWDriverThread::hwdtSloSetBaud(AbstractSerial::BaudRate baud)
 {
     if (!serial->setBaudRate(baud)) {
-        qDebug() << "Set baud rate " <<  baud << " error.";
+        QTextStream error;
+        error << "Set baud rate " <<  AbstractSerial::BaudRate19200 << " error.";
+        logger()->error(*error.string());
     };
 }
 
+void THWDriverThread::hwdtSloSerOpenClose(bool open){
+    if (open){
+        /*
+            Here using the open flag "Unbuffered".
+            This flag disables the internal buffer class,
+            and also disables the automatic data acquisition (disables asynchronous mode).
+            In this case, we have disabled the asynchronous mode to read from port data using timeouts on the packet.
+            Ie if we call, for example, read(5) and in buffer UART
+            not yet available - then the method will wait for a time (total read timeout and/or char interval timeout) until the data arrive.
+
+            Note: Behavior would be different if you open a port without a flag "Unbuffered".
+                  I will not describe it - test/check it yourself. ;)
+        */
+        if ( !serial->open(AbstractSerial::ReadWrite | AbstractSerial::Unbuffered) ) {
+            QTextStream error;
+            error << "Serial device: " << serial->deviceName() << " open fail.";
+            logger()->error(*error.string());
+        }
+
+    }else{
+        serial->close();
+        QTextStream error;
+        error << "Serial device: " << serial->deviceName() << " closed.";
+        logger()->debug(*error.string());
+    }
+}
+
 bool THWDriverThread::sendBuffer(char *TXBuffer,char *RXBuffer,uint size,uint timeout , bool TempCtrler){
+    QString trace;
     TXBuffer[size-1] = crc8(TXBuffer,size-1);
     if (TempCtrler){//lets keep the direction pin low -> controller will toggle direction
         serial->setRts(false);
+        trace = "RTS cleared; ";
     }else{//for motion controll we have to controll direction pin
         serial->setRts(true);//for sending
+        trace = "RTS set; ";
     }
     serial->write(TXBuffer,size);
+    if (logger()->isTraceEnabled()){
+        for (uint i=0; i< size;i++){
+            QString t;
+            t.sprintf("[0x%02X], ",TXBuffer[i]);
+            trace = trace + t;
+        }
+        trace = "SentTX Buffer: " + trace;
+        logger()->trace(trace);
+    }
     return waitForAnswer(TXBuffer,RXBuffer,size,timeout,TempCtrler);
 }
 
@@ -146,22 +183,34 @@ bool THWDriverThread::waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,int 
 
         }
         serial->setRts(false);//for receiving
+        logger()->trace("RTS cleared");
     }
     timer.restart();
     do{
         while((timer.elapsed() <= 10) || (!TransmissionOK)){
             if (serial->bytesAvailable() > 0)  {
                 serial->read(&RXBuffer[0], 1);
-                if ((unsigned char)RXBuffer[0] == CMD_TRNSMIT_OK)
+                if ((unsigned char)RXBuffer[0] == CMD_TRNSMIT_OK){
                     TransmissionOK = true;
+                }else{
+                    emit hwdtSigTransferDone(tsCheckSumError,RetransmissionCounter);
+                    logger()->warn(QString("Transmission: Checksum error! tries: %1 ").arg(RetransmissionCounter));
+                    break;
+                }
             }
         }
         if (!TransmissionOK){
+            if (timer.elapsed() > 10){
+                emit hwdtSigTransferDone(tsTimeOut,RetransmissionCounter);
+                logger()->warn(QString("Transmission: Timeout error! tries: %1 ").arg(RetransmissionCounter));
+            }
             //lets retransmit
             serial->write(TXBuffer,size);
             RetransmissionCounter++;
-            if (RetransmissionCounter > 10)
+            if (RetransmissionCounter > 10){
                 TransmissionError = true;
+                logger()->error(QString("Transmission error tries: %1").arg(RetransmissionCounter));
+            }
         }
     }while(!TransmissionOK || !TransmissionError);
 
@@ -174,6 +223,15 @@ bool THWDriverThread::waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,int 
             }
         }
         TransmissionOK = BufferIndex == 9;
+        if((!TransmissionOK) && (timer.elapsed() > timeout)){
+            emit hwdtSigTransferDone(tsTimeOut,HW_TRANSMISSION_TIMEOUT_FINAL_PARAMETER);
+            logger()->error("Transmission error Timeout or answer too small ");
+        }
+    }
+
+    if (TransmissionOK){
+        emit hwdtSigTransferDone(tsOK,RetransmissionCounter);
+        logger()->debug("Transmission done and answer rxed");
     }
     return TransmissionOK;
 }
@@ -202,13 +260,17 @@ void THWDriverThread::hwdtSloAskTemperature(THWTempSensorID sensorID, bool byTim
     const uint Bufferlength = 9;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
+    logger()->debug(QString("Asking for Temperature. SensorID: %1").arg(sensorIDtoInt(sensorID)));
     txBuffer[0] =  0;
     txBuffer[1] =  CMD_TEMP_READ_SENSORID;
     txBuffer[P1] =  sensorIDtoInt(sensorID);
     if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,true)){
-        int16_t Temperature;
-        Temperature = rxBuffer[P2];
-        Temperature += rxBuffer[P1]>>8;
+        int16_t siTemperature;
+        float Temperature;
+        siTemperature = rxBuffer[P2];
+        siTemperature += rxBuffer[P1]>>8;
+        Temperature =  sensorTempToCelsius(siTemperature);
+        logger()->debug(QString("Temperature of Sensor ID: %1 is %2 C").arg(sensorIDtoInt(sensorID)).arg(Temperature));
         emit hwdtSigGotTemperature(sensorID, sensorTempToCelsius(Temperature),byTimer);
     }
 
@@ -219,6 +281,7 @@ void THWDriverThread::hwdtSloSetTargetTemperature(float temperature)
     const uint Bufferlength = 9;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
+    logger()->debug(QString("Setting target temperature. Temperature: %1 C").arg(temperature));
     int16_t siTemperature = CelsiusToSensorTemp(temperature);
     txBuffer[0] =  0;
     txBuffer[1] =  CMD_TEMP_WRITE_SHOULD_TEMP;
@@ -267,6 +330,7 @@ void THWDriverThread::hwdtSloConfigTilt(TTiltConfigRes Resolution,TTiltConfigGai
     txBuffer[1] =  CMD_MOT_INCLIN_SET_INIT;
     txBuffer[P1] = TiltGainToConfBit(Gain);//gain
     txBuffer[P2] = TiltResolutionToConfBit(Resolution);//resolution
+    logger()->debug(QString("Configuring Tilt Sensor. Resolution: %1 bits, Gain: %2").arg((int)Resolution).arg((int)Gain));
     if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false)){
         TiltADC_Gain = (int) Gain;
         TiltADC_Steps = 1 << (int) Resolution;
@@ -281,6 +345,8 @@ void THWDriverThread::hwdtSloAskTilt()
     char rxBuffer[Bufferlength];
     txBuffer[0] =  0;
     txBuffer[1] =  CMD_MOT_INCLIN_READ;
+    logger()->debug("Asking Tilt Sensor");
+    logger()->trace(QString("Tilt sensor Resolution: %1 steps, Gain: %2").arg((int)TiltADC_Steps).arg((int)TiltADC_Gain));
     if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false)){
         float TiltX,TiltY;
         float XCalOffset,YCalOffset;
@@ -299,16 +365,18 @@ void THWDriverThread::hwdtSloAskTilt()
         liTiltY += rxBuffer[P6] << 16;
         if(liTiltY & 0x00800000)//sign bit set
             liTiltY |= 0xFF000000;
-
+        logger()->trace(QString("Tilt sensor rxed X: %1 Y: %2").arg(liTiltY).arg(liTiltX));
         //steps are with including sign bit -> range is -refvolt till +refvolt -> factor 2
         TiltX = 2*TiltADC_RefVoltage*(float)liTiltX/((float)TiltADC_Steps*(float)TiltADC_Gain);
         TiltY = 2*TiltADC_RefVoltage*(float)liTiltY/((float)TiltADC_Steps*(float)TiltADC_Gain);
+        logger()->trace(QString("Tilt g calced X: %1 Y: %2" ).arg(TiltX).arg(TiltY));
 
         XCalOffset  = (TiltCalValPosGX + TiltCalValNegGX)/2;
         XCalGain    = (TiltCalValPosGX - TiltCalValNegGX)/2;
         YCalOffset  = (TiltCalValPosGY + TiltCalValNegGY)/2;
         YCalGain    = (TiltCalValPosGY - TiltCalValNegGY)/2;
-
+        logger()->trace(QString("Tilt g OffsetError X: %1 Y: %2").arg(XCalOffset).arg(YCalOffset));
+        logger()->trace(QString("Tilt g GainError X: %1 Y %2" ).arg(XCalGain).arg(YCalGain));
         TiltX = XCalGain*TiltX+XCalOffset;
         TiltY = YCalGain*TiltY+YCalOffset;
 
@@ -324,7 +392,7 @@ void THWDriverThread::hwdtSloAskTilt()
 
         TiltX=asin((float)TiltX);
         TiltY=asin((float)TiltY);
-
+        logger()->debug(QString("Tilt Sensor X: %1 Y: %2").arg(TiltX).arg(TiltY));
         emit hwdtSigGotTilt(TiltX,TiltY);
     }
 }
@@ -338,6 +406,7 @@ void THWDriverThread::hwdtSloAskCompass()
     char rxBuffer[Bufferlength];
     txBuffer[0] =  0;
     txBuffer[1] =  CMD_MOT_COMPASS_READ;
+    logger()->debug("Asking Compass");
     if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false)){
 
         float Heading;
@@ -348,8 +417,8 @@ void THWDriverThread::hwdtSloAskCompass()
 
         Heading = siHeading;
         Heading /= 10;
-        Heading += HeadingOffset;
-
+        logger()->debug(QString("Compass Heading: %1").arg(Heading) );
+        //Heading += HeadingOffset;
         emit hwdtSigGotCompassHeading(Heading);
     }
 }
@@ -361,6 +430,7 @@ void THWDriverThread::hwdtSloStartCompassCal()
     char rxBuffer[Bufferlength];
     txBuffer[0] =  0;
     txBuffer[1] =  CMD_MOT_COMPASS_CAL_ENTER;
+    logger()->debug("Compass Calibration start");
     if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false)){
         emit hwdtSigCompassStartedCalibrating();
     }
@@ -373,12 +443,15 @@ void THWDriverThread::hwdtSloStopCompassCal()
     char rxBuffer[Bufferlength];
     txBuffer[0] =  0;
     txBuffer[1] =  CMD_MOT_COMPASS_CAL_EXIT;
+    logger()->debug("Compass Calibration stop");
     if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false)){
         emit hwdtSigCompassStoppedCalibrating();
     }
 }
 
 void THWDriverThread::hwdtSloConfigLightSensor(TLightSensorGain Gain, TLightSensorIntegTime LightSensorIntegTime){
+    int g;
+    float integ=0;
     const uint Bufferlength = 9;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
@@ -387,6 +460,16 @@ void THWDriverThread::hwdtSloConfigLightSensor(TLightSensorGain Gain, TLightSens
     txBuffer[P1] =  1; //switch on
     txBuffer[P2] =  (int)Gain; //switch on
     txBuffer[P3] =  (int)LightSensorIntegTime; //switch on
+    g = 1;
+    if (Gain==lsGain16)
+        g = 16;
+
+    switch(LightSensorIntegTime){
+    case lsInteg13_7ms: integ *= 13.7; break;
+    case lsInteg101ms:  integ *= 101;  break;
+    case lsInteg402ms:  integ *= 402;  break;
+    }
+    logger()->debug(QString("Config Light Sensor Gain: %1 Integrationtime(ms): %2").arg(g).arg(integ));
     if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false)){
         LightSensorGain = Gain;
         this->LightSensorIntegTime = LightSensorIntegTime;
@@ -399,6 +482,7 @@ void THWDriverThread::hwdtSloAskLightSensor(){
     char rxBuffer[Bufferlength];
     txBuffer[0] =  0;
     txBuffer[1] =  CMD_MOT_LIGHT_READ;
+    logger()->debug("Ask Light Sensor");
     if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false)){
         uint16_t sivalue;
         float value;
@@ -413,6 +497,7 @@ void THWDriverThread::hwdtSloAskLightSensor(){
 
         if (LightSensorGain == lsGain16)
             value /= 16;
+        logger()->debug(QString("Light Sensor value: %1").arg(value) );
         emit hwdtSigGotLightSensorValue(value);
     }
 }
@@ -424,6 +509,7 @@ void THWDriverThread::hwdtSloGoMotorHome(void)
     char rxBuffer[Bufferlength];
     txBuffer[0] = 0;
     txBuffer[1] = CMD_MOT_CALIBRATION;
+    logger()->debug("Calibrate Motor");
     if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutMotion,false)){
         emit hwdtSigCompassStoppedCalibrating();
     }
@@ -436,8 +522,10 @@ bool THWDriverThread::SetShutter(THWShutterCMD ShutterCMD){
     txBuffer[0] =  0;
     if (ShutterCMD == scClose){
         txBuffer[1] =  CMD_MOT_CLOSESHUTTER;
+        logger()->debug("Close shutter");
     }else{
         txBuffer[1] =  CMD_MOT_OPENSHUTTER;
+        logger()->debug("Open shutter");
     }
     if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutMotion,false)){
         return true;
@@ -472,9 +560,10 @@ void THWDriverThread::hwdtSloMeasureScanPixel(int PosX, int PosY ,uint avg, uint
     txBuffer[P4] = PosStationary & 0xFF;
     txBuffer[P5] = (PosStationary >> 8) & 0xFF;
     txBuffer[P6] = (PosStationary >> 16) & 0xFF;
-
+    logger()->debug(QString("Motors go to. Mirror: %1 Stationary: %2").arg(PosX).arg(PosY));
     if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutMotion,false)){
         //now we should measure;
+        logger()->debug("Fetch Spectra");
         (void)avg;
         (void)integrTime;
         emit hwdtSigScanPixelMeasured();
@@ -487,6 +576,7 @@ void THWDriverThread::hwdtSloMeasureSpectrum(uint avg, uint integrTime,THWShutte
 
     if (SetShutter(shutterCMD)){
         emit hwdtSigShutterStateChanged(shutterCMD);
+        logger()->debug("Fetch Spectra");
         //Measure Spectr;
         (void)avg;
         (void)integrTime;
@@ -581,6 +671,10 @@ THWDriver::THWDriver()
                     this,SLOT (hwdSloSpectrumeterOpened( )),Qt::QueuedConnection);
         connect(HWDriverObject,SIGNAL(hwdtSigSpectrumeterOpened( )),
                     this,SIGNAL (hwdSigSpectrumeterOpened( )),Qt::QueuedConnection);
+
+        connect(HWDriverObject,SIGNAL(hwdtSigTransferDone(THWTransferState , uint )),
+                    this,SIGNAL (hwdSigTransferDone(THWTransferState , uint )),Qt::QueuedConnection);
+
     }
     //for messages giong from this to thread..
     {

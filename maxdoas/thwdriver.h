@@ -9,6 +9,10 @@
 #include <QReadWriteLock>
 #include <abstractserial.h>
 
+#include "log4qt/consoleappender.h"
+#include "log4qt/logger.h"
+#include "log4qt/ttcclayout.h"
+
 #include "tspectrum.h"
 
 #define MAXWAVELEGNTH_BUFFER_ELEMTENTS 4096
@@ -17,11 +21,16 @@
 
 #define INVALID_LIGHTSENSOR_VAL -1
 
+#define HW_TRANSMISSION_TIMEOUT_FINAL_PARAMETER 100
+
 enum THWTempSensorID {tsNone,tsPeltier=0,tsHeatSink=1,tsSpectrometer=2};
 enum THWDriverState {tsIDLE,tsGettingSensorData,tsMotorsCalibrating,tsMeasuringScanPixel,tsMeasuringSpectrum};
 enum THWShutterCMD {scNone,scClose,scOpen};
 
 enum THWCompassState {csNone,csCalibrating,csReady};
+
+enum THWTransferState {tsOK,tsCheckSumError,tsTimeOut};
+
 
 enum TTiltConfigRes {tcr12Bit=12,tcr14Bit=14,tcr16Bit=16,tcr18Bit=18};
 enum TTiltConfigGain {tcGain1=1,tcGain2=2,tcGain4=4,tcGain8=8};
@@ -44,6 +53,8 @@ protected:
 class THWDriverThread : public QObject
 {
     Q_OBJECT
+    LOG4QT_DECLARE_QCLASS_LOGGER
+
 public:
     THWDriverThread();
 
@@ -53,6 +64,7 @@ public:
 public slots:
     void hwdtSloSetComPort(QString name);
     void hwdtSloSetBaud(AbstractSerial::BaudRate baud);
+    void hwdtSloSerOpenClose(bool open);
 
     void hwdtSloAskTemperature(THWTempSensorID sensorID,bool byTimer);
     void hwdtSloSetTargetTemperature(float temperature);
@@ -82,6 +94,8 @@ public slots:
     void hwdtSloCloseSpectrometer();
 
 signals:
+    void hwdtSigTransferDone(THWTransferState TransferState, uint ErrorParameter);
+
     void hwdtSigGotTemperature(THWTempSensorID sensorID, float Temperature, bool byTimer);
     void hwdtSigGotTilt(float TiltX,float TiltY);
 
@@ -104,7 +118,7 @@ private:
     short int CelsiusToSensorTemp(float Temperature);
     int CRCError;
 
-    float HeadingOffset;
+    //float HeadingOffset;
 
     uint TiltADC_Steps;
     uint TiltADC_Gain;
@@ -204,7 +218,7 @@ signals: //thread -> outside
     void hwdSigScanPixelMeasured();
     void hwdSigGotSpectrum();
     void hwdSigSpectrumeterOpened();
-
+    void hwdSigTransferDone(THWTransferState TransferState, uint ErrorParameter);
 
     //commands for controlling thread
     void hwdtSigSetComPort(QString name);

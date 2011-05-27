@@ -34,3 +34,4 @@ HEADERS += mainwindow.h \
     crc8.h
 FORMS += mainwindow.ui \
     tfrmtempctrl.ui
+include(../libs/log4qt/src/log4qt/log4qt.pri)
