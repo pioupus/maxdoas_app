@@ -24,17 +24,21 @@
 #define HW_TRANSMISSION_TIMEOUT_FINAL_PARAMETER 100
 
 enum THWTempSensorID {tsNone,tsPeltier=0,tsHeatSink=1,tsSpectrometer=2};
+Q_DECLARE_METATYPE(THWTempSensorID);
 enum THWDriverState {tsIDLE,tsGettingSensorData,tsMotorsCalibrating,tsMeasuringScanPixel,tsMeasuringSpectrum};
 enum THWShutterCMD {scNone,scClose,scOpen};
-
+Q_DECLARE_METATYPE(THWShutterCMD);
 enum THWCompassState {csNone,csCalibrating,csReady};
 
 enum THWTransferState {tsOK,tsCheckSumError,tsTimeOut};
-
+Q_DECLARE_METATYPE(THWTransferState);
 
 enum TTiltConfigRes {tcr12Bit=12,tcr14Bit=14,tcr16Bit=16,tcr18Bit=18};
+Q_DECLARE_METATYPE(TTiltConfigRes);
 enum TTiltConfigGain {tcGain1=1,tcGain2=2,tcGain4=4,tcGain8=8};
+Q_DECLARE_METATYPE(TTiltConfigGain);
 
+Q_DECLARE_METATYPE(AbstractSerial::BaudRate);
 enum TLightSensorGain {lsGain1=0,lsGain16=1};
 enum TLightSensorIntegTime {lsInteg13_7ms=0,lsInteg101ms=1,lsInteg402ms=2};
 //
@@ -57,7 +61,7 @@ class THWDriverThread : public QObject
 
 public:
     THWDriverThread();
-
+    ~THWDriverThread();
 
     void hwdtGetLastSpectrumBuffer(double *Spectrum, uint size);
 

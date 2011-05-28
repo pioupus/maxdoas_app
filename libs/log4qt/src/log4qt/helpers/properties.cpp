@@ -186,7 +186,7 @@ namespace Log4Qt
 		QString key;
 		QString value;
 		QString *p_string = &key;
-		uint ucs;
+                uint ucs = 0;
 		int ucs_digits;
 		while (i < rProperty.length())
 		{

@@ -85,17 +85,14 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    // Create a layout
-//    setApplicationName("MyApplication");
-//    setOrganisationName("MyOrganisation");
-//    setOrganizationDomain("www.myorganisation.com");
 
     // Log first message, which initialises Log4Qt
     setupLog4Qt();
-    Log4Qt::Logger::logger("MyApplication")->info("Hello World");
+    thread()->setObjectName("Main");
+    logger()->warn("test");
+    //Logger("MaxDoas")->name("Main");
 
-
-
+    HWDriver = new THWDriver();
     plot = new QwtPlot(this);
     ui->hbox->addWidget(plot);
     d_spectrogram = new QwtPlotSpectrogram();
@@ -112,7 +109,7 @@ MainWindow::MainWindow(QWidget *parent) :
             d_marker2 = new QwtMarkerArrow();
 
             d_marker2->setSymbol( new QwtSymbolArrow(QwtSymbolArrow::  UserStyle,
-                                                     QColor(Qt::white), QPen(Qt::white,1), QSize(20,20)));
+                                  QColor(Qt::white), QPen(Qt::white,1), QSize(20,20)));
             d_marker2->setValue(j,i,cos(i/2)/2,sin(j/3)/2);
             d_marker2->attach(plot);
         }

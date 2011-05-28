@@ -68,29 +68,11 @@ static int sensorIDtoInt(THWTempSensorID id){
 
 THWDriverThread::THWDriverThread()
 {
-    QTextStream error;
+
+
     serial = new AbstractSerial(this);
 
-    if (!serial->setBaudRate(AbstractSerial::BaudRate19200)) {
-        error << "Set baud rate "  << AbstractSerial::BaudRate19200 << " error.";
-        logger()->error(* error.string() );
-    };
-    if (!serial->setDataBits(AbstractSerial::DataBits8)) {
-        error << "Set data bits " <<  AbstractSerial::DataBits8 << " error.";
-        logger()->error(* error.string() );
-    }
-    if (!serial->setParity(AbstractSerial::ParityNone)) {
-        error << "Set parity " <<  AbstractSerial::ParityNone << " error.";
-        logger()->error(* error.string() );
-    }
-    if (!serial->setStopBits(AbstractSerial::StopBits1)) {
-        error << "Set stop bits " <<  AbstractSerial::StopBits1 << " error.";
-        logger()->error(* error.string() );
-    }
-    if (!serial->setFlowControl(AbstractSerial::FlowControlOff)) {
-        error << "Set flow " <<  AbstractSerial::FlowControlOff << " error.";
-        logger()->error(* error.string() );
-    }
+
     TiltADC_Steps = 1<<12;  //lets calculate with 12 bits;
     TiltADC_Gain = 1;  //1,2,4,8 Gains available
     TiltADC_RefVoltage = 2.5;
@@ -104,6 +86,10 @@ THWDriverThread::THWDriverThread()
     LastShutterCMD = scNone;
 }
 
+THWDriverThread::~THWDriverThread(){
+    serial->close();
+}
+
 void THWDriverThread::hwdtSloSetComPort(QString name)
 {
     hwdtSloSerOpenClose(false);
@@ -114,13 +100,15 @@ void THWDriverThread::hwdtSloSetComPort(QString name)
 void THWDriverThread::hwdtSloSetBaud(AbstractSerial::BaudRate baud)
 {
     if (!serial->setBaudRate(baud)) {
-        QTextStream error;
-        error << "Set baud rate " <<  AbstractSerial::BaudRate19200 << " error.";
-        logger()->error(*error.string());
+
+        QString str;
+        QTextStream(&str) << "Set baud rate " << baud << " error.";
+        logger()->error( str );
     };
 }
 
 void THWDriverThread::hwdtSloSerOpenClose(bool open){
+    bool err = false;
     if (open){
         /*
             Here using the open flag "Unbuffered".
@@ -134,16 +122,52 @@ void THWDriverThread::hwdtSloSerOpenClose(bool open){
                   I will not describe it - test/check it yourself. ;)
         */
         if ( !serial->open(AbstractSerial::ReadWrite | AbstractSerial::Unbuffered) ) {
-            QTextStream error;
-            error << "Serial device: " << serial->deviceName() << " open fail.";
-            logger()->error(*error.string());
+            QString str;
+            QTextStream(&str) << "Serial device: " << serial->deviceName() << " open fail.";
+            logger()->error(str);
+            err = true;
+        }
+        if (!serial->setBaudRate(AbstractSerial::BaudRate19200)) {
+            QString str;
+            QTextStream(&str) << "Set baud rate " << AbstractSerial::BaudRate19200 << " error.";
+            logger()->error( str );
+            err = true;
+        };
+        if (!serial->setDataBits(AbstractSerial::DataBits8)) {
+            QString str;
+            QTextStream(&str) << "Set data bits " <<  AbstractSerial::DataBits8 << " error.";
+            logger()->error( str );
+            err = true;
+        }
+        if (!serial->setParity(AbstractSerial::ParityNone)) {
+            QString str;
+            QTextStream(&str) << "Set parity " <<  AbstractSerial::ParityNone << " error.";
+            logger()->error( str );
+            err = true;
+        }
+        if (!serial->setStopBits(AbstractSerial::StopBits1)) {
+            QString str;
+            QTextStream(&str) << "Set stop bits " <<  AbstractSerial::StopBits1 << " error.";
+            logger()->error( str );
+            err = true;
+        }
+        if (!serial->setFlowControl(AbstractSerial::FlowControlOff)) {
+            QString str;
+            QTextStream(&str) << "Set flow " <<  AbstractSerial::FlowControlOff << " error.";
+            logger()->error( str );
+            err = true;
+        }
+        if (! err){
+            QString str;
+            QTextStream(&str) << "Serial device " << serial->deviceName() << " opened with " << serial->baudRate();
+            logger()->info(str);
         }
 
     }else{
         serial->close();
-        QTextStream error;
-        error << "Serial device: " << serial->deviceName() << " closed.";
-        logger()->debug(*error.string());
+        QString str;
+        QTextStream(&str) << "Serial device: " << serial->deviceName() << " closed.";
+        logger()->info(str);
     }
 }
 
@@ -228,7 +252,16 @@ bool THWDriverThread::waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,int 
             logger()->error("Transmission error Timeout or answer too small ");
         }
     }
-
+    if (logger()->isTraceEnabled()){
+        QString trace;
+        for (uint i=0; i< BufferIndex;i++){
+            QString t;
+            t.sprintf("[0x%02X], ",RXBuffer[i]);
+            trace = trace + t;
+        }
+        trace = "Received Buffer: " + trace;
+        logger()->trace(trace);
+    }
     if (TransmissionOK){
         emit hwdtSigTransferDone(tsOK,RetransmissionCounter);
         logger()->debug("Transmission done and answer rxed");
@@ -612,11 +645,18 @@ THWDriver::THWDriver()
     CompassHeading = INVALID_COMPASS_HEADING;
     CompassOffset = 0;
     LightSensorVal = INVALID_LIGHTSENSOR_VAL;
+    qRegisterMetaType<THWTransferState>( "THWTransferState" );
+    qRegisterMetaType<THWTempSensorID>( "THWTempSensorID" );
+    qRegisterMetaType<THWShutterCMD>( "THWShutterCMD" );
+    qRegisterMetaType<TTiltConfigRes>( "TTiltConfigRes" );
+    qRegisterMetaType<TTiltConfigGain>( "TTiltConfigGain" );
+    qRegisterMetaType<AbstractSerial::BaudRate>( "BaudRate" );
+
     //Connection of outgoing signals..
     {
-        connect(HWDriverObject,SIGNAL(hwdSigGotTemperature(THWTempSensorID , float ,bool)),
+        connect(HWDriverObject,SIGNAL(hwdtSigGotTemperature(THWTempSensorID , float ,bool)),
                     this,SLOT (hwdSloGotTemperature(THWTempSensorID , float ,bool)),Qt::QueuedConnection);
-        connect(HWDriverObject,SIGNAL(hwdSigGotTemperature(THWTempSensorID , float )),
+        connect(HWDriverObject,SIGNAL(hwdtSigGotTemperature(THWTempSensorID , float, bool )),
                     this,SIGNAL (hwdSigGotTemperature(THWTempSensorID , float )),Qt::QueuedConnection);
 
         connect(HWDriverObject,SIGNAL(hwdtSigGotTilt(float,float)),
@@ -684,8 +724,8 @@ THWDriver::THWDriver()
         connect(this,SIGNAL(hwdtSigSetBaud(AbstractSerial::BaudRate )),
                     HWDriverObject,SLOT (hwdtSloSetBaud(AbstractSerial::BaudRate  )),Qt::QueuedConnection);
 
-        connect(this,SIGNAL(hwdtSigAskTemperature(THWTempSensorID )),
-                    HWDriverObject,SLOT (hwdtSloAskTemperature(THWTempSensorID )),Qt::QueuedConnection);
+        connect(this,SIGNAL(hwdtSigAskTemperature(THWTempSensorID ,bool)),
+                    HWDriverObject,SLOT (hwdtSloAskTemperature(THWTempSensorID,bool )),Qt::QueuedConnection);
 
         connect(this,SIGNAL(hwdtSigSetTargetTemperature(float )),
                     HWDriverObject,SLOT (hwdtSloSetTargetTemperature(float )),Qt::QueuedConnection);
@@ -737,9 +777,11 @@ THWDriver::THWDriver()
 
     }
     HWDriverThread = new QThreadEx();
+    HWDriverThread->setObjectName("DriverThread");
     HWDriverObject->moveToThread(HWDriverThread);
     HWDriverThread->start();
     TemperatureTimer->start(200);
+    hwdSetComPort("/dev/ttyUSB0");
 }
 
 

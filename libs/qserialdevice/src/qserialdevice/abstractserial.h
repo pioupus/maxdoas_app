@@ -27,7 +27,6 @@
 #include <QtCore/QIODevice>
 #include <QtCore/QMap>
 #include <QtCore/QDateTime>
-
 #ifndef QT_NO_DEBUG_STREAM
 #include <QtCore/QDebug>
 #endif
@@ -113,6 +112,7 @@ public:
         BaudRate3500000,  /*!< \~english Speed 3500000 bauds. */    //enhanced speed (experimental)
         BaudRate4000000,  /*!< \~english Speed 4000000 bauds. */    //enhanced speed (experimental)
     };
+
     /*! \~english
         \enum DataBits
         Standard types of data bits serial device that supports the class AbstractSerial.

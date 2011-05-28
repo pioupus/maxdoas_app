@@ -4,6 +4,11 @@
 #include <QMainWindow>
 #include <qwt_plot.h>
 #include <qwt_plot_spectrogram.h>
+#include "thwdriver.h"
+
+#include "log4qt/consoleappender.h"
+#include "log4qt/logger.h"
+#include "log4qt/ttcclayout.h"
 
 namespace Ui {
     class MainWindow;
@@ -12,6 +17,7 @@ namespace Ui {
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
+    LOG4QT_DECLARE_QCLASS_LOGGER
 
 public:
     explicit MainWindow(QWidget *parent = 0);
@@ -23,7 +29,7 @@ private:
 
     QwtPlot *plot;
     QwtPlotSpectrogram *d_spectrogram;
-
+    THWDriver  *HWDriver;
 private slots:
 
     void on_actionTempctrler_triggered();
