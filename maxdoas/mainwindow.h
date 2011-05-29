@@ -27,7 +27,8 @@ public:
 private:
     Ui::MainWindow *ui;
 
-    QwtPlot *plot;
+    QwtPlot *ImagePlot;
+    QwtPlot *SpectrPlot;
     QwtPlotSpectrogram *d_spectrogram;
     THWDriver  *HWDriver;
 private slots:

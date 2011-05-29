@@ -93,15 +93,18 @@ MainWindow::MainWindow(QWidget *parent) :
     //Logger("MaxDoas")->name("Main");
 
     HWDriver = new THWDriver();
-    plot = new QwtPlot(this);
-    ui->hbox->addWidget(plot);
+
+    ImagePlot = new QwtPlot(this);
+    ui->hbox->addWidget(ImagePlot);
+    SpectrPlot = new QwtPlot(this);
+    ui->hbox->addWidget(SpectrPlot);
     d_spectrogram = new QwtPlotSpectrogram();
     d_spectrogram->setRenderThreadCount(0); // use system specific thread count
 
     d_spectrogram->setColorMap( new ColorMap() );
 
     d_spectrogram->setData(new RasterData());
-    d_spectrogram->attach(plot);
+    d_spectrogram->attach(ImagePlot);
     QwtMarkerArrow *d_marker2;
     for (int i=0;i<32;i++){
         for (int j=0;j<32;j++){
@@ -111,7 +114,7 @@ MainWindow::MainWindow(QWidget *parent) :
             d_marker2->setSymbol( new QwtSymbolArrow(QwtSymbolArrow::  UserStyle,
                                   QColor(Qt::white), QPen(Qt::white,1), QSize(20,20)));
             d_marker2->setValue(j,i,cos(i/2)/2,sin(j/3)/2);
-            d_marker2->attach(plot);
+            d_marker2->attach(ImagePlot);
         }
     }
     ;
@@ -127,5 +130,7 @@ void MainWindow::on_actionTempctrler_triggered(){
 
 MainWindow::~MainWindow()
 {
+    delete ImagePlot;
+    delete SpectrPlot;
     delete ui;
 }

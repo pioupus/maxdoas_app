@@ -22,8 +22,9 @@ class TSpectrum
 {
 public:
     TSpectrum();
-    double* spectrum;
+    double spectrum[ MAXWAVELEGNTH_BUFFER_ELEMTENTS];
     double* Wavelength;//points to global buffer
+    int NumOfSpectrPixels;
 private:
     TSprectumType type;
     uint SpectrCount;

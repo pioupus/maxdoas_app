@@ -15,7 +15,10 @@
 
 #include "tspectrum.h"
 
-#define MAXWAVELEGNTH_BUFFER_ELEMTENTS 4096
+#include <Wrapper.h>
+#include <ArrayTypes.h>
+#include <iostream>
+#include <iomanip>
 
 #define INVALID_COMPASS_HEADING 400
 
@@ -63,7 +66,8 @@ public:
     THWDriverThread();
     ~THWDriverThread();
 
-    void hwdtGetLastSpectrumBuffer(double *Spectrum, uint size);
+    void hwdtGetLastSpectrumBuffer(double *Spectrum,int *NumberOfSpecPixels, uint size);
+    QList<QString> hwdtGetSpectrometerList();
 
 public slots:
     void hwdtSloSetComPort(QString name);
@@ -93,8 +97,10 @@ public slots:
     void hwdtSloMeasureSpectrum(uint avg, uint integrTime,THWShutterCMD shutterCMD);
 
     void hwdtSloAskWLCoefficients();
+    void hwdtSloDiscoverSpectrometers();
+    void hwdtSloOpenSpectrometer(QString Serialnumber);
 
-    void hwdtSloOpenSpectrometer(uint index);
+
     void hwdtSloCloseSpectrometer();
 
 signals:
@@ -115,11 +121,13 @@ signals:
     void hwdtSigGotWLCoefficients();
     void hwdtSigGotSpectrum();
     void hwdtSigSpectrumeterOpened();
+    void hwdtSigSpectrometersDicovered();
 private:
     bool sendBuffer(char *TXBuffer,char *RXBuffer,uint size,uint timeout , bool TempCtrler); //returns true if ok
     bool waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,int timeout, bool TempCtrler); //returns true if ok
     float sensorTempToCelsius(short int Temperature);
     short int CelsiusToSensorTemp(float Temperature);
+    void TakeSpectrum(int avg, uint IntegrTime);
     int CRCError;
 
     //float HeadingOffset;
@@ -140,9 +148,15 @@ private:
     uint SpectrBufferSize;
     uint integTimer;
     uint SpectrAvgCount;
-
+    Wrapper *wrapper; //Spectrometer;
+    int NumberOfSpectrometers;
+    int SpectrometerIndex;
+    uint LastSpectrIntegTime;
+    int NumOfPixels;
     AbstractSerial *serial;
     THWShutterCMD LastShutterCMD;
+    QReadWriteLock MutexSpectrList;
+    QList<QString> *SpectrometerList;
 
 };
 
@@ -192,7 +206,7 @@ public:
     uint hwdGetSpectrum(TSpectrum *Spectrum);
 
     QList<QString> hwdGetListSpectrometer();
-    void hwdOpenSpectrometer(uint index);
+    void hwdOpenSpectrometer(QString SerialNumber);
     void hwdCloseSpectrometer();
 
 private slots:  //coming from thread
@@ -223,7 +237,7 @@ signals: //thread -> outside
     void hwdSigGotSpectrum();
     void hwdSigSpectrumeterOpened();
     void hwdSigTransferDone(THWTransferState TransferState, uint ErrorParameter);
-
+    void hwdSigSpectrometersDiscovered();
     //commands for controlling thread
     void hwdtSigSetComPort(QString name);
     void hwdtSigSetBaud(AbstractSerial::BaudRate baud);
@@ -247,7 +261,8 @@ signals: //thread -> outside
 
     void hwdtSigMeasureSpectrum(uint avg, uint integrTime,THWShutterCMD shutterCMD);
     void hwdtSigAskWLCoefficients();
-    void hwdtSigOpenSpectrometer(uint index);
+    void hwdtSigDiscoverSpectrometers();
+    void hwdtSigOpenSpectrometer(QString SerialNumber);
     void hwdtSigCloseSpectrometer();
 private:
 
