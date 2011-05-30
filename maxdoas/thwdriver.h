@@ -163,7 +163,7 @@ private:
 
 
 
-class THWDriver : private QObject
+class THWDriver : public QObject
 {
         Q_OBJECT
 public:
@@ -204,7 +204,7 @@ public:
     void hwdMeasureSpectrum(uint avg, uint integrTime,THWShutterCMD shutterCMD);
 
     uint hwdGetSpectrum(TSpectrum *Spectrum);
-
+    void hwdDiscoverSpectrometers();
     QList<QString> hwdGetListSpectrometer();
     void hwdOpenSpectrometer(QString SerialNumber);
     void hwdCloseSpectrometer();

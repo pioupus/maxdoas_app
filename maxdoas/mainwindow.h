@@ -4,9 +4,12 @@
 #include <QMainWindow>
 #include <qwt_plot.h>
 #include <qwt_plot_spectrogram.h>
-#include "thwdriver.h"
 #include <qwt_plot_curve.h>
 
+#include "thwdriver.h"
+#include "tspectrum.h"
+
+#include "maxdoassettings.h"
 #include "log4qt/consoleappender.h"
 #include "log4qt/logger.h"
 #include "log4qt/ttcclayout.h"
@@ -32,12 +35,15 @@ private:
     QwtPlot *SpectrPlot;
     QwtPlotCurve *SpectrPlotCurve;
     QwtPlotSpectrogram *d_spectrogram;
-    THWDriver  *HWDriver;
+    THWDriver *HWDriver;
+    TSpectrum spectrum;
+    TMaxdoasSettings *ms;
     void timerEvent(QTimerEvent *);
 private slots:
 
     void on_actionTempctrler_triggered();
     void on_actionConfigSpectrometer_triggered();
+    void on_GotSpectrum();
 
 
 };

@@ -1,6 +1,7 @@
 #include <QtGui/QApplication>
 
 #include "mainwindow.h"
+#include "maxdoassettings.h"
 
 int main(int argc, char *argv[])
 {

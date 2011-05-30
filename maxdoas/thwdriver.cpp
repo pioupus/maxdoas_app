@@ -94,6 +94,7 @@ THWDriverThread::THWDriverThread()
 }
 
 THWDriverThread::~THWDriverThread(){
+    wrapper->closeAllSpectrometers();
     delete wrapper;
     delete SpectrometerList;
     serial->close();
@@ -182,25 +183,30 @@ void THWDriverThread::hwdtSloSerOpenClose(bool open){
 
 bool THWDriverThread::sendBuffer(char *TXBuffer,char *RXBuffer,uint size,uint timeout , bool TempCtrler){
     QString trace;
-    TXBuffer[size-1] = crc8(TXBuffer,size-1);
-    if (TempCtrler){//lets keep the direction pin low -> controller will toggle direction
-        serial->setRts(false);
-        trace = "RTS cleared; ";
-    }else{//for motion controll we have to controll direction pin
-        serial->setRts(true);//for sending
-        trace = "RTS set; ";
-    }
-    serial->write(TXBuffer,size);
-    if (logger()->isTraceEnabled()){
-        for (uint i=0; i< size;i++){
-            QString t;
-            t.sprintf("[0x%02X], ",(unsigned char )TXBuffer[i]);
-            trace = trace + t;
+    if (serial->isOpen()){
+        TXBuffer[size-1] = crc8(TXBuffer,size-1);
+        if (TempCtrler){//lets keep the direction pin low -> controller will toggle direction
+            serial->setRts(false);
+            trace = "RTS cleared; ";
+        }else{//for motion controll we have to controll direction pin
+            serial->setRts(true);//for sending
+            trace = "RTS set; ";
         }
-        trace = "SentTX Buffer: " + trace;
-        logger()->trace(trace);
+        serial->write(TXBuffer,size);
+        if (logger()->isTraceEnabled()){
+            for (uint i=0; i< size;i++){
+                QString t;
+                t.sprintf("[0x%02X], ",(unsigned char )TXBuffer[i]);
+                trace = trace + t;
+            }
+            trace = "SentTX Buffer: " + trace;
+            logger()->trace(trace);
+        }
+        return waitForAnswer(TXBuffer,RXBuffer,size,timeout,TempCtrler);
+    }else{
+        logger()->error("Try to use COM-Port, but it's closed");
+        return false;
     }
-    return waitForAnswer(TXBuffer,RXBuffer,size,timeout,TempCtrler);
 }
 
 bool THWDriverThread::waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,int timeout , bool TempCtrler){
@@ -563,17 +569,23 @@ bool THWDriverThread::SetShutter(THWShutterCMD ShutterCMD){
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
     txBuffer[0] =  0;
-    if (ShutterCMD == scClose){
-        txBuffer[1] =  CMD_MOT_CLOSESHUTTER;
-        logger()->debug("Close shutter");
-    }else{
-        txBuffer[1] =  CMD_MOT_OPENSHUTTER;
-        logger()->debug("Open shutter");
-    }
-    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutMotion,false)){
+    if ((ShutterCMD == scNone) || (LastShutterCMD == ShutterCMD)){
+        LastShutterCMD = ShutterCMD;
         return true;
     }else{
-        return false;
+        if (ShutterCMD == scClose){
+            txBuffer[1] =  CMD_MOT_CLOSESHUTTER;
+            logger()->debug("Close shutter");
+        }else{
+            txBuffer[1] =  CMD_MOT_OPENSHUTTER;
+            logger()->debug("Open shutter");
+        }
+        if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutMotion,false)){
+            LastShutterCMD = ShutterCMD;
+            return true;
+        }else{
+            return false;
+        }
     }
 }
 
@@ -581,7 +593,6 @@ void THWDriverThread::hwdtSloSetShutter(THWShutterCMD ShutterCMD)
 {
     if (SetShutter(ShutterCMD)){
         emit hwdtSigShutterStateChanged(ShutterCMD);
-        LastShutterCMD = ShutterCMD;
     }
 }
 
@@ -648,7 +659,7 @@ void THWDriverThread::hwdtSloMeasureScanPixel(int PosX, int PosY ,uint avg, uint
 
 void THWDriverThread::hwdtSloMeasureSpectrum(uint avg, uint integrTime,THWShutterCMD shutterCMD)
 {
-
+    THWShutterCMD shutterCMDtmp = LastShutterCMD;
     if (SetShutter(shutterCMD)){
 
 
@@ -656,8 +667,9 @@ void THWDriverThread::hwdtSloMeasureSpectrum(uint avg, uint integrTime,THWShutte
 
 
         TakeSpectrum(avg,integrTime);
-        if (SetShutter(LastShutterCMD)){
-            emit hwdtSigShutterStateChanged(LastShutterCMD);
+        emit hwdtSigGotSpectrum();
+        if (SetShutter(shutterCMDtmp)){
+            emit hwdtSigShutterStateChanged(shutterCMDtmp);
         }
     }
 }
@@ -686,7 +698,7 @@ void THWDriverThread::hwdtSloDiscoverSpectrometers(){
         logger()->debug("Spectrometer "+s+" found.");
     }
     MutexSpectrList.unlock();
-
+    emit hwdtSigSpectrometersDicovered();
 }
 
 void THWDriverThread::hwdtSloOpenSpectrometer(QString Serialnumber)
@@ -845,7 +857,7 @@ THWDriver::THWDriver()
                     HWDriverObject,SLOT (hwdtSloAskWLCoefficients( )),Qt::QueuedConnection);
 
         connect(this,SIGNAL(hwdtSigDiscoverSpectrometers()),
-                    HWDriverObject,SLOT (hwdtSloDiscoverSpectrometers()),Qt::BlockingQueuedConnection);
+                    HWDriverObject,SLOT (hwdtSloDiscoverSpectrometers()),Qt::QueuedConnection);
 
         connect(this,SIGNAL(hwdtSigOpenSpectrometer(QString )),
                     HWDriverObject,SLOT (hwdtSloOpenSpectrometer(QString )),Qt::QueuedConnection);
@@ -1048,25 +1060,35 @@ void THWDriver::hwdMeasureSpectrum(uint avg, uint integrTime,THWShutterCMD shutt
 
 uint THWDriver::hwdGetSpectrum(TSpectrum *Spectrum)
 {
+
     HWDriverObject->hwdtGetLastSpectrumBuffer(Spectrum->spectrum,&Spectrum->NumOfSpectrPixels,MAXWAVELEGNTH_BUFFER_ELEMTENTS);
     return Spectrum->NumOfSpectrPixels;
 }
 
+void THWDriver::hwdDiscoverSpectrometers()
+{
+    emit hwdtSigDiscoverSpectrometers();
+}
 
 QList<QString> THWDriver::hwdGetListSpectrometer()
 {
-    emit hwdtSigDiscoverSpectrometers();
+    //emit hwdtSigDiscoverSpectrometers();
     return HWDriverObject->hwdtGetSpectrometerList();
 }
 
 void THWDriver::hwdOpenSpectrometer(QString SerialNumber)
 {
-    emit hwdOpenSpectrometer(SerialNumber);
+    emit hwdtSigOpenSpectrometer(SerialNumber);
+    if (WavelengthBuffer != NULL){
+        for (uint i = 0;i<WavelengthBufferSize;i++){
+            WavelengthBuffer[i] = i;
+        }
+    }
 }
 
 void THWDriver::hwdCloseSpectrometer()
 {
-    emit hwdCloseSpectrometer();
+    emit hwdtSigCloseSpectrometer();
 }
 
 

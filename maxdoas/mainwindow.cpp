@@ -103,10 +103,14 @@ MainWindow::MainWindow(QWidget *parent) :
     thread()->setObjectName("Main");
     logger()->warn("test");
     //Logger("MaxDoas")->name("Main");
-
+    ms = TMaxdoasSettings::instance();
     HWDriver = new THWDriver();
+    connect(HWDriver,SIGNAL(hwdSigGotSpectrum()),this,SLOT(on_GotSpectrum()));
+    HWDriver->hwdSetWavelengthBuffer(globalWaveLengthBuffer,MAXWAVELEGNTH_BUFFER_ELEMTENTS);
+    //  HWDriver->hwdGetListSpectrometer();
     //ui->cbSpectrList->addItems(HWDriver->hwdGetListSpectrometer());
-
+    HWDriver->hwdOpenSpectrometer(ms->getPreferredSpecSerial());
+    HWDriver->hwdMeasureSpectrum(1,100,scNone);
     ImagePlot = new QwtPlot(this);
     ui->hbox->addWidget(ImagePlot);
     SpectrPlot = new QwtPlot(this);
@@ -132,10 +136,18 @@ MainWindow::MainWindow(QWidget *parent) :
             d_marker2->attach(ImagePlot);
         }
     }
+
+}
+
+void MainWindow::on_GotSpectrum(){
+    HWDriver->hwdGetSpectrum(&spectrum);
+    SpectrPlotCurve->setRawSamples(&spectrum.spectrum[0],&spectrum.Wavelength[0],spectrum.NumOfSpectrPixels);
+    SpectrPlot->replot();
+    HWDriver->hwdMeasureSpectrum(1,100,scNone);
 }
 
 void MainWindow::on_actionConfigSpectrometer_triggered(){
-    TFrmSpectrConfig *tfrmspectrconfig = new TFrmSpectrConfig();
+    TFrmSpectrConfig *tfrmspectrconfig = new TFrmSpectrConfig(HWDriver);
     tfrmspectrconfig->show();
 }
 
