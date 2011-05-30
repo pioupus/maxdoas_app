@@ -194,7 +194,7 @@ bool THWDriverThread::sendBuffer(char *TXBuffer,char *RXBuffer,uint size,uint ti
     if (logger()->isTraceEnabled()){
         for (uint i=0; i< size;i++){
             QString t;
-            t.sprintf("[0x%02X], ",TXBuffer[i]);
+            t.sprintf("[0x%02X], ",(unsigned char )TXBuffer[i]);
             trace = trace + t;
         }
         trace = "SentTX Buffer: " + trace;
@@ -245,7 +245,7 @@ bool THWDriverThread::waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,int 
                 logger()->error(QString("Transmission error tries: %1").arg(RetransmissionCounter));
             }
         }
-    }while(!TransmissionOK || !TransmissionError);
+    }while(!TransmissionOK && !TransmissionError);
 
     if (TransmissionOK){
         timer.restart();
@@ -265,7 +265,7 @@ bool THWDriverThread::waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,int 
         QString trace;
         for (uint i=0; i< BufferIndex;i++){
             QString t;
-            t.sprintf("[0x%02X], ",RXBuffer[i]);
+            t.sprintf("[0x%02X], ",(unsigned char)RXBuffer[i]);
             trace = trace + t;
         }
         trace = "Received Buffer: " + trace;
@@ -694,6 +694,7 @@ void THWDriverThread::hwdtSloOpenSpectrometer(QString Serialnumber)
     SpectrometerIndex = SpectrometerList->indexOf(Serialnumber);
     if (SpectrometerIndex == -1)
         hwdtSloDiscoverSpectrometers();
+    SpectrometerIndex = SpectrometerList->indexOf(Serialnumber);
     if (SpectrometerIndex > -1){
         LastSpectrIntegTime = -1;
         MutexSpectrBuffer.lockForWrite();
@@ -717,6 +718,7 @@ THWDriver::THWDriver()
     CompassState = csNone;
     CompassHeading = INVALID_COMPASS_HEADING;
     CompassOffset = 0;
+    WavelengthBuffer = NULL;
     LightSensorVal = INVALID_LIGHTSENSOR_VAL;
     qRegisterMetaType<THWTransferState>( "THWTransferState" );
     qRegisterMetaType<THWTempSensorID>( "THWTempSensorID" );
@@ -873,13 +875,18 @@ void THWDriver::hwdSetWavelengthBuffer(double* wlBuffer,uint Bufferlength)
 
 void THWDriver::hwdOverwriteWLCoefficients(TSPectrWLCoefficients* SpectrCoefficients)
 {
-    (void)SpectrCoefficients;
+    if (WavelengthBuffer == NULL){
+        for (uint i = 0;i<WavelengthBufferSize;i++){
+            WavelengthBuffer[i] = SpectrCoefficients->Offset+(double)i*SpectrCoefficients->Coeff0+pow((double)i,2.0)*SpectrCoefficients->Coeff1+pow((double)i,3.0)*SpectrCoefficients->Coeff2;
+        }
+    }
+    this->SpectrCoefficients = *SpectrCoefficients;
 }
 
 TSPectrWLCoefficients THWDriver::hwdGetWLCoefficients()
 {
-    TSPectrWLCoefficients Coefficients;
-    return Coefficients;
+
+    return this->SpectrCoefficients;
 }
 
 
@@ -1042,7 +1049,7 @@ void THWDriver::hwdMeasureSpectrum(uint avg, uint integrTime,THWShutterCMD shutt
 uint THWDriver::hwdGetSpectrum(TSpectrum *Spectrum)
 {
     HWDriverObject->hwdtGetLastSpectrumBuffer(Spectrum->spectrum,&Spectrum->NumOfSpectrPixels,MAXWAVELEGNTH_BUFFER_ELEMTENTS);
-    return 0;
+    return Spectrum->NumOfSpectrPixels;
 }
 
 

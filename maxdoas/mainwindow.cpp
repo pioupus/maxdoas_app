@@ -23,6 +23,9 @@
 #include "log4qt/consoleappender.h"
 #include "log4qt/logger.h"
 #include "log4qt/ttcclayout.h"
+#include "tspectrum.h"
+#include "tfrmspectrconfig.h"
+
 
 class RasterData: public QwtMatrixRasterData
 {
@@ -51,7 +54,7 @@ class ColorMap: public QwtLinearColorMap
 {
 public:
     ColorMap():
-        QwtLinearColorMap(Qt::black, Qt::red)
+    QwtLinearColorMap(Qt::black, Qt::red)
     {
 //        addColorStop(0.2, Qt::blue);
 //        addColorStop(0.4, Qt::cyan);
@@ -79,6 +82,15 @@ void MainWindow::setupLog4Qt()
     // Settings will become active on next application startup
 }
 
+void MainWindow::timerEvent(QTimerEvent *){
+    uint i;
+    TSpectrum Spectrum;
+    i = HWDriver->hwdGetSpectrum(&Spectrum);
+
+    SpectrPlotCurve->setRawSamples(&Spectrum.spectrum[0],&Spectrum.Wavelength[0],i);
+    SpectrPlot->replot();
+
+}
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -93,11 +105,14 @@ MainWindow::MainWindow(QWidget *parent) :
     //Logger("MaxDoas")->name("Main");
 
     HWDriver = new THWDriver();
+    //ui->cbSpectrList->addItems(HWDriver->hwdGetListSpectrometer());
 
     ImagePlot = new QwtPlot(this);
     ui->hbox->addWidget(ImagePlot);
     SpectrPlot = new QwtPlot(this);
     ui->hbox->addWidget(SpectrPlot);
+    SpectrPlotCurve = new QwtPlotCurve("Spectrum");
+    SpectrPlotCurve->attach(SpectrPlot);
     d_spectrogram = new QwtPlotSpectrogram();
     d_spectrogram->setRenderThreadCount(0); // use system specific thread count
 
@@ -117,12 +132,15 @@ MainWindow::MainWindow(QWidget *parent) :
             d_marker2->attach(ImagePlot);
         }
     }
-    ;
-    Log4Qt::Logger::logger("MyApplication")->warn(QString("Transmission: Checksum error! tries: %1 ").arg(5.877));
+}
+
+void MainWindow::on_actionConfigSpectrometer_triggered(){
+    TFrmSpectrConfig *tfrmspectrconfig = new TFrmSpectrConfig();
+    tfrmspectrconfig->show();
 }
 
 void MainWindow::on_actionTempctrler_triggered(){
-    TfrmTempctrl *frmtempctrler = new TfrmTempctrl();
+    TfrmTempctrl *frmtempctrler = new TfrmTempctrl(HWDriver);
     frmtempctrler->show();
 
 }

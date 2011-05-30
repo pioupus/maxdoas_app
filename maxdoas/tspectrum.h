@@ -2,6 +2,7 @@
 #define TSPECTRUM_H
 #include <QPoint>
 
+static double globalWaveLengthBuffer[MAXWAVELEGNTH_BUFFER_ELEMTENTS];
 
 struct TSPectrWLCoefficients{
     double Offset;
@@ -11,12 +12,6 @@ struct TSPectrWLCoefficients{
 };
 
 enum TSprectumType{stNone,stDarkOffset,stDarkNoise,stSunSpec,stMeasurement};
-//TSpectrum
-//    ARRAY of double
-//    position
-//    type(darkoffset,darknoise,sunspec,measurement)
-//    const integtime
-//    const avg
 
 class TSpectrum
 {
@@ -25,13 +20,13 @@ public:
     double spectrum[ MAXWAVELEGNTH_BUFFER_ELEMTENTS];
     double* Wavelength;//points to global buffer
     int NumOfSpectrPixels;
-private:
+
     TSprectumType type;
-    uint SpectrCount;
     QPoint position;
     uint IntegTime;
     uint AvgCount;
     TSPectrWLCoefficients WLCoefficients;
+    private:
 };
 
 #endif // TSPECTRUM_H

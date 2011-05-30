@@ -3,44 +3,47 @@
 
 
 
-TfrmTempctrl::TfrmTempctrl(QWidget *parent) :
+//void TfrmTempctrl::setHWDriver(THWDriver *hwdriver){
+//    this->hwdriver = hwdriver;
+//}
+
+TfrmTempctrl::TfrmTempctrl(THWDriver *hwdriver, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::TfrmTempctrl)
 {
     int i;
     ui->setupUi(this);
+    this->hwdriver=hwdriver;
     setAttribute(Qt::WA_DeleteOnClose, true);
     plot = new QwtPlot(this);
     curvePeltier = new QwtPlotCurve("Peltier");
     curveHeatsink = new QwtPlotCurve("Heatsink");
-    //curve2 = new QwtPlotCurve("Spectrometer");
+    curveSpectrometer = new QwtPlotCurve("Spectrometer");
     QwtLegend *legend = new QwtLegend;
     legend->setItemMode(QwtLegend::CheckableItem);
     plot->insertLegend(legend, QwtPlot::RightLegend);
   //  plot->aut
     ui->hbox->addWidget(plot);
-    factor1 = 1.5705;
-    factor2 = 1.5705;
-    startTimer(20);
+
+    startTimer(50);
     curvePeltier->attach(plot);
     curveHeatsink->attach(plot);
-    QPen Pen(Qt::green);
+    curveSpectrometer->attach(plot);
+    curvePeltier->setPen(QPen(Qt::green));
+    curveHeatsink->setPen(QPen(Qt::red));
+    BufferFilled = 0;
 
-    curvePeltier->setPen(Pen);
-
-
-    for (i=0;i<2000;i++){
-        BufferY1[i] = sin((double)i/1);
+    for (i=0;i<TEMPERAT_BUFFER_SIZE;i++){
+        BufferX1[i] = i;
     }
-
     connect(plot, SIGNAL(legendChecked(QwtPlotItem *, bool)),
         SLOT(showCurve(QwtPlotItem *, bool)));
 
-//    connect(this, SIGNAL(finished()),
-//        SLOT(on_close(void)));
 
     showCurve(curvePeltier, true);
     showCurve(curveHeatsink, true);
+    showCurve(curveSpectrometer, true);
+    show();
 }
 
 void TfrmTempctrl::showCurve(QwtPlotItem *item, bool on)
@@ -55,14 +58,23 @@ void TfrmTempctrl::showCurve(QwtPlotItem *item, bool on)
 
 void TfrmTempctrl::timerEvent(QTimerEvent *){
     int i;
-    for (i=0;i<2000;i++){
-        BufferX1[i] = cos((double)(i+factor1)/2);
-        BufferX2[i] = cos((double)(i+factor2)/3);
+
+    BufferFilled++;
+    if (BufferFilled == TEMPERAT_BUFFER_SIZE){
+        for (i=1;i<TEMPERAT_BUFFER_SIZE;i++){
+            BufferPeltier[i-1] = BufferPeltier[i];
+            BufferHeatSink[i-1] = BufferHeatSink[i];
+            BufferSpectrometer[i-1] = BufferSpectrometer[i];
+        }
+        BufferFilled = TEMPERAT_BUFFER_SIZE-1;
     }
-    factor1+=0.03;
-    factor2-=0.07;
-    curvePeltier->setRawSamples(&BufferX1[0],&BufferY1[0],2000);
-    curveHeatsink->setRawSamples(&BufferX2[0],&BufferY1[0],2000);
+    BufferPeltier[BufferFilled] = hwdriver->hwdGetTemperature(tsPeltier);
+    BufferHeatSink[BufferFilled] = hwdriver->hwdGetTemperature(tsHeatSink);
+    BufferSpectrometer[BufferFilled] = hwdriver->hwdGetTemperature(tsSpectrometer);
+
+    curvePeltier->setRawSamples(&BufferX1[0],&BufferPeltier[0],BufferFilled);
+    curveHeatsink->setRawSamples(&BufferX1[0],&BufferHeatSink[0],BufferFilled);
+    curveSpectrometer->setRawSamples(&BufferX1[0],&BufferSpectrometer[0],BufferFilled);
     plot->replot();
 
 }

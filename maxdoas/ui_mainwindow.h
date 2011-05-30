@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'mainwindow.ui'
 **
-** Created: Sun May 29 02:49:32 2011
+** Created: Mon May 30 00:51:46 2011
 **      by: Qt User Interface Compiler version 4.6.2
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -14,16 +14,13 @@
 #include <QtGui/QAction>
 #include <QtGui/QApplication>
 #include <QtGui/QButtonGroup>
-#include <QtGui/QComboBox>
 #include <QtGui/QGridLayout>
 #include <QtGui/QHBoxLayout>
 #include <QtGui/QHeaderView>
-#include <QtGui/QLabel>
 #include <QtGui/QMainWindow>
 #include <QtGui/QMenu>
 #include <QtGui/QMenuBar>
 #include <QtGui/QSpacerItem>
-#include <QtGui/QSpinBox>
 #include <QtGui/QStatusBar>
 #include <QtGui/QVBoxLayout>
 #include <QtGui/QWidget>
@@ -37,17 +34,10 @@ public:
     QAction *actionSensors;
     QAction *actionClose;
     QAction *actionHjkjhkj;
+    QAction *actionConfigSpectrometer;
     QWidget *centralWidget;
     QGridLayout *gridLayout;
     QVBoxLayout *verticalLayout;
-    QHBoxLayout *horizontalLayout_2;
-    QLabel *label;
-    QComboBox *comboBox;
-    QLabel *label_3;
-    QSpinBox *spinBox_2;
-    QLabel *label_2;
-    QSpinBox *spinBox;
-    QSpacerItem *horizontalSpacer;
     QHBoxLayout *hbox;
     QSpacerItem *verticalSpacer;
     QMenuBar *menuBar;
@@ -73,6 +63,8 @@ public:
         actionClose->setObjectName(QString::fromUtf8("actionClose"));
         actionHjkjhkj = new QAction(MainWindow);
         actionHjkjhkj->setObjectName(QString::fromUtf8("actionHjkjhkj"));
+        actionConfigSpectrometer = new QAction(MainWindow);
+        actionConfigSpectrometer->setObjectName(QString::fromUtf8("actionConfigSpectrometer"));
         centralWidget = new QWidget(MainWindow);
         centralWidget->setObjectName(QString::fromUtf8("centralWidget"));
         QSizePolicy sizePolicy1(QSizePolicy::Ignored, QSizePolicy::Ignored);
@@ -88,51 +80,6 @@ public:
         verticalLayout->setSpacing(6);
         verticalLayout->setObjectName(QString::fromUtf8("verticalLayout"));
         verticalLayout->setSizeConstraint(QLayout::SetNoConstraint);
-        horizontalLayout_2 = new QHBoxLayout();
-        horizontalLayout_2->setSpacing(6);
-        horizontalLayout_2->setObjectName(QString::fromUtf8("horizontalLayout_2"));
-        horizontalLayout_2->setSizeConstraint(QLayout::SetNoConstraint);
-        label = new QLabel(centralWidget);
-        label->setObjectName(QString::fromUtf8("label"));
-        label->setLayoutDirection(Qt::RightToLeft);
-
-        horizontalLayout_2->addWidget(label);
-
-        comboBox = new QComboBox(centralWidget);
-        comboBox->setObjectName(QString::fromUtf8("comboBox"));
-
-        horizontalLayout_2->addWidget(comboBox);
-
-        label_3 = new QLabel(centralWidget);
-        label_3->setObjectName(QString::fromUtf8("label_3"));
-        label_3->setLayoutDirection(Qt::RightToLeft);
-
-        horizontalLayout_2->addWidget(label_3);
-
-        spinBox_2 = new QSpinBox(centralWidget);
-        spinBox_2->setObjectName(QString::fromUtf8("spinBox_2"));
-
-        horizontalLayout_2->addWidget(spinBox_2);
-
-        label_2 = new QLabel(centralWidget);
-        label_2->setObjectName(QString::fromUtf8("label_2"));
-        label_2->setEnabled(true);
-        label_2->setLayoutDirection(Qt::RightToLeft);
-
-        horizontalLayout_2->addWidget(label_2);
-
-        spinBox = new QSpinBox(centralWidget);
-        spinBox->setObjectName(QString::fromUtf8("spinBox"));
-
-        horizontalLayout_2->addWidget(spinBox);
-
-        horizontalSpacer = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
-
-        horizontalLayout_2->addItem(horizontalSpacer);
-
-
-        verticalLayout->addLayout(horizontalLayout_2);
-
         hbox = new QHBoxLayout();
         hbox->setSpacing(6);
         hbox->setObjectName(QString::fromUtf8("hbox"));
@@ -165,6 +112,7 @@ public:
         menuFile->addAction(actionClose);
         menuConfiguration->addAction(actionTempctrler);
         menuConfiguration->addAction(actionSensors);
+        menuConfiguration->addAction(actionConfigSpectrometer);
 
         retranslateUi(MainWindow);
 
@@ -178,9 +126,7 @@ public:
         actionSensors->setText(QApplication::translate("MainWindow", "Motion controll sensors", 0, QApplication::UnicodeUTF8));
         actionClose->setText(QApplication::translate("MainWindow", "Close", 0, QApplication::UnicodeUTF8));
         actionHjkjhkj->setText(QApplication::translate("MainWindow", "hjkjhkj", 0, QApplication::UnicodeUTF8));
-        label->setText(QApplication::translate("MainWindow", "Spectrometer", 0, QApplication::UnicodeUTF8));
-        label_3->setText(QApplication::translate("MainWindow", "IntegrationTime us", 0, QApplication::UnicodeUTF8));
-        label_2->setText(QApplication::translate("MainWindow", "Average", 0, QApplication::UnicodeUTF8));
+        actionConfigSpectrometer->setText(QApplication::translate("MainWindow", "Spectrometer", 0, QApplication::UnicodeUTF8));
         menuFile->setTitle(QApplication::translate("MainWindow", "File", 0, QApplication::UnicodeUTF8));
         menuConfiguration->setTitle(QApplication::translate("MainWindow", "Configuration", 0, QApplication::UnicodeUTF8));
     } // retranslateUi
