@@ -114,7 +114,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->hbox->addWidget(ImagePlot);
     SpectrPlot = new QwtPlot(this);
     ui->hbox->addWidget(SpectrPlot);
-    SpectrPlot->setAxisScale(0,-2,20000);
+    SpectrPlot->setAxisScale(0,-2,70000);
     SpectrPlotCurve = new QwtPlotCurve("Spectrum");
     SpectrPlotCurve->attach(SpectrPlot);
     d_spectrogram = new QwtPlotSpectrogram();
@@ -145,7 +145,7 @@ void MainWindow::on_GotSpectrum(){
     HWDriver->hwdGetSpectrum(&spectrum);
     SpectrPlotCurve->setRawSamples(&spectrum.Wavelength->buf[0],&spectrum.spectrum[0],spectrum.NumOfSpectrPixels);
     SpectrPlot->replot();
-    HWDriver->hwdMeasureSpectrum(2,1000,scNone);
+    HWDriver->hwdMeasureSpectrum(20,1000,scNone);
 }
 
 void MainWindow::on_actionConfigSpectrometer_triggered(){

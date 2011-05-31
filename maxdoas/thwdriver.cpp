@@ -605,10 +605,10 @@ void THWDriverThread::TakeSpectrum(int avg, uint IntegrTime){
         for (m = 0;m<2;m++){
             //if (LastSpectrIntegTime != IntegrTime)
                 //wrapper->setIntegrationTime(SpectrometerIndex,IntegrTime);
-            if (m == 0)
-                wrapper->setIntegrationTime(SpectrometerIndex,wrapper->getMinimumIntegrationTime(SpectrometerIndex));
-            else
-                wrapper->setIntegrationTime(SpectrometerIndex,wrapper->getMinimumIntegrationTime(SpectrometerIndex)*1000);
+            if (m == 0){
+             //   wrapper->setIntegrationTime(SpectrometerIndex,wrapper->getMinimumIntegrationTime(SpectrometerIndex));
+            }else
+                wrapper->setIntegrationTime(SpectrometerIndex,wrapper->getMinimumIntegrationTime(SpectrometerIndex)*600);
             LastSpectrIntegTime = IntegrTime;
             MutexSpectrBuffer.lockForWrite();
             // NumOfPixels = wrapper->getNumberOfPixels(SpectrometerIndex);
