@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'tfrmtempctrl.ui'
 **
-** Created: Sat May 28 21:02:44 2011
+** Created: Mon May 30 23:52:23 2011
 **      by: Qt User Interface Compiler version 4.6.2
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!

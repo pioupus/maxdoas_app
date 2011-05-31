@@ -1,8 +1,9 @@
 #include "tspectrum.h"
 
+
 TSpectrum::TSpectrum()
 {
-    Wavelength = &globalWaveLengthBuffer[0];
+    Wavelength = TWavelengthbuffer::instance();
     type = stNone;
     position.setX(0);
     position.setY(0);

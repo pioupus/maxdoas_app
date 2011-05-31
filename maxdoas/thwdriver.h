@@ -8,7 +8,7 @@
 #include <QThread>
 #include <QReadWriteLock>
 #include <abstractserial.h>
-
+#include "wavelengthbuffer.h"
 #include "log4qt/consoleappender.h"
 #include "log4qt/logger.h"
 #include "log4qt/ttcclayout.h"
@@ -145,7 +145,7 @@ private:
 
     QReadWriteLock MutexSpectrBuffer;
     double LastSpectr[MAXWAVELEGNTH_BUFFER_ELEMTENTS];
-    uint SpectrBufferSize;
+  //  uint SpectrBufferSize;
     uint integTimer;
     uint SpectrAvgCount;
     Wrapper *wrapper; //Spectrometer;
@@ -169,7 +169,6 @@ class THWDriver : public QObject
 public:
     THWDriver();
 
-    void hwdSetWavelengthBuffer(double* wlBuffer,uint Bufferlength);
     void hwdOverwriteWLCoefficients(TSPectrWLCoefficients* SpectrCoefficients);
     TSPectrWLCoefficients hwdGetWLCoefficients();
 
@@ -272,8 +271,7 @@ private:
 
     QTimer *TemperatureTimer;
 
-    double *WavelengthBuffer; //for storing inside TSpectrum
-    uint WavelengthBufferSize;
+    TWavelengthbuffer *WavelengthBuffer; //for storing inside TSpectrum
     THWTempSensorID LastSensorID;
     float Temperatures[3];
     QPointF *ActualTilt;

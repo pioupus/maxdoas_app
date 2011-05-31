@@ -83,12 +83,12 @@ void MainWindow::setupLog4Qt()
 }
 
 void MainWindow::timerEvent(QTimerEvent *){
-    uint i;
-    TSpectrum Spectrum;
-    i = HWDriver->hwdGetSpectrum(&Spectrum);
-
-    SpectrPlotCurve->setRawSamples(&Spectrum.spectrum[0],&Spectrum.Wavelength[0],i);
-    SpectrPlot->replot();
+//    uint i;
+//    TSpectrum Spectrum;
+//    i = HWDriver->hwdGetSpectrum(&Spectrum);
+//
+//    SpectrPlotCurve->setRawSamples(&Spectrum.spectrum[0],&Spectrum.Wavelength[0],i);
+//    SpectrPlot->replot();
 
 }
 
@@ -106,7 +106,6 @@ MainWindow::MainWindow(QWidget *parent) :
     ms = TMaxdoasSettings::instance();
     HWDriver = new THWDriver();
     connect(HWDriver,SIGNAL(hwdSigGotSpectrum()),this,SLOT(on_GotSpectrum()));
-    HWDriver->hwdSetWavelengthBuffer(globalWaveLengthBuffer,MAXWAVELEGNTH_BUFFER_ELEMTENTS);
     //  HWDriver->hwdGetListSpectrometer();
     //ui->cbSpectrList->addItems(HWDriver->hwdGetListSpectrometer());
     HWDriver->hwdOpenSpectrometer(ms->getPreferredSpecSerial());
@@ -115,6 +114,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->hbox->addWidget(ImagePlot);
     SpectrPlot = new QwtPlot(this);
     ui->hbox->addWidget(SpectrPlot);
+    SpectrPlot->setAxisScale(0,-2,20000);
     SpectrPlotCurve = new QwtPlotCurve("Spectrum");
     SpectrPlotCurve->attach(SpectrPlot);
     d_spectrogram = new QwtPlotSpectrogram();
@@ -140,10 +140,12 @@ MainWindow::MainWindow(QWidget *parent) :
 }
 
 void MainWindow::on_GotSpectrum(){
+    double wlb[100];
+    memcpy(&wlb[0],&spectrum.Wavelength->buf,100*sizeof(double));
     HWDriver->hwdGetSpectrum(&spectrum);
-    SpectrPlotCurve->setRawSamples(&spectrum.spectrum[0],&spectrum.Wavelength[0],spectrum.NumOfSpectrPixels);
+    SpectrPlotCurve->setRawSamples(&spectrum.Wavelength->buf[0],&spectrum.spectrum[0],spectrum.NumOfSpectrPixels);
     SpectrPlot->replot();
-    HWDriver->hwdMeasureSpectrum(1,100,scNone);
+    HWDriver->hwdMeasureSpectrum(2,1000,scNone);
 }
 
 void MainWindow::on_actionConfigSpectrometer_triggered(){

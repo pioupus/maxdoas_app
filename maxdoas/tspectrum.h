@@ -1,8 +1,7 @@
 #ifndef TSPECTRUM_H
 #define TSPECTRUM_H
 #include <QPoint>
-
-static double globalWaveLengthBuffer[MAXWAVELEGNTH_BUFFER_ELEMTENTS];
+#include "wavelengthbuffer.h"
 
 struct TSPectrWLCoefficients{
     double Offset;
@@ -18,7 +17,7 @@ class TSpectrum
 public:
     TSpectrum();
     double spectrum[ MAXWAVELEGNTH_BUFFER_ELEMTENTS];
-    double* Wavelength;//points to global buffer
+    TWavelengthbuffer *Wavelength;//points to global buffer
     int NumOfSpectrPixels;
 
     TSprectumType type;

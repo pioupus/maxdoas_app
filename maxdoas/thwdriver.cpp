@@ -287,8 +287,8 @@ bool THWDriverThread::waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,int 
 
 void THWDriverThread::hwdtGetLastSpectrumBuffer(double *Spectrum, int *NumberOfSpecPixels, uint size)
 {
-    int i = SpectrBufferSize;
-    if (size < SpectrBufferSize)
+    uint i = NumOfPixels;
+    if (size < i)
         i = size;
     MutexSpectrBuffer.lockForRead();
     memcpy(Spectrum,LastSpectr,sizeof(double)*i);
@@ -597,34 +597,46 @@ void THWDriverThread::hwdtSloSetShutter(THWShutterCMD ShutterCMD)
 }
 
 void THWDriverThread::TakeSpectrum(int avg, uint IntegrTime){
-    DoubleArray Spectrbuf;
+
     double *spectrpointer;
-    int i,n;
+    int i,n,m;
     logger()->debug("Fetch Spectra");
     if (SpectrometerIndex > -1){
-        if (LastSpectrIntegTime != IntegrTime)
-            wrapper->setIntegrationTime(SpectrometerIndex,IntegrTime);
-        LastSpectrIntegTime = IntegrTime;
-        MutexSpectrBuffer.lockForWrite();
-
-        for (i=0;i<avg;i++){
-            Spectrbuf = wrapper->getSpectrum(SpectrometerIndex,0);
-            spectrpointer = Spectrbuf.getDoubleValues();
-            if (i == 0){
-                memcpy(LastSpectr,spectrpointer,sizeof(double)*NumOfPixels);
-            }else{
-                for (n = 0; n< NumOfPixels;n++){
-                    LastSpectr[n] += spectrpointer[n];
+        for (m = 0;m<2;m++){
+            //if (LastSpectrIntegTime != IntegrTime)
+                //wrapper->setIntegrationTime(SpectrometerIndex,IntegrTime);
+            if (m == 0)
+                wrapper->setIntegrationTime(SpectrometerIndex,wrapper->getMinimumIntegrationTime(SpectrometerIndex));
+            else
+                wrapper->setIntegrationTime(SpectrometerIndex,wrapper->getMinimumIntegrationTime(SpectrometerIndex)*1000);
+            LastSpectrIntegTime = IntegrTime;
+            MutexSpectrBuffer.lockForWrite();
+            // NumOfPixels = wrapper->getNumberOfPixels(SpectrometerIndex);
+            for (i=0;i<avg;i++){
+                {
+                    DoubleArray Spectrbuf;
+                    Spectrbuf = wrapper->getSpectrum(SpectrometerIndex,0);
+                    spectrpointer = Spectrbuf.getDoubleValues();
+                    if (i == 0){
+                        //                for (n = 0; n< NumOfPixels;n++){
+                        //                    LastSpectr[n] = n;
+                        //                }
+                        memcpy(LastSpectr,spectrpointer,sizeof(double)*NumOfPixels);
+                    }else{
+                        for (n = 0; n< NumOfPixels;n++){
+                            LastSpectr[n] += spectrpointer[n];
+                        }
+                    }
                 }
             }
-        }
-        if (avg > 1){
-            for (n = 0; n< NumOfPixels;n++){
-                LastSpectr[n] /= (double)avg;
+            if (avg > 1){
+                for (n = 0; n< NumOfPixels;n++){
+                    LastSpectr[n] /= (double)avg;
+                }
             }
-        }
 
-        MutexSpectrBuffer.unlock();
+            MutexSpectrBuffer.unlock();
+        }
     }else{
         logger()->error("Trying to read from Spectrometer even though its not opened yet.");
     }
@@ -703,6 +715,7 @@ void THWDriverThread::hwdtSloDiscoverSpectrometers(){
 
 void THWDriverThread::hwdtSloOpenSpectrometer(QString Serialnumber)
 {
+
     SpectrometerIndex = SpectrometerList->indexOf(Serialnumber);
     if (SpectrometerIndex == -1)
         hwdtSloDiscoverSpectrometers();
@@ -713,6 +726,7 @@ void THWDriverThread::hwdtSloOpenSpectrometer(QString Serialnumber)
         NumOfPixels = wrapper->getNumberOfPixels(SpectrometerIndex,0);
         MutexSpectrBuffer.unlock();
     }
+  //   SpectrometerIndex =0 ;
 }
 
 void THWDriverThread::hwdtSloCloseSpectrometer()
@@ -730,7 +744,6 @@ THWDriver::THWDriver()
     CompassState = csNone;
     CompassHeading = INVALID_COMPASS_HEADING;
     CompassOffset = 0;
-    WavelengthBuffer = NULL;
     LightSensorVal = INVALID_LIGHTSENSOR_VAL;
     qRegisterMetaType<THWTransferState>( "THWTransferState" );
     qRegisterMetaType<THWTempSensorID>( "THWTempSensorID" );
@@ -875,21 +888,17 @@ THWDriver::THWDriver()
     HWDriverThread->start();
     TemperatureTimer->start(200);
     hwdSetComPort("/dev/ttyUSB0");
+    WavelengthBuffer = TWavelengthbuffer::instance();
 }
 
 
 
-void THWDriver::hwdSetWavelengthBuffer(double* wlBuffer,uint Bufferlength)
-{
-    WavelengthBuffer = wlBuffer;
-    WavelengthBufferSize = Bufferlength;
-}
 
 void THWDriver::hwdOverwriteWLCoefficients(TSPectrWLCoefficients* SpectrCoefficients)
 {
-    if (WavelengthBuffer == NULL){
-        for (uint i = 0;i<WavelengthBufferSize;i++){
-            WavelengthBuffer[i] = SpectrCoefficients->Offset+(double)i*SpectrCoefficients->Coeff0+pow((double)i,2.0)*SpectrCoefficients->Coeff1+pow((double)i,3.0)*SpectrCoefficients->Coeff2;
+    if (WavelengthBuffer != NULL){
+        for (uint i = 0;i<MAXWAVELEGNTH_BUFFER_ELEMTENTS;i++){
+            WavelengthBuffer->buf[i] = SpectrCoefficients->Offset+(double)i*SpectrCoefficients->Coeff0+pow((double)i,2.0)*SpectrCoefficients->Coeff1+pow((double)i,3.0)*SpectrCoefficients->Coeff2;
         }
     }
     this->SpectrCoefficients = *SpectrCoefficients;
@@ -1080,8 +1089,8 @@ void THWDriver::hwdOpenSpectrometer(QString SerialNumber)
 {
     emit hwdtSigOpenSpectrometer(SerialNumber);
     if (WavelengthBuffer != NULL){
-        for (uint i = 0;i<WavelengthBufferSize;i++){
-            WavelengthBuffer[i] = i;
+        for (uint i = 0;i<MAXWAVELEGNTH_BUFFER_ELEMTENTS;i++){
+            WavelengthBuffer->buf[i] = i;
         }
     }
 }

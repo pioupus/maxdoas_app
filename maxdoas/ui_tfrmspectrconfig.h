@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'tfrmspectrconfig.ui'
 **
-** Created: Mon May 30 01:04:14 2011
+** Created: Mon May 30 23:52:23 2011
 **      by: Qt User Interface Compiler version 4.6.2
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -85,6 +85,12 @@ public:
 
         cbSpectrList = new QComboBox(TFrmSpectrConfig);
         cbSpectrList->setObjectName(QString::fromUtf8("cbSpectrList"));
+        QSizePolicy sizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
+        sizePolicy.setHorizontalStretch(0);
+        sizePolicy.setVerticalStretch(0);
+        sizePolicy.setHeightForWidth(cbSpectrList->sizePolicy().hasHeightForWidth());
+        cbSpectrList->setSizePolicy(sizePolicy);
+        cbSpectrList->setMinimumSize(QSize(150, 0));
 
         horizontalLayout_4->addWidget(cbSpectrList);
 

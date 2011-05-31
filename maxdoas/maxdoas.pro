@@ -36,7 +36,8 @@ SOURCES += main.cpp \
     tgassignature.cpp \
     crc8.c \
     tfrmspectrconfig.cpp \
-    maxdoassettings.cpp
+    maxdoassettings.cpp \
+    wavelengthbuffer.cpp
 HEADERS += mainwindow.h \
     tfrmtempctrl.h \
     qwtsymbolarrow.h \
@@ -48,7 +49,8 @@ HEADERS += mainwindow.h \
     tgassignature.h \
     crc8.h \
     tfrmspectrconfig.h \
-    maxdoassettings.h
+    maxdoassettings.h \
+    wavelengthbuffer.h
 FORMS += mainwindow.ui \
     tfrmtempctrl.ui \
     tfrmspectrconfig.ui
