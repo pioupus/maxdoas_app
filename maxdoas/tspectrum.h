@@ -2,13 +2,8 @@
 #define TSPECTRUM_H
 #include <QPoint>
 #include "wavelengthbuffer.h"
+#include "maxdoassettings.h"
 
-struct TSPectrWLCoefficients{
-    double Offset;
-    double Coeff0;
-    double Coeff1;
-    double Coeff2;
-};
 
 enum TSprectumType{stNone,stDarkOffset,stDarkNoise,stSunSpec,stMeasurement};
 

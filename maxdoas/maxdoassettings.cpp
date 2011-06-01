@@ -69,3 +69,27 @@ int TMaxdoasSettings::getRetrievalAutoMaxIntegTime(){
 void TMaxdoasSettings::setRetrievalAutoMaxIntegTime(int i){
     settings->setValue("RetrievalParameters/AutoMaxIntegTime",i);
 }
+
+TSPectrWLCoefficients TMaxdoasSettings::getWaveLengthCoefficients(QString serial){
+    TSPectrWLCoefficients ret;
+    ret.Offset = settings->value("WavelengthCoefficients/"+serial+"/Intercept",0).toDouble();
+    ret.Coeff1 = settings->value("WavelengthCoefficients/"+serial+"/Coef1",1).toDouble();
+    ret.Coeff2 = settings->value("WavelengthCoefficients/"+serial+"/Coef2",0).toDouble();
+    ret.Coeff3 = settings->value("WavelengthCoefficients/"+serial+"/Coef3",0).toDouble();
+    ret.overWrittenFromFile = true;
+    ret.uninitialized = !settings->value("WavelengthCoefficients/"+serial+"/UseFileInsteadOfSpectrometer",false).toBool();
+    return ret;
+}
+
+void TMaxdoasSettings::setWaveLengthCoefficients(QString serial, TSPectrWLCoefficients coef,bool lock, bool alwaysUseTheseCoef){
+    bool locked;
+    locked = settings->value("WavelengthCoefficients/"+serial+"/LockTheseCoefficients",false).toBool();
+    if ((!locked) && (!coef.uninitialized)){
+        settings->setValue("WavelengthCoefficients/"+serial+"/Intercept",coef.Offset);
+        settings->setValue("WavelengthCoefficients/"+serial+"/Coef1",coef.Coeff1);
+        settings->setValue("WavelengthCoefficients/"+serial+"/Coef2",coef.Coeff2);
+        settings->setValue("WavelengthCoefficients/"+serial+"/Coef3",coef.Coeff3);
+        settings->setValue("WavelengthCoefficients/"+serial+"/UseFileInsteadOfSpectrometer",alwaysUseTheseCoef);
+        settings->setValue("WavelengthCoefficients/"+serial+"/LockTheseCoefficients",lock);
+    }
+}

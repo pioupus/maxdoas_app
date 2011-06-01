@@ -96,6 +96,7 @@ MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
+
     ui->setupUi(this);
 
     // Log first message, which initialises Log4Qt
@@ -106,15 +107,15 @@ MainWindow::MainWindow(QWidget *parent) :
     ms = TMaxdoasSettings::instance();
     HWDriver = new THWDriver();
     connect(HWDriver,SIGNAL(hwdSigGotSpectrum()),this,SLOT(on_GotSpectrum()));
+  //  connect(this,SIGNAL(finished()),this,SLOT(on_Finished()));
     //  HWDriver->hwdGetListSpectrometer();
     //ui->cbSpectrList->addItems(HWDriver->hwdGetListSpectrometer());
-    HWDriver->hwdOpenSpectrometer(ms->getPreferredSpecSerial());
-    HWDriver->hwdMeasureSpectrum(1,100,scNone);
+
     ImagePlot = new QwtPlot(this);
     ui->hbox->addWidget(ImagePlot);
     SpectrPlot = new QwtPlot(this);
     ui->hbox->addWidget(SpectrPlot);
-    SpectrPlot->setAxisScale(0,-2,70000);
+    SpectrPlot->setAxisScale(0,-2,7000);
     SpectrPlotCurve = new QwtPlotCurve("Spectrum");
     SpectrPlotCurve->attach(SpectrPlot);
     d_spectrogram = new QwtPlotSpectrogram();
@@ -136,16 +137,31 @@ MainWindow::MainWindow(QWidget *parent) :
             d_marker2->attach(ImagePlot);
         }
     }
+    QMetaObject::invokeMethod(this,
+                                         "StartMeasure",
+                                         Qt::QueuedConnection);
 
 }
 
+void MainWindow::StartMeasure(){
+    TSPectrWLCoefficients wlcoef;
+    HWDriver->hwdOpenSpectrometer(ms->getPreferredSpecSerial());
+    wlcoef = ms->getWaveLengthCoefficients(ms->getPreferredSpecSerial());
+    HWDriver->hwdOverwriteWLCoefficients(&wlcoef);
+    HWDriver->hwdMeasureSpectrum(1,100,scNone);
+}
+
+void MainWindow::on_Finished(){
+    //delete HWDriverObject;
+}
+
 void MainWindow::on_GotSpectrum(){
-    double wlb[100];
-    memcpy(&wlb[0],&spectrum.Wavelength->buf,100*sizeof(double));
+  //  double wlb[100];
+  //  memcpy(&wlb[0],&spectrum.Wavelength->buf,100*sizeof(double));
     HWDriver->hwdGetSpectrum(&spectrum);
     SpectrPlotCurve->setRawSamples(&spectrum.Wavelength->buf[0],&spectrum.spectrum[0],spectrum.NumOfSpectrPixels);
     SpectrPlot->replot();
-    HWDriver->hwdMeasureSpectrum(20,1000,scNone);
+    HWDriver->hwdMeasureSpectrum(2,400000,scNone);
 }
 
 void MainWindow::on_actionConfigSpectrometer_triggered(){
@@ -162,6 +178,7 @@ void MainWindow::on_actionTempctrler_triggered(){
 
 MainWindow::~MainWindow()
 {
+    delete HWDriver;
     delete ImagePlot;
     delete SpectrPlot;
     delete ui;

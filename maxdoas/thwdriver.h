@@ -51,9 +51,9 @@ enum TLightSensorIntegTime {lsInteg13_7ms=0,lsInteg101ms=1,lsInteg402ms=2};
 class QThreadEx : public QThread
 {
 protected:
-    void run() {
-        exec();
-    }
+    //void run() {
+    //    exec();
+    //}
 };
 
 
@@ -66,10 +66,11 @@ public:
     THWDriverThread();
     ~THWDriverThread();
 
-    void hwdtGetLastSpectrumBuffer(double *Spectrum,int *NumberOfSpecPixels, uint size);
+    void hwdtGetLastSpectrumBuffer(double *Spectrum,int *NumberOfSpecPixels, TSPectrWLCoefficients *SpectrCoefficients, uint size);
     QList<QString> hwdtGetSpectrometerList();
 
 public slots:
+
     void hwdtSloSetComPort(QString name);
     void hwdtSloSetBaud(AbstractSerial::BaudRate baud);
     void hwdtSloSerOpenClose(bool open);
@@ -103,6 +104,10 @@ public slots:
 
     void hwdtSloCloseSpectrometer();
 
+    void CloseEverythingForLeaving();
+private slots:
+   // void threadTerminated();
+    void init();
 signals:
     void hwdtSigTransferDone(THWTransferState TransferState, uint ErrorParameter);
 
@@ -128,10 +133,12 @@ private:
     float sensorTempToCelsius(short int Temperature);
     short int CelsiusToSensorTemp(float Temperature);
     void TakeSpectrum(int avg, uint IntegrTime);
+    void newOmniWrapper();
+
     int CRCError;
 
     //float HeadingOffset;
-
+   // uint integtimetest;
     uint TiltADC_Steps;
     uint TiltADC_Gain;
     float TiltADC_RefVoltage;
@@ -148,6 +155,7 @@ private:
   //  uint SpectrBufferSize;
     uint integTimer;
     uint SpectrAvgCount;
+    TSPectrWLCoefficients SpectrCoefficients;
     Wrapper *wrapper; //Spectrometer;
     int NumberOfSpectrometers;
     int SpectrometerIndex;
@@ -168,8 +176,8 @@ class THWDriver : public QObject
         Q_OBJECT
 public:
     THWDriver();
-
-    void hwdOverwriteWLCoefficients(TSPectrWLCoefficients* SpectrCoefficients);
+    ~THWDriver();
+    void hwdOverwriteWLCoefficients(TSPectrWLCoefficients* WlCoefficients);
     TSPectrWLCoefficients hwdGetWLCoefficients();
 
     void hwdSetComPort(QString name);
@@ -221,6 +229,7 @@ private slots:  //coming from thread
     void hwdSloGotSpectrum();
     void hwdSloSpectrumeterOpened();
     void hwdSloGotWLCoefficients();
+    void hwdSlothreadFinished();
 private slots:  //internal signals
     void hwdSlotTemperatureTimer();
 signals: //thread -> outside
@@ -263,6 +272,7 @@ signals: //thread -> outside
     void hwdtSigDiscoverSpectrometers();
     void hwdtSigOpenSpectrometer(QString SerialNumber);
     void hwdtSigCloseSpectrometer();
+    void hwdtQuitThred();
 private:
 
     THWDriverThread *HWDriverObject;

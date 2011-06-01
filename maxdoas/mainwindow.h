@@ -40,11 +40,11 @@ private:
     TMaxdoasSettings *ms;
     void timerEvent(QTimerEvent *);
 private slots:
-
+    void on_Finished();
     void on_actionTempctrler_triggered();
     void on_actionConfigSpectrometer_triggered();
     void on_GotSpectrum();
-
+    void StartMeasure();
 
 };
 

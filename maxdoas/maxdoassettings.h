@@ -4,6 +4,14 @@
 #include <QSettings>
 
 #include <QMutex>
+struct TSPectrWLCoefficients{
+    double Offset;
+    double Coeff1;
+    double Coeff2;
+    double Coeff3;
+    bool overWrittenFromFile;
+    bool uninitialized;
+};
 
 class TMaxdoasSettings
 {
@@ -29,6 +37,9 @@ public:
 
     int getRetrievalAutoMaxIntegTime();
     void setRetrievalAutoMaxIntegTime(int i);
+
+    TSPectrWLCoefficients getWaveLengthCoefficients(QString serial);
+    void setWaveLengthCoefficients(QString serial, TSPectrWLCoefficients coef,bool lock, bool alwaysUseTheseCoef);
 
     static TMaxdoasSettings* instance()
     {

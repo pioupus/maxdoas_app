@@ -11,7 +11,6 @@ TFrmSpectrConfig::TFrmSpectrConfig(THWDriver *hwdriver,QWidget *parent) :
     GotSpecList = false;
     this->hwdriver=hwdriver;
     connect(hwdriver,SIGNAL(hwdSigSpectrometersDiscovered()),this,SLOT(SpectrometersDiscovered()));
-    connect(this,SIGNAL(accepted()),this,SLOT(on_accepted()));
     ms = TMaxdoasSettings::instance();
 
     ui->sbAvg->setValue(ms->getRetrievalAvgCount());
