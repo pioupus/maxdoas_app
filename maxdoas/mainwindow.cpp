@@ -19,7 +19,7 @@
 #include <qimagewriter.h>
 #include <qwt_plot_marker.h>
 #include <QSettings>
-
+#include <QCloseEvent>
 #include "log4qt/consoleappender.h"
 #include "log4qt/logger.h"
 #include "log4qt/ttcclayout.h"
@@ -63,6 +63,9 @@ public:
     }
 };
 
+
+
+
 void MainWindow::setupLog4Qt()
 {
     QSettings s;
@@ -82,31 +85,21 @@ void MainWindow::setupLog4Qt()
     // Settings will become active on next application startup
 }
 
-void MainWindow::timerEvent(QTimerEvent *){
-//    uint i;
-//    TSpectrum Spectrum;
-//    i = HWDriver->hwdGetSpectrum(&Spectrum);
-//
-//    SpectrPlotCurve->setRawSamples(&Spectrum.spectrum[0],&Spectrum.Wavelength[0],i);
-//    SpectrPlot->replot();
 
-}
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
-
-    ui->setupUi(this);
-
-    // Log first message, which initialises Log4Qt
-    setupLog4Qt();
-    thread()->setObjectName("Main");
+    closenow = false;
+    ui->setupUi(this);    
+    HWDriver = new THWDriver();
+    setupLog4Qt();    // Log first message, which initialises Log4Qt
     logger()->warn("test");
+    thread()->setObjectName("Main");
     //Logger("MaxDoas")->name("Main");
     ms = TMaxdoasSettings::instance();
-    HWDriver = new THWDriver();
-    connect(HWDriver,SIGNAL(hwdSigGotSpectrum()),this,SLOT(on_GotSpectrum()));
+
   //  connect(this,SIGNAL(finished()),this,SLOT(on_Finished()));
     //  HWDriver->hwdGetListSpectrometer();
     //ui->cbSpectrList->addItems(HWDriver->hwdGetListSpectrometer());
@@ -137,22 +130,21 @@ MainWindow::MainWindow(QWidget *parent) :
             d_marker2->attach(ImagePlot);
         }
     }
-    QMetaObject::invokeMethod(this,
-                                         "StartMeasure",
-                                         Qt::QueuedConnection);
 
+    connect(HWDriver,SIGNAL(hwdSigGotSpectrum()),this,SLOT(on_GotSpectrum()));
+        connect(HWDriver,SIGNAL(hwdSigHWThreadFinished()),this,SLOT(HWThreadFinished()));
+    QMetaObject::invokeMethod(this,
+                              "StartMeasure",
+                              Qt::QueuedConnection);
 }
 
 void MainWindow::StartMeasure(){
     TSPectrWLCoefficients wlcoef;
+
     HWDriver->hwdOpenSpectrometer(ms->getPreferredSpecSerial());
     wlcoef = ms->getWaveLengthCoefficients(ms->getPreferredSpecSerial());
     HWDriver->hwdOverwriteWLCoefficients(&wlcoef);
     HWDriver->hwdMeasureSpectrum(1,100,scNone);
-}
-
-void MainWindow::on_Finished(){
-    //delete HWDriverObject;
 }
 
 void MainWindow::on_GotSpectrum(){
@@ -163,6 +155,7 @@ void MainWindow::on_GotSpectrum(){
     SpectrPlot->replot();
     HWDriver->hwdMeasureSpectrum(2,400000,scNone);
 }
+
 
 void MainWindow::on_actionConfigSpectrometer_triggered(){
     TFrmSpectrConfig *tfrmspectrconfig = new TFrmSpectrConfig(HWDriver);
@@ -175,11 +168,40 @@ void MainWindow::on_actionTempctrler_triggered(){
 
 }
 
+void MainWindow::on_actionClose_triggered(){
+    HWDriver->stop();
+}
+
+
+void MainWindow::HWThreadFinished(){
+    close();
+}
+
+void MainWindow::closeEvent(QCloseEvent *event){
+
+
+    if (!closenow){
+        HWDriver->stop();
+
+
+        event->ignore();
+        closenow = true;
+       // QMetaObject::invokeMethod(this,
+       //                                      "close",
+       //                                      Qt::QueuedConnection);
+                //QTimer::singleShot(1000, this, SLOT(close()));
+    }else{
+        event->accept();
+    }
+
+
+}
+
 
 MainWindow::~MainWindow()
 {
-    delete HWDriver;
     delete ImagePlot;
     delete SpectrPlot;
+    delete HWDriver;
     delete ui;
 }

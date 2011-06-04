@@ -53,7 +53,7 @@
 #define CMD_TRNSMIT_OK			0xAA
 #define CMD_TRNSMIT_FAIL		0x55
 
-#define OMNI_ENABLED 0
+#define OMNI_ENABLED 1
 const uint TimeOutData  =  30; //ms
 const uint TimeOutMotion  =  10000; //ms
 
@@ -95,6 +95,8 @@ void THWDriverThread::init(){
 
     LastShutterCMD = scNone;
     wrapper = NULL;
+    if (!wrapper)
+        wrapper = new Wrapper();
     NumberOfSpectrometers = 0;
     SpectrometerIndex = -1;
     NumOfPixels = 0;
@@ -116,41 +118,43 @@ void THWDriverThread::CloseEverythingForLeaving(){
     delete SpectrometerList;
     SpectrometerList = NULL;
     if (serial)
-    serial->close();
+        serial->close();
     delete serial;
     serial = NULL;
-
+    thread()->quit();
 }
 
-//void THWDriverThread::threadTerminated(){
-//    CloseEverythingForLeaving();
-//}
-
 THWDriverThread::~THWDriverThread(){
-    CloseEverythingForLeaving();
+    //hopefully stop() was called to close the spectrometer
+    //CloseEverythingForLeaving();
 }
 
 void THWDriverThread::hwdtSloSetComPort(QString name)
 {
     hwdtSloSerOpenClose(false);
-    serial->setDeviceName(name);
+    if (serial)
+        serial->setDeviceName(name);
     hwdtSloSerOpenClose(true);
 }
 
+
 void THWDriverThread::hwdtSloSetBaud(AbstractSerial::BaudRate baud)
 {
-    if (!serial->setBaudRate(baud)) {
+    if (serial) {
+        if (!serial->setBaudRate(baud)) {
 
-        QString str;
-        QTextStream(&str) << "Set baud rate " << baud << " error.";
-        logger()->error( str );
-    };
+            QString str;
+            QTextStream(&str) << "Set baud rate " << baud << " error.";
+            logger()->error( str );
+        };
+    }
 }
 
 void THWDriverThread::hwdtSloSerOpenClose(bool open){
-    bool err = false;
-    if (open){
-        /*
+    if (serial){
+        bool err = false;
+        if (open){
+            /*
             Here using the open flag "Unbuffered".
             This flag disables the internal buffer class,
             and also disables the automatic data acquisition (disables asynchronous mode).
@@ -161,81 +165,84 @@ void THWDriverThread::hwdtSloSerOpenClose(bool open){
             Note: Behavior would be different if you open a port without a flag "Unbuffered".
                   I will not describe it - test/check it yourself. ;)
         */
-        if ( !serial->open(AbstractSerial::ReadWrite | AbstractSerial::Unbuffered) ) {
+            if ( !serial->open(AbstractSerial::ReadWrite | AbstractSerial::Unbuffered) ) {
+                QString str;
+                QTextStream(&str) << "Serial device: " << serial->deviceName() << " open fail.";
+                logger()->error(str);
+                err = true;
+            }
+            if (!serial->setBaudRate(AbstractSerial::BaudRate19200)) {
+                QString str;
+                QTextStream(&str) << "Set baud rate " << AbstractSerial::BaudRate19200 << " error.";
+                logger()->error( str );
+                err = true;
+            };
+            if (!serial->setDataBits(AbstractSerial::DataBits8)) {
+                QString str;
+                QTextStream(&str) << "Set data bits " <<  AbstractSerial::DataBits8 << " error.";
+                logger()->error( str );
+                err = true;
+            }
+            if (!serial->setParity(AbstractSerial::ParityNone)) {
+                QString str;
+                QTextStream(&str) << "Set parity " <<  AbstractSerial::ParityNone << " error.";
+                logger()->error( str );
+                err = true;
+            }
+            if (!serial->setStopBits(AbstractSerial::StopBits1)) {
+                QString str;
+                QTextStream(&str) << "Set stop bits " <<  AbstractSerial::StopBits1 << " error.";
+                logger()->error( str );
+                err = true;
+            }
+            if (!serial->setFlowControl(AbstractSerial::FlowControlOff)) {
+                QString str;
+                QTextStream(&str) << "Set flow " <<  AbstractSerial::FlowControlOff << " error.";
+                logger()->error( str );
+                err = true;
+            }
+            if (! err){
+                QString str;
+                QTextStream(&str) << "Serial device " << serial->deviceName() << " opened with " << serial->baudRate();
+                logger()->info(str);
+            }
+
+        }else{
+            serial->close();
             QString str;
-            QTextStream(&str) << "Serial device: " << serial->deviceName() << " open fail.";
-            logger()->error(str);
-            err = true;
-        }
-        if (!serial->setBaudRate(AbstractSerial::BaudRate19200)) {
-            QString str;
-            QTextStream(&str) << "Set baud rate " << AbstractSerial::BaudRate19200 << " error.";
-            logger()->error( str );
-            err = true;
-        };
-        if (!serial->setDataBits(AbstractSerial::DataBits8)) {
-            QString str;
-            QTextStream(&str) << "Set data bits " <<  AbstractSerial::DataBits8 << " error.";
-            logger()->error( str );
-            err = true;
-        }
-        if (!serial->setParity(AbstractSerial::ParityNone)) {
-            QString str;
-            QTextStream(&str) << "Set parity " <<  AbstractSerial::ParityNone << " error.";
-            logger()->error( str );
-            err = true;
-        }
-        if (!serial->setStopBits(AbstractSerial::StopBits1)) {
-            QString str;
-            QTextStream(&str) << "Set stop bits " <<  AbstractSerial::StopBits1 << " error.";
-            logger()->error( str );
-            err = true;
-        }
-        if (!serial->setFlowControl(AbstractSerial::FlowControlOff)) {
-            QString str;
-            QTextStream(&str) << "Set flow " <<  AbstractSerial::FlowControlOff << " error.";
-            logger()->error( str );
-            err = true;
-        }
-        if (! err){
-            QString str;
-            QTextStream(&str) << "Serial device " << serial->deviceName() << " opened with " << serial->baudRate();
+            QTextStream(&str) << "Serial device: " << serial->deviceName() << " closed.";
             logger()->info(str);
         }
-
-    }else{
-        serial->close();
-        QString str;
-        QTextStream(&str) << "Serial device: " << serial->deviceName() << " closed.";
-        logger()->info(str);
     }
 }
 
 bool THWDriverThread::sendBuffer(char *TXBuffer,char *RXBuffer,uint size,uint timeout , bool TempCtrler){
     QString trace;
-    if (serial->isOpen()){
-        TXBuffer[size-1] = crc8(TXBuffer,size-1);
-        if (TempCtrler){//lets keep the direction pin low -> controller will toggle direction
-            serial->setRts(false);
-            trace = "RTS cleared; ";
-        }else{//for motion controll we have to controll direction pin
-            serial->setRts(true);//for sending
-            trace = "RTS set; ";
-        }
-        serial->write(TXBuffer,size);
-        if (logger()->isTraceEnabled()){
-            for (uint i=0; i< size;i++){
-                QString t;
-                t.sprintf("[0x%02X], ",(unsigned char )TXBuffer[i]);
-                trace = trace + t;
+    if (serial){
+        if (serial->isOpen()){
+            TXBuffer[size-1] = crc8(TXBuffer,size-1);
+            if (TempCtrler){//lets keep the direction pin low -> controller will toggle direction
+                serial->setRts(false);
+                trace = "RTS cleared; ";
+            }else{//for motion controll we have to controll direction pin
+                serial->setRts(true);//for sending
+                trace = "RTS set; ";
             }
-            trace = "SentTX Buffer: " + trace;
-            logger()->trace(trace);
+            serial->write(TXBuffer,size);
+            if (logger()->isTraceEnabled()){
+                for (uint i=0; i< size;i++){
+                    QString t;
+                    t.sprintf("[0x%02X], ",(unsigned char )TXBuffer[i]);
+                    trace = trace + t;
+                }
+                trace = "SentTX Buffer: " + trace;
+                logger()->trace(trace);
+            }
+            return waitForAnswer(TXBuffer,RXBuffer,size,timeout,TempCtrler);
+        }else{
+            logger()->error("Try to use COM-Port, but it's closed");
+            return false;
         }
-        return waitForAnswer(TXBuffer,RXBuffer,size,timeout,TempCtrler);
-    }else{
-        logger()->error("Try to use COM-Port, but it's closed");
-        return false;
     }
 }
 
@@ -244,74 +251,75 @@ bool THWDriverThread::waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,int 
     bool TransmissionOK = false;
     bool TransmissionError = false;
     uint RetransmissionCounter = 0;
+    if (serial){
+        uint BufferIndex = 0;
+        timer.start();
+        if (!TempCtrler){//for motion controller we have to controll dir pin
+            while(timer.elapsed() <= 5){//lets be sure that send buffer sent completly
 
-    uint BufferIndex = 0;
-    timer.start();
-    if (!TempCtrler){//for motion controller we have to controll dir pin
-        while(timer.elapsed() <= 5){//lets be sure that send buffer sent completly
-
+            }
+            serial->setRts(false);//for receiving
+            logger()->trace("RTS cleared");
         }
-        serial->setRts(false);//for receiving
-        logger()->trace("RTS cleared");
-    }
-    timer.restart();
-    do{
-        while((timer.elapsed() <= 10) || (!TransmissionOK)){
-            if (serial->bytesAvailable() > 0)  {
-                serial->read(&RXBuffer[0], 1);
-                if ((unsigned char)RXBuffer[0] == CMD_TRNSMIT_OK){
-                    TransmissionOK = true;
-                }else{
-                    emit hwdtSigTransferDone(tsCheckSumError,RetransmissionCounter);
-                    logger()->warn(QString("Transmission: Checksum error! tries: %1 ").arg(RetransmissionCounter));
-                    break;
+        timer.restart();
+        do{
+            while((timer.elapsed() <= 10) || (!TransmissionOK)){
+                if (serial->bytesAvailable() > 0)  {
+                    serial->read(&RXBuffer[0], 1);
+                    if ((unsigned char)RXBuffer[0] == CMD_TRNSMIT_OK){
+                        TransmissionOK = true;
+                    }else{
+                        emit hwdtSigTransferDone(tsCheckSumError,RetransmissionCounter);
+                        logger()->warn(QString("Transmission: Checksum error! tries: %1 ").arg(RetransmissionCounter));
+                        break;
+                    }
                 }
             }
-        }
-        if (!TransmissionOK){
-            if (timer.elapsed() > 10){
-                emit hwdtSigTransferDone(tsTimeOut,RetransmissionCounter);
-                logger()->warn(QString("Transmission: Timeout error! tries: %1 ").arg(RetransmissionCounter));
+            if (!TransmissionOK){
+                if (timer.elapsed() > 10){
+                    emit hwdtSigTransferDone(tsTimeOut,RetransmissionCounter);
+                    logger()->warn(QString("Transmission: Timeout error! tries: %1 ").arg(RetransmissionCounter));
+                }
+                //lets retransmit
+                serial->write(TXBuffer,size);
+                RetransmissionCounter++;
+                if (RetransmissionCounter > 10){
+                    TransmissionError = true;
+                    logger()->error(QString("Transmission error tries: %1").arg(RetransmissionCounter));
+                }
             }
-            //lets retransmit
-            serial->write(TXBuffer,size);
-            RetransmissionCounter++;
-            if (RetransmissionCounter > 10){
-                TransmissionError = true;
-                logger()->error(QString("Transmission error tries: %1").arg(RetransmissionCounter));
-            }
-        }
-    }while(!TransmissionOK && !TransmissionError);
+        }while(!TransmissionOK && !TransmissionError);
 
-    if (TransmissionOK){
-        timer.restart();
-        while((timer.elapsed() <= timeout) || (BufferIndex < 9)){
-            if (serial->bytesAvailable() > 0)  {
-                serial->read(&RXBuffer[BufferIndex], 1);
-                BufferIndex++;
+        if (TransmissionOK){
+            timer.restart();
+            while((timer.elapsed() <= timeout) || (BufferIndex < 9)){
+                if (serial->bytesAvailable() > 0)  {
+                    serial->read(&RXBuffer[BufferIndex], 1);
+                    BufferIndex++;
+                }
+            }
+            TransmissionOK = BufferIndex == 9;
+            if((!TransmissionOK) && (timer.elapsed() > timeout)){
+                emit hwdtSigTransferDone(tsTimeOut,HW_TRANSMISSION_TIMEOUT_FINAL_PARAMETER);
+                logger()->error("Transmission error Timeout or answer too small ");
             }
         }
-        TransmissionOK = BufferIndex == 9;
-        if((!TransmissionOK) && (timer.elapsed() > timeout)){
-            emit hwdtSigTransferDone(tsTimeOut,HW_TRANSMISSION_TIMEOUT_FINAL_PARAMETER);
-            logger()->error("Transmission error Timeout or answer too small ");
+        if (logger()->isTraceEnabled()){
+            QString trace;
+            for (uint i=0; i< BufferIndex;i++){
+                QString t;
+                t.sprintf("[0x%02X], ",(unsigned char)RXBuffer[i]);
+                trace = trace + t;
+            }
+            trace = "Received Buffer: " + trace;
+            logger()->trace(trace);
         }
-    }
-    if (logger()->isTraceEnabled()){
-        QString trace;
-        for (uint i=0; i< BufferIndex;i++){
-            QString t;
-            t.sprintf("[0x%02X], ",(unsigned char)RXBuffer[i]);
-            trace = trace + t;
+        if (TransmissionOK){
+            emit hwdtSigTransferDone(tsOK,RetransmissionCounter);
+            logger()->debug("Transmission done and answer rxed");
         }
-        trace = "Received Buffer: " + trace;
-        logger()->trace(trace);
+        return TransmissionOK;
     }
-    if (TransmissionOK){
-        emit hwdtSigTransferDone(tsOK,RetransmissionCounter);
-        logger()->debug("Transmission done and answer rxed");
-    }
-    return TransmissionOK;
 }
 
 
@@ -633,11 +641,16 @@ void THWDriverThread::TakeSpectrum(int avg, uint IntegrTime){
 
     double *spectrpointer;
     int i,n;//,m;
+    JString s;
     logger()->debug("Fetch Spectra");
     #if OMNI_ENABLED
+    s = wrapper->getLastException();
+    if (s.getLength()==0)
+        SpectrometerIndex=0;
     if (SpectrometerIndex > -1){
          if (LastSpectrIntegTime != IntegrTime)
              wrapper->setIntegrationTime(SpectrometerIndex,IntegrTime);
+
 //        for (m = 1;m<2;m++){
 //            if (m == 0){
 //                wrapper->setIntegrationTime(SpectrometerIndex,wrapper->getMinimumIntegrationTime(SpectrometerIndex)*integtimetest);
@@ -712,9 +725,10 @@ void THWDriverThread::hwdtSloMeasureSpectrum(uint avg, uint integrTime,THWShutte
 
         emit hwdtSigShutterStateChanged(shutterCMD);
 
-
-        TakeSpectrum(avg,integrTime);
-        emit hwdtSigGotSpectrum();
+        if (wrapper){
+            TakeSpectrum(avg,integrTime);
+            emit hwdtSigGotSpectrum();
+        }
         if (SetShutter(shutterCMDtmp)){
             emit hwdtSigShutterStateChanged(shutterCMDtmp);
         }
@@ -801,7 +815,7 @@ THWDriver::THWDriver()
     LightSensorVal = INVALID_LIGHTSENSOR_VAL;
     HWDriverThread = new QThreadEx();
     HWDriverThread->setObjectName("DriverThread");
-    HWDriverObject->moveToThread(HWDriverThread);
+
     qRegisterMetaType<THWTransferState>( "THWTransferState" );
     qRegisterMetaType<THWTempSensorID>( "THWTempSensorID" );
     qRegisterMetaType<THWShutterCMD>( "THWShutterCMD" );
@@ -943,13 +957,9 @@ THWDriver::THWDriver()
 
 
     }
-
+    HWDriverObject->moveToThread(HWDriverThread);
     HWDriverThread->start();
-   // connect(HWDriverThread,SIGNAL(finished()),this,SLOT(hwdSlothreadFinished()));
-  //  connect(this,SIGNAL(hwdtQuitThred()),HWDriverObject,SLOT(quit()));
-//    producerThread.connect(&HWDriverThread,
-//                           SIGNAL(finished()),
-//                           SLOT(quit()));
+    connect(HWDriverThread,SIGNAL(finished()),this,SLOT(hwdSlothreadFinished()));
     TemperatureTimer->start(200);
    // hwdSetComPort("/dev/ttyUSB0");
     WavelengthBuffer = TWavelengthbuffer::instance();
@@ -957,28 +967,21 @@ THWDriver::THWDriver()
 }
 
 THWDriver::~THWDriver(){
- //   emit hwdtQuitThred();
-    //HWDriverThread->deleteLater();
+    //hopefully stop() was called for not deleting a running thread
     HWDriverObject->deleteLater();
-  //  HWDriverThread->deleteLater();
-    HWDriverThread->quit();
-    //HWDriverThread->terminate();
-
-  //  wait(10000);
-
-    //HWDriverThread->deleteLater();
-    //HWDriverThread->deleteLater();
-    //delete HWDriverThread;
+    HWDriverThread->deleteLater();
 }
 
+void THWDriver::stop(){
+    emit hwdtQuitThred();
+}
 
 void THWDriver::hwdSlothreadFinished(){
-    delete HWDriverObject;
+        emit hwdSigHWThreadFinished();
 }
 
 TSPectrWLCoefficients THWDriver::hwdGetWLCoefficients()
 {
-
     return this->SpectrCoefficients;
 }
 

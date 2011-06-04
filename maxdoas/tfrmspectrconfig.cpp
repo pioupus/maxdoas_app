@@ -10,6 +10,7 @@ TFrmSpectrConfig::TFrmSpectrConfig(THWDriver *hwdriver,QWidget *parent) :
     ui->setupUi(this);
     GotSpecList = false;
     this->hwdriver=hwdriver;
+    setAttribute(Qt::WA_DeleteOnClose, true);
     connect(hwdriver,SIGNAL(hwdSigSpectrometersDiscovered()),this,SLOT(SpectrometersDiscovered()));
     ms = TMaxdoasSettings::instance();
 

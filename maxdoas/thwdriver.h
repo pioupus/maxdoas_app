@@ -215,6 +215,7 @@ public:
     QList<QString> hwdGetListSpectrometer();
     void hwdOpenSpectrometer(QString SerialNumber);
     void hwdCloseSpectrometer();
+    void stop();
 
 private slots:  //coming from thread
     void hwdSloGotTemperature(THWTempSensorID sensorID, float Temperature,bool byTimer);
@@ -233,6 +234,7 @@ private slots:  //coming from thread
 private slots:  //internal signals
     void hwdSlotTemperatureTimer();
 signals: //thread -> outside
+    void hwdSigHWThreadFinished();
     void hwdSigGotTemperature(THWTempSensorID sensorID, float Temperature);
     void hwdSigGotTilt(float TiltX,float TiltY);
     void hwdSigGotCompassHeading(float Heading);

@@ -2,17 +2,12 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <qwt_plot.h>
-#include <qwt_plot_spectrogram.h>
-#include <qwt_plot_curve.h>
 
-#include "thwdriver.h"
-#include "tspectrum.h"
-
-#include "maxdoassettings.h"
 #include "log4qt/consoleappender.h"
 #include "log4qt/logger.h"
 #include "log4qt/ttcclayout.h"
+#include "mainwindowgui.h"
+#include "thwdriver.h"
 
 namespace Ui {
     class MainWindow;
@@ -28,23 +23,28 @@ public:
     void setupLog4Qt();
     ~MainWindow();
 
+private slots:
+   // void startprogram();
+
+private slots:
+    void HWThreadFinished();
+    void on_actionTempctrler_triggered();
+    void on_actionConfigSpectrometer_triggered();
+    void on_actionClose_triggered();
+    void on_GotSpectrum();
+    void StartMeasure();
+
 private:
     Ui::MainWindow *ui;
-
+    THWDriver *HWDriver;
     QwtPlot *ImagePlot;
     QwtPlot *SpectrPlot;
     QwtPlotCurve *SpectrPlotCurve;
     QwtPlotSpectrogram *d_spectrogram;
-    THWDriver *HWDriver;
     TSpectrum spectrum;
     TMaxdoasSettings *ms;
-    void timerEvent(QTimerEvent *);
-private slots:
-    void on_Finished();
-    void on_actionTempctrler_triggered();
-    void on_actionConfigSpectrometer_triggered();
-    void on_GotSpectrum();
-    void StartMeasure();
+    void closeEvent(QCloseEvent *event);
+    bool closenow;
 
 };
 
