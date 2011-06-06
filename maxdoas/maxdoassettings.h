@@ -13,6 +13,14 @@ struct TSPectrWLCoefficients{
     bool uninitialized;
 };
 
+struct TAutoIntegConf{
+    bool autoenabled;
+    float targetPeak;//in percent
+    float targetCorridor;//in percent(targetPeak-targetCorridor/2 < signal < targetPeak+targetCorridor/2)
+    uint maxIntegTime;
+    uint fixedIntegtime;
+};
+
 class TMaxdoasSettings
 {
 public:
@@ -23,23 +31,11 @@ public:
     int getRetrievalAvgCount();
     void setRetrievalAvgCount(int s);
 
-    int getRetrievalIntegTimeuS();
-    void setRetrievalIntegTimeuS(int uS);
-
-    bool getRetrievalAutoEnabled();
-    void setRetrievalAutoEnabled(bool i);
-
-    int getRetrievalAutoTargetPeak();
-    void setRetrievalAutoTargetPeak(int i);
-
-    int getRetrievalAutoTargetPeakCorridor();
-    void setRetrievalAutoTargetPeakCorridor(int i);
-
-    int getRetrievalAutoMaxIntegTime();
-    void setRetrievalAutoMaxIntegTime(int i);
-
     TSPectrWLCoefficients getWaveLengthCoefficients(QString serial);
     void setWaveLengthCoefficients(QString serial, TSPectrWLCoefficients coef,bool lock, bool alwaysUseTheseCoef);
+
+    TAutoIntegConf getAutoIntegrationRetrievalConf();
+    void setAutoIntegrationRetrievalConf(TAutoIntegConf AutoIntegrationConf);
 
     static TMaxdoasSettings* instance()
     {

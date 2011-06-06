@@ -44,7 +44,8 @@ Q_DECLARE_METATYPE(TTiltConfigGain);
 Q_DECLARE_METATYPE(AbstractSerial::BaudRate);
 enum TLightSensorGain {lsGain1=0,lsGain16=1};
 enum TLightSensorIntegTime {lsInteg13_7ms=0,lsInteg101ms=1,lsInteg402ms=2};
-//
+
+
 //classes:
 
 
@@ -66,7 +67,8 @@ public:
     THWDriverThread();
     ~THWDriverThread();
 
-    void hwdtGetLastSpectrumBuffer(double *Spectrum,int *NumberOfSpecPixels, TSPectrWLCoefficients *SpectrCoefficients, uint size);
+    void hwdtGetLastSpectrumBuffer(double *Spectrum,int *NumberOfSpecPixels, TSPectrWLCoefficients *SpectrCoefficients, uint size, double *MaxPossibleValue);
+    void hwdtSetIntegrationConfiguration(TAutoIntegConf *autoIntConf);
     QList<QString> hwdtGetSpectrometerList();
 
 public slots:
@@ -97,7 +99,6 @@ public slots:
 
     void hwdtSloMeasureSpectrum(uint avg, uint integrTime,THWShutterCMD shutterCMD);
 
-    void hwdtSloAskWLCoefficients();
     void hwdtSloDiscoverSpectrometers();
     void hwdtSloOpenSpectrometer(QString Serialnumber);
 
@@ -134,6 +135,8 @@ private:
     short int CelsiusToSensorTemp(float Temperature);
     void TakeSpectrum(int avg, uint IntegrTime);
     void newOmniWrapper();
+    bool CalcAndSetAutoIntegTime();
+    double getMaxIntensityOfLastSpect();
 
     int CRCError;
 
@@ -152,8 +155,7 @@ private:
 
     QReadWriteLock MutexSpectrBuffer;
     double LastSpectr[MAXWAVELEGNTH_BUFFER_ELEMTENTS];
-  //  uint SpectrBufferSize;
-    uint integTimer;
+
     uint SpectrAvgCount;
     TSPectrWLCoefficients SpectrCoefficients;
     Wrapper *wrapper; //Spectrometer;
@@ -161,10 +163,15 @@ private:
     int SpectrometerIndex;
     uint LastSpectrIntegTime;
     int NumOfPixels;
+    double SpectrMinIntegTime;
+    double SpectrMaxIntensity;
+    QReadWriteLock MutexintegTime;
+    TAutoIntegConf IntegTimeConf;
     AbstractSerial *serial;
     THWShutterCMD LastShutterCMD;
     QReadWriteLock MutexSpectrList;
     QList<QString> *SpectrometerList;
+
 
 };
 
@@ -211,6 +218,7 @@ public:
     void hwdMeasureSpectrum(uint avg, uint integrTime,THWShutterCMD shutterCMD);
 
     uint hwdGetSpectrum(TSpectrum *Spectrum);
+    void setIntegrationConfiguration(TAutoIntegConf *autoIntConf);
     void hwdDiscoverSpectrometers();
     QList<QString> hwdGetListSpectrometer();
     void hwdOpenSpectrometer(QString SerialNumber);
@@ -270,7 +278,6 @@ signals: //thread -> outside
     void hwdtSigMeasureScanPixel(int PosX, int PosY ,uint avg, uint integrTime);
 
     void hwdtSigMeasureSpectrum(uint avg, uint integrTime,THWShutterCMD shutterCMD);
-    void hwdtSigAskWLCoefficients();
     void hwdtSigDiscoverSpectrometers();
     void hwdtSigOpenSpectrometer(QString SerialNumber);
     void hwdtSigCloseSpectrometer();

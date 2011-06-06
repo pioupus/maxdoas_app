@@ -140,20 +140,24 @@ MainWindow::MainWindow(QWidget *parent) :
 
 void MainWindow::StartMeasure(){
     TSPectrWLCoefficients wlcoef;
-
+    TAutoIntegConf ac;
     HWDriver->hwdOpenSpectrometer(ms->getPreferredSpecSerial());
     wlcoef = ms->getWaveLengthCoefficients(ms->getPreferredSpecSerial());
     HWDriver->hwdOverwriteWLCoefficients(&wlcoef);
-    HWDriver->hwdMeasureSpectrum(1,100,scNone);
+    ac = ms->getAutoIntegrationRetrievalConf();
+    HWDriver->setIntegrationConfiguration(&ac);
+    HWDriver->hwdMeasureSpectrum(1,0,scNone);
 }
 
 void MainWindow::on_GotSpectrum(){
   //  double wlb[100];
   //  memcpy(&wlb[0],&spectrum.Wavelength->buf,100*sizeof(double));
     HWDriver->hwdGetSpectrum(&spectrum);
+    SpectrPlot->setAxisScale(0,0,spectrum.MaxPossibleValue);
+    SpectrPlot->setAxisScale(1,spectrum.Wavelength->buf[0],spectrum.Wavelength->buf[spectrum.NumOfSpectrPixels-1]);
     SpectrPlotCurve->setRawSamples(&spectrum.Wavelength->buf[0],&spectrum.spectrum[0],spectrum.NumOfSpectrPixels);
     SpectrPlot->replot();
-    HWDriver->hwdMeasureSpectrum(2,400000,scNone);
+    HWDriver->hwdMeasureSpectrum(2,0,scNone);
 }
 
 

@@ -20,6 +20,7 @@ public:
     uint IntegTime;
     uint AvgCount;
     TSPectrWLCoefficients WLCoefficients;
+    double MaxPossibleValue;
     private:
 };
 

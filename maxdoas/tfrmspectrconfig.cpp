@@ -6,20 +6,20 @@ TFrmSpectrConfig::TFrmSpectrConfig(THWDriver *hwdriver,QWidget *parent) :
     QDialog(parent),
     ui(new Ui::TFrmSpectrConfig)
 {
-
+    TAutoIntegConf integtimeconf;
     ui->setupUi(this);
     GotSpecList = false;
     this->hwdriver=hwdriver;
     setAttribute(Qt::WA_DeleteOnClose, true);
     connect(hwdriver,SIGNAL(hwdSigSpectrometersDiscovered()),this,SLOT(SpectrometersDiscovered()));
     ms = TMaxdoasSettings::instance();
-
+    integtimeconf = ms->getAutoIntegrationRetrievalConf();
     ui->sbAvg->setValue(ms->getRetrievalAvgCount());
-    ui->sbIntegrTime->setValue(ms->getRetrievalIntegTimeuS());
-    ui->sbTargetIntensity->setValue(ms->getRetrievalAutoTargetPeak());
-    ui->sbTargetCorridor->setValue(ms->getRetrievalAutoTargetPeakCorridor());
-    ui->sbMaxIntegTime->setValue(ms->getRetrievalAutoMaxIntegTime());
-    ui->rbtnAuto->setChecked(ms->getRetrievalAutoEnabled());
+    ui->sbIntegrTime->setValue(integtimeconf.fixedIntegtime);
+    ui->sbTargetIntensity->setValue(integtimeconf.targetPeak);
+    ui->sbTargetCorridor->setValue(integtimeconf.targetCorridor);
+    ui->sbMaxIntegTime->setValue(integtimeconf.maxIntegTime);
+    ui->rbtnAuto->setChecked(integtimeconf.autoenabled);
     hwdriver->hwdDiscoverSpectrometers();
 
 
@@ -63,12 +63,15 @@ void TFrmSpectrConfig::changeEvent(QEvent *e)
 }
 
 void TFrmSpectrConfig::on_buttonBox_accepted(){
+    TAutoIntegConf integtimeconf;
     if (GotSpecList)
         ms->setPreferredSpecSerial(ui->cbSpectrList->currentText());
+    integtimeconf.autoenabled       = ui->rbtnAuto->isChecked();
+    integtimeconf.fixedIntegtime    = ui->sbIntegrTime->value();
+    integtimeconf.maxIntegTime      = ui->sbMaxIntegTime->value();
+    integtimeconf.targetCorridor    = ui->sbTargetCorridor->value();
+    integtimeconf.targetPeak        = ui->sbTargetIntensity->value();
+    ms->setAutoIntegrationRetrievalConf(integtimeconf);
     ms->setRetrievalAvgCount(ui->sbAvg->value());
-    ms->setRetrievalIntegTimeuS(ui->sbIntegrTime->value());
-    ms->setRetrievalAutoTargetPeak(ui->sbTargetIntensity->value());
-    ms->setRetrievalAutoTargetPeakCorridor(ui->sbTargetCorridor->value());
-    ms->setRetrievalAutoMaxIntegTime(ui->sbMaxIntegTime->value());
-    ms->setRetrievalAutoEnabled(ui->rbtnAuto->isChecked());
+
 }

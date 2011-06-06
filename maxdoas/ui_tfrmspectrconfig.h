@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'tfrmspectrconfig.ui'
 **
-** Created: Sat Jun 4 18:32:23 2011
+** Created: Sun Jun 5 22:56:50 2011
 **      by: Qt User Interface Compiler version 4.6.2
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -146,6 +146,7 @@ public:
         sbIntegrTime = new QSpinBox(groupBox);
         sbIntegrTime->setObjectName(QString::fromUtf8("sbIntegrTime"));
         sbIntegrTime->setMinimumSize(QSize(100, 0));
+        sbIntegrTime->setMaximum(1000000000);
 
         horizontalLayout->addWidget(sbIntegrTime);
 
@@ -174,6 +175,7 @@ public:
         sbTargetIntensity = new QSpinBox(groupBox);
         sbTargetIntensity->setObjectName(QString::fromUtf8("sbTargetIntensity"));
         sbTargetIntensity->setMinimumSize(QSize(100, 0));
+        sbTargetIntensity->setMaximum(100);
 
         horizontalLayout_2->addWidget(sbTargetIntensity);
 
@@ -198,6 +200,8 @@ public:
         sbTargetCorridor = new QSpinBox(groupBox);
         sbTargetCorridor->setObjectName(QString::fromUtf8("sbTargetCorridor"));
         sbTargetCorridor->setMinimumSize(QSize(100, 0));
+        sbTargetCorridor->setMinimum(0);
+        sbTargetCorridor->setMaximum(100);
 
         horizontalLayout_5->addWidget(sbTargetCorridor);
 
@@ -219,6 +223,7 @@ public:
         sbMaxIntegTime = new QSpinBox(groupBox);
         sbMaxIntegTime->setObjectName(QString::fromUtf8("sbMaxIntegTime"));
         sbMaxIntegTime->setMinimumSize(QSize(100, 0));
+        sbMaxIntegTime->setMaximum(1000000000);
 
         horizontalLayout_3->addWidget(sbMaxIntegTime);
 
