@@ -67,7 +67,7 @@ public:
     THWDriverThread();
     ~THWDriverThread();
 
-    void hwdtGetLastSpectrumBuffer(double *Spectrum,int *NumberOfSpecPixels, TSPectrWLCoefficients *SpectrCoefficients, uint size, double *MaxPossibleValue);
+    void hwdtGetLastSpectrumBuffer(double *Spectrum,int *NumberOfSpecPixels, TSPectrWLCoefficients *SpectrCoefficients, uint size, double *MaxPossibleValue,uint *Integrationtime);
     void hwdtSetIntegrationConfiguration(TAutoIntegConf *autoIntConf);
     QList<QString> hwdtGetSpectrometerList();
 

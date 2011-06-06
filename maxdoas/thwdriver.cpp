@@ -630,7 +630,12 @@ void THWDriverThread::hwdtSloSetShutter(THWShutterCMD ShutterCMD)
 }
 
 //called from other threads!!!
-void THWDriverThread::hwdtGetLastSpectrumBuffer(double *Spectrum, int *NumberOfSpecPixels, TSPectrWLCoefficients *SpectrCoefficients ,uint size, double *MaxPossibleValue)
+void THWDriverThread::hwdtGetLastSpectrumBuffer(double *Spectrum,
+                                                int *NumberOfSpecPixels,
+                                                TSPectrWLCoefficients *SpectrCoefficients,
+                                                uint size,
+                                                double *MaxPossibleValue,
+                                                uint *Integrationtime)
 {
     uint i = NumOfPixels;
     if (size < i)
@@ -640,6 +645,7 @@ void THWDriverThread::hwdtGetLastSpectrumBuffer(double *Spectrum, int *NumberOfS
         memcpy(Spectrum,LastSpectr,sizeof(double)*i);
         *MaxPossibleValue = SpectrMaxIntensity;
         *NumberOfSpecPixels = NumOfPixels;
+        *Integrationtime = LastSpectrIntegTime;
         memcpy(SpectrCoefficients,&(this->SpectrCoefficients),sizeof(TSPectrWLCoefficients));
     }
     MutexSpectrBuffer.unlock();
@@ -1262,7 +1268,8 @@ uint THWDriver::hwdGetSpectrum(TSpectrum *Spectrum)
                                               &Spectrum->NumOfSpectrPixels,
                                               &coef,
                                               MAXWAVELEGNTH_BUFFER_ELEMTENTS,
-                                              &Spectrum->MaxPossibleValue
+                                              &Spectrum->MaxPossibleValue,
+                                              &Spectrum->IntegTime
                                               );
     if (SpectrCoefficients.uninitialized){
         memcpy(&SpectrCoefficients,&coef,sizeof(TSPectrWLCoefficients));

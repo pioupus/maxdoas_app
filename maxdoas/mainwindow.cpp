@@ -118,6 +118,24 @@ MainWindow::MainWindow(QWidget *parent) :
 
     d_spectrogram->setData(new RasterData());
     d_spectrogram->attach(ImagePlot);
+    marker_corr_top = new QwtPlotMarker();
+    marker_corr_bot = new QwtPlotMarker();
+    marker_target  = new QwtPlotMarker();
+    marker_corr_top->setSymbol( new QwtSymbol(QwtSymbol::NoSymbol  ,
+                          QColor(Qt::red), QPen(Qt::red,1), QSize(20,20)));
+    marker_corr_bot->setSymbol( new QwtSymbol(QwtSymbol::  NoSymbol,
+                          QColor(Qt::red), QPen(Qt::red,1), QSize(20,20)));
+    marker_target->setSymbol( new QwtSymbol(QwtSymbol::  NoSymbol,
+                          QColor(Qt::green), QPen(Qt::green,1), QSize(20,20)));
+
+    marker_corr_top->setLineStyle( QwtPlotMarker::HLine);
+    marker_corr_bot->setLineStyle( QwtPlotMarker::HLine);
+    marker_target->setLineStyle( QwtPlotMarker::HLine);
+
+    marker_corr_top->attach(SpectrPlot);
+    marker_corr_bot->attach(SpectrPlot);
+    marker_target->attach(SpectrPlot);
+
     QwtMarkerArrow *d_marker2;
     for (int i=0;i<32;i++){
         for (int j=0;j<32;j++){
@@ -150,9 +168,11 @@ void MainWindow::StartMeasure(){
 }
 
 void MainWindow::on_GotSpectrum(){
-  //  double wlb[100];
-  //  memcpy(&wlb[0],&spectrum.Wavelength->buf,100*sizeof(double));
+    TAutoIntegConf ac = ms->getAutoIntegrationRetrievalConf();
     HWDriver->hwdGetSpectrum(&spectrum);
+    marker_corr_top->setValue(0, ac.targetPeak*spectrum.MaxPossibleValue/100 + ac.targetCorridor*spectrum.MaxPossibleValue/100);
+    marker_corr_bot->setValue(0,ac.targetPeak*spectrum.MaxPossibleValue/100 - ac.targetCorridor*spectrum.MaxPossibleValue/100);
+    marker_target->setValue(0,ac.targetPeak*spectrum.MaxPossibleValue/100);
     SpectrPlot->setAxisScale(0,0,spectrum.MaxPossibleValue);
     SpectrPlot->setAxisScale(1,spectrum.Wavelength->buf[0],spectrum.Wavelength->buf[spectrum.NumOfSpectrPixels-1]);
     SpectrPlotCurve->setRawSamples(&spectrum.Wavelength->buf[0],&spectrum.spectrum[0],spectrum.NumOfSpectrPixels);
@@ -204,6 +224,9 @@ void MainWindow::closeEvent(QCloseEvent *event){
 
 MainWindow::~MainWindow()
 {
+    delete marker_corr_top;
+    delete marker_corr_bot;
+    delete marker_target;
     delete ImagePlot;
     delete SpectrPlot;
     delete HWDriver;

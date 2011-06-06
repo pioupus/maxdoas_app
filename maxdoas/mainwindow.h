@@ -57,6 +57,9 @@ private:
     QwtPlot *SpectrPlot;
     QwtPlotCurve *SpectrPlotCurve;
     QwtPlotSpectrogram *d_spectrogram;
+    QwtPlotMarker *marker_corr_top;
+    QwtPlotMarker *marker_corr_bot;
+    QwtPlotMarker *marker_target;
     TSpectrum spectrum;
     TMaxdoasSettings *ms;
     void closeEvent(QCloseEvent *event);
