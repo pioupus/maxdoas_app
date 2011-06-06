@@ -27,12 +27,21 @@ TFrmSpectrConfig::TFrmSpectrConfig(THWDriver *hwdriver,QWidget *parent) :
 
 void TFrmSpectrConfig::SpectrometersDiscovered(){
     QList<QString> specl;
-    QString serial;
+    int i;
+    bool changed=false;
+    QString actserial = ui->cbSpectrList->currentText();
 
     specl = hwdriver->hwdGetListSpectrometer();
-    serial = ms->getPreferredSpecSerial();
-    ui->cbSpectrList->addItems(specl);
-    ui->cbSpectrList->setCurrentIndex(specl.indexOf(serial));
+    if (actserial == "")
+        actserial = ms->getPreferredSpecSerial();
+    for (i = 0; i<specl.count();i++ ){
+        if (ui->cbSpectrList->findText(specl[i])==-1){
+            ui->cbSpectrList->addItem(specl[i]);
+            changed = true;
+        }
+    }
+    if (changed)
+        ui->cbSpectrList->setCurrentIndex(specl.indexOf(actserial));
     GotSpecList = true;
 }
 

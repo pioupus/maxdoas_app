@@ -37,8 +37,7 @@ SOURCES += main.cpp \
     crc8.c \
     tfrmspectrconfig.cpp \
     maxdoassettings.cpp \
-    wavelengthbuffer.cpp #\
-   # mainwindowgui.cpp
+    wavelengthbuffer.cpp
 HEADERS += mainwindow.h \
     tfrmtempctrl.h \
     qwtsymbolarrow.h \
@@ -51,10 +50,8 @@ HEADERS += mainwindow.h \
     crc8.h \
     tfrmspectrconfig.h \
     maxdoassettings.h \
-    wavelengthbuffer.h #\
-   # mainwindowgui.h
+    wavelengthbuffer.h
 FORMS += mainwindow.ui \
     tfrmtempctrl.ui \
-    tfrmspectrconfig.ui #\
-  #  mainwindowgui.ui
+    tfrmspectrconfig.ui
 include(../libs/log4qt/src/log4qt/log4qt.pri)

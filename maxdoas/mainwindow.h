@@ -2,11 +2,27 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-
+#include <qwt_color_map.h>
+#include <qwt_plot_spectrogram.h>
+#include <qwt_plot_layout.h>
+#include <qwt_matrix_raster_data.h>
+#include <qwt_scale_widget.h>
+#include <qwt_plot_magnifier.h>
+#include <qwt_plot_panner.h>
+#include <qwt_plot_renderer.h>
+#include <qwt_plot_grid.h>
+#include <qwt_plot_canvas.h>
+#include <qwtsymbolarrow.h>
+#include <qwtmarkerarrow.h>
+#include <qwtsymbolarrow.h>
+#include <qwtmarkerarrow.h>
+#include <qwt_plot_curve.h>
+#include <qfiledialog.h>
+#include <qimagewriter.h>
+#include <qwt_plot_marker.h>
 #include "log4qt/consoleappender.h"
 #include "log4qt/logger.h"
 #include "log4qt/ttcclayout.h"
-#include "mainwindowgui.h"
 #include "thwdriver.h"
 
 namespace Ui {
