@@ -72,7 +72,7 @@ void MainWindow::setupLog4Qt()
 
     // Set logging level for Log4Qt to TRACE
     s.beginGroup("Log4Qt");
-    s.setValue("Debug", "TRACE");
+    s.setValue("Debug", "ERROR");
 
     // Configure logging to log to the file C:/myapp.log using the level TRACE
     s.beginGroup("Properties");
@@ -80,7 +80,7 @@ void MainWindow::setupLog4Qt()
     s.setValue("log4j.appender.A1.file", "log4qt.log");
     s.setValue("log4j.appender.A1.layout", "org.apache.log4j.TTCCLayout");
     s.setValue("log4j.appender.A1.layout.DateFormat", "ISO8601");
-    s.setValue("log4j.rootLogger", "TRACE, A1");
+    s.setValue("log4j.rootLogger", "ERROR, A1");
 
     // Settings will become active on next application startup
 }
@@ -159,7 +159,7 @@ MainWindow::MainWindow(QWidget *parent) :
 void MainWindow::StartMeasure(){
     TSPectrWLCoefficients wlcoef;
     TAutoIntegConf ac;
-    HWDriver->hwdSetComPort("/dev/ttyUSB0");
+    HWDriver->hwdSetComPort("/dev/ttyUSB1");
     HWDriver->hwdOpenSpectrometer(ms->getPreferredSpecSerial());
     wlcoef = ms->getWaveLengthCoefficients(ms->getPreferredSpecSerial());
     HWDriver->hwdOverwriteWLCoefficients(&wlcoef);

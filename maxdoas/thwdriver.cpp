@@ -358,10 +358,10 @@ void THWDriverThread::hwdtSloAskTemperature(THWTempSensorID sensorID, bool byTim
         TemperaturePeltier =  sensorTempToCelsius(siTemperature);
         siTemperature = (uint8_t)rxBuffer[P2];
         siTemperature += rxBuffer[P3]<<8;
-        TemperatureSpectr =  sensorTempToCelsius(siTemperature);
+        TemperatureHeatsink =  sensorTempToCelsius(siTemperature);
         siTemperature = (uint8_t)rxBuffer[P4];
         siTemperature += rxBuffer[P5]<<8;
-        TemperatureHeatsink =  sensorTempToCelsius(siTemperature);
+        TemperatureSpectr =  sensorTempToCelsius(siTemperature);
         logger()->debug(QString("Temperature of Sensor Peltier: %1C, Spectr: %2C, Heatsink: %3C").arg(TemperaturePeltier).arg(TemperatureSpectr).arg(TemperatureHeatsink));
         emit hwdtSigGotTemperature(sensorID, TemperaturePeltier,TemperatureSpectr,TemperatureHeatsink,byTimer);
     }

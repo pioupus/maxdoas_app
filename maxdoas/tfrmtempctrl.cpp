@@ -3,9 +3,6 @@
 
 
 
-//void TfrmTempctrl::setHWDriver(THWDriver *hwdriver){
-//    this->hwdriver = hwdriver;
-//}
 
 TfrmTempctrl::TfrmTempctrl(THWDriver *hwdriver, QWidget *parent) :
     QDialog(parent),
