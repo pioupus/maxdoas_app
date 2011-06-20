@@ -43,7 +43,7 @@ private:
 
 private slots:
     void showCurve(QwtPlotItem *item, bool on);
-
+    void SloGotTemperature(float TemperaturePeltier, float TemperatureSpectr, float TemperatureHeatsink);
 protected:
     virtual void timerEvent(QTimerEvent *e);
 };

@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'tfrmspectrconfig.ui'
 **
-** Created: Sun Jun 5 22:56:50 2011
+** Created: Sun Jun 19 20:57:10 2011
 **      by: Qt User Interface Compiler version 4.6.2
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!

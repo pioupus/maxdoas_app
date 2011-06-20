@@ -159,6 +159,7 @@ MainWindow::MainWindow(QWidget *parent) :
 void MainWindow::StartMeasure(){
     TSPectrWLCoefficients wlcoef;
     TAutoIntegConf ac;
+    HWDriver->hwdSetComPort("/dev/ttyUSB0");
     HWDriver->hwdOpenSpectrometer(ms->getPreferredSpecSerial());
     wlcoef = ms->getWaveLengthCoefficients(ms->getPreferredSpecSerial());
     HWDriver->hwdOverwriteWLCoefficients(&wlcoef);

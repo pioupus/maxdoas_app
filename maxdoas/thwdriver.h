@@ -112,7 +112,7 @@ private slots:
 signals:
     void hwdtSigTransferDone(THWTransferState TransferState, uint ErrorParameter);
 
-    void hwdtSigGotTemperature(THWTempSensorID sensorID, float Temperature, bool byTimer);
+    void hwdtSigGotTemperature(THWTempSensorID sensorID, float TemperaturePeltier,float TemperatureSpectr,float TemperatureHeatsink, bool byTimer);
     void hwdtSigGotTilt(float TiltX,float TiltY);
 
     void hwdtSigGotCompassHeading(float Heading);
@@ -226,7 +226,7 @@ public:
     void stop();
 
 private slots:  //coming from thread
-    void hwdSloGotTemperature(THWTempSensorID sensorID, float Temperature,bool byTimer);
+    void hwdSloGotTemperature(THWTempSensorID sensorID, float TemperaturePeltier, float TemperatureSpectr,float TemperatureHeatsink,bool byTimer);
     void hwdSloGotTilt(float TiltX,float TiltY);
     void hwdSloGotCompassHeading(float Heading);
     void hwdSloCompassStartedCalibrating();
@@ -243,7 +243,7 @@ private slots:  //internal signals
     void hwdSlotTemperatureTimer();
 signals: //thread -> outside
     void hwdSigHWThreadFinished();
-    void hwdSigGotTemperature(THWTempSensorID sensorID, float Temperature);
+    void hwdSigGotTemperatures(float TemperaturePeltier,float TemperatureSpectr,float TemperatureHeatsink);
     void hwdSigGotTilt(float TiltX,float TiltY);
     void hwdSigGotCompassHeading(float Heading);
     void hwdSigCompassStartedCalibrating();

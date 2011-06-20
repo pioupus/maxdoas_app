@@ -54,7 +54,7 @@
 #define CMD_TRNSMIT_FAIL		0x55
 
 #define OMNI_ENABLED 1
-const uint TimeOutData  =  30; //ms
+const uint TimeOutData  =  300; //ms
 const uint TimeOutMotion  =  10000; //ms
 
 
@@ -258,7 +258,7 @@ bool THWDriverThread::waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,int 
         uint BufferIndex = 0;
         timer.start();
         if (!TempCtrler){//for motion controller we have to controll dir pin
-            while(timer.elapsed() <= 5){//lets be sure that send buffer sent completly
+            while(timer.elapsed() <= 10){//lets be sure that send buffer sent completly
 
             }
             serial->setRts(false);//for receiving
@@ -266,7 +266,7 @@ bool THWDriverThread::waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,int 
         }
         timer.restart();
         do{
-            while((timer.elapsed() <= 10) || (!TransmissionOK)){
+            while((timer.elapsed() <= 50) && (!TransmissionOK)){
                 if (serial->bytesAvailable() > 0)  {
                     serial->read(&RXBuffer[0], 1);
                     if ((unsigned char)RXBuffer[0] == CMD_TRNSMIT_OK){
@@ -279,7 +279,7 @@ bool THWDriverThread::waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,int 
                 }
             }
             if (!TransmissionOK){
-                if (timer.elapsed() > 10){
+                if (timer.elapsed() > 50){
                     emit hwdtSigTransferDone(tsTimeOut,RetransmissionCounter);
                     logger()->warn(QString("Transmission: Timeout error! tries: %1 ").arg(RetransmissionCounter));
                 }
@@ -295,13 +295,13 @@ bool THWDriverThread::waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,int 
 
         if (TransmissionOK){
             timer.restart();
-            while((timer.elapsed() <= timeout) || (BufferIndex < 9)){
+            while((timer.elapsed() <= timeout) && (BufferIndex < size)){
                 if (serial->bytesAvailable() > 0)  {
                     serial->read(&RXBuffer[BufferIndex], 1);
                     BufferIndex++;
                 }
             }
-            TransmissionOK = BufferIndex == 9;
+            TransmissionOK = BufferIndex == size;
             if((!TransmissionOK) && (timer.elapsed() > timeout)){
                 emit hwdtSigTransferDone(tsTimeOut,HW_TRANSMISSION_TIMEOUT_FINAL_PARAMETER);
                 logger()->error("Transmission error Timeout or answer too small ");
@@ -330,41 +330,55 @@ bool THWDriverThread::waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,int 
 
 
 float THWDriverThread::sensorTempToCelsius(short int Temperature){
-    return Temperature;
+    return Temperature*0.0625;
 }
 
 short int THWDriverThread::CelsiusToSensorTemp(float Temperature){
-    return Temperature;
+    return round(Temperature/0.0625);
 }
 
 void THWDriverThread::hwdtSloAskTemperature(THWTempSensorID sensorID, bool byTimer)
 {
-    const uint Bufferlength = 9;
+    const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
     logger()->debug(QString("Asking for Temperature. SensorID: %1").arg(sensorIDtoInt(sensorID)));
+    for (uint i = 0; i < Bufferlength;i++){
+        txBuffer[i] =  0;
+        rxBuffer[i] =  0;
+    }
     txBuffer[0] =  0;
-    txBuffer[1] =  CMD_TEMP_READ_SENSORID;
+    txBuffer[1] =  CMD_TEMP_READ_SENSOR;
     txBuffer[P1] =  sensorIDtoInt(sensorID);
     if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,true)){
         int16_t siTemperature;
-        float Temperature;
-        siTemperature = rxBuffer[P2];
-        siTemperature += rxBuffer[P1]>>8;
-        Temperature =  sensorTempToCelsius(siTemperature);
-        logger()->debug(QString("Temperature of Sensor ID: %1 is %2 C").arg(sensorIDtoInt(sensorID)).arg(Temperature));
-        emit hwdtSigGotTemperature(sensorID, sensorTempToCelsius(Temperature),byTimer);
+        float TemperaturePeltier,TemperatureSpectr,TemperatureHeatsink;
+        siTemperature = (uint8_t)rxBuffer[P0];
+        siTemperature += rxBuffer[P1]<<8;
+        TemperaturePeltier =  sensorTempToCelsius(siTemperature);
+        siTemperature = (uint8_t)rxBuffer[P2];
+        siTemperature += rxBuffer[P3]<<8;
+        TemperatureSpectr =  sensorTempToCelsius(siTemperature);
+        siTemperature = (uint8_t)rxBuffer[P4];
+        siTemperature += rxBuffer[P5]<<8;
+        TemperatureHeatsink =  sensorTempToCelsius(siTemperature);
+        logger()->debug(QString("Temperature of Sensor Peltier: %1C, Spectr: %2C, Heatsink: %3C").arg(TemperaturePeltier).arg(TemperatureSpectr).arg(TemperatureHeatsink));
+        emit hwdtSigGotTemperature(sensorID, TemperaturePeltier,TemperatureSpectr,TemperatureHeatsink,byTimer);
     }
 
 }
 
 void THWDriverThread::hwdtSloSetTargetTemperature(float temperature)
 {
-    const uint Bufferlength = 9;
+    const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
     logger()->debug(QString("Setting target temperature. Temperature: %1 C").arg(temperature));
     int16_t siTemperature = CelsiusToSensorTemp(temperature);
+    for (uint i = 0; i < Bufferlength;i++){
+        txBuffer[i] =  0;
+        rxBuffer[i] =  0;
+    }
     txBuffer[0] =  0;
     txBuffer[1] =  CMD_TEMP_WRITE_SHOULD_TEMP;
     txBuffer[P1] = (siTemperature >> 8) & 0xFF;
@@ -405,9 +419,13 @@ void THWDriverThread::hwdtSloOffsetTilt(float TiltX, float TiltY){
 
 
 void THWDriverThread::hwdtSloConfigTilt(TTiltConfigRes Resolution,TTiltConfigGain Gain){
-    const uint Bufferlength = 9;
+    const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
+    for (uint i = 0; i < Bufferlength;i++){
+        txBuffer[i] =  0;
+        rxBuffer[i] =  0;
+    }
     txBuffer[0] =  0;
     txBuffer[1] =  CMD_MOT_INCLIN_SET_INIT;
     txBuffer[P1] = TiltGainToConfBit(Gain);//gain
@@ -422,9 +440,13 @@ void THWDriverThread::hwdtSloConfigTilt(TTiltConfigRes Resolution,TTiltConfigGai
 void THWDriverThread::hwdtSloAskTilt()
 {
 
-    const uint Bufferlength = 9;
+    const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
+    for (uint i = 0; i < Bufferlength;i++){
+        txBuffer[i] =  0;
+        rxBuffer[i] =  0;
+    }
     txBuffer[0] =  0;
     txBuffer[1] =  CMD_MOT_INCLIN_READ;
     logger()->debug("Asking Tilt Sensor");
@@ -483,9 +505,13 @@ void THWDriverThread::hwdtSloAskCompass()
 {
 
 
-    const uint Bufferlength = 9;
+    const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
+    for (uint i = 0; i < Bufferlength;i++){
+        txBuffer[i] =  0;
+        rxBuffer[i] =  0;
+    }
     txBuffer[0] =  0;
     txBuffer[1] =  CMD_MOT_COMPASS_READ;
     logger()->debug("Asking Compass");
@@ -507,9 +533,13 @@ void THWDriverThread::hwdtSloAskCompass()
 
 void THWDriverThread::hwdtSloStartCompassCal()
 {
-    const uint Bufferlength = 9;
+    const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
+    for (uint i = 0; i < Bufferlength;i++){
+        txBuffer[i] =  0;
+        rxBuffer[i] =  0;
+    }
     txBuffer[0] =  0;
     txBuffer[1] =  CMD_MOT_COMPASS_CAL_ENTER;
     logger()->debug("Compass Calibration start");
@@ -520,9 +550,13 @@ void THWDriverThread::hwdtSloStartCompassCal()
 
 void THWDriverThread::hwdtSloStopCompassCal()
 {
-    const uint Bufferlength = 9;
+    const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
+    for (uint i = 0; i < Bufferlength;i++){
+        txBuffer[i] =  0;
+        rxBuffer[i] =  0;
+    }
     txBuffer[0] =  0;
     txBuffer[1] =  CMD_MOT_COMPASS_CAL_EXIT;
     logger()->debug("Compass Calibration stop");
@@ -534,9 +568,13 @@ void THWDriverThread::hwdtSloStopCompassCal()
 void THWDriverThread::hwdtSloConfigLightSensor(TLightSensorGain Gain, TLightSensorIntegTime LightSensorIntegTime){
     int g;
     float integ=0;
-    const uint Bufferlength = 9;
+    const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
+    for (uint i = 0; i < Bufferlength;i++){
+        txBuffer[i] =  0;
+        rxBuffer[i] =  0;
+    }
     txBuffer[0] =  0;
     txBuffer[1] =  CMD_MOT_LIGHT_INIT;
     txBuffer[P1] =  1; //switch on
@@ -559,9 +597,13 @@ void THWDriverThread::hwdtSloConfigLightSensor(TLightSensorGain Gain, TLightSens
 }
 
 void THWDriverThread::hwdtSloAskLightSensor(){
-    const uint Bufferlength = 9;
+    const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
+    for (uint i = 0; i < Bufferlength;i++){
+        txBuffer[i] =  0;
+        rxBuffer[i] =  0;
+    }
     txBuffer[0] =  0;
     txBuffer[1] =  CMD_MOT_LIGHT_READ;
     logger()->debug("Ask Light Sensor");
@@ -586,9 +628,13 @@ void THWDriverThread::hwdtSloAskLightSensor(){
 
 void THWDriverThread::hwdtSloGoMotorHome(void)
 {
-    const uint Bufferlength = 9;
+    const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
+    for (uint i = 0; i < Bufferlength;i++){
+        txBuffer[i] =  0;
+        rxBuffer[i] =  0;
+    }
     txBuffer[0] = 0;
     txBuffer[1] = CMD_MOT_CALIBRATION;
     logger()->debug("Calibrate Motor");
@@ -598,9 +644,13 @@ void THWDriverThread::hwdtSloGoMotorHome(void)
 }
 
 bool THWDriverThread::SetShutter(THWShutterCMD ShutterCMD){
-    const uint Bufferlength = 9;
+    const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
+    for (uint i = 0; i < Bufferlength;i++){
+        txBuffer[i] =  0;
+        rxBuffer[i] =  0;
+    }
     txBuffer[0] =  0;
     if ((ShutterCMD == scNone) || (LastShutterCMD == ShutterCMD)){
         LastShutterCMD = ShutterCMD;
@@ -773,11 +823,15 @@ void THWDriverThread::TakeSpectrum(int avg, uint IntegrTime){
 
 void THWDriverThread::hwdtSloMeasureScanPixel(int PosX, int PosY ,uint avg, uint integrTime)
 {
-    const uint Bufferlength = 9;
+    const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
     int32_t PosStationary = PosX;
     int32_t PosMirror = PosY;
+    for (uint i = 0; i < Bufferlength;i++){
+        txBuffer[i] =  0;
+        rxBuffer[i] =  0;
+    }
     txBuffer[0] =  0;
     txBuffer[1] =  CMD_MOT_RAMP;
 
@@ -931,10 +985,10 @@ THWDriver::THWDriver()
 
     //Connection of outgoing signals..
     {
-        connect(HWDriverObject,SIGNAL(hwdtSigGotTemperature(THWTempSensorID , float ,bool)),
-                    this,SLOT (hwdSloGotTemperature(THWTempSensorID , float ,bool)),Qt::QueuedConnection);
-        connect(HWDriverObject,SIGNAL(hwdtSigGotTemperature(THWTempSensorID , float, bool )),
-                    this,SIGNAL (hwdSigGotTemperature(THWTempSensorID , float )),Qt::QueuedConnection);
+        connect(HWDriverObject,SIGNAL(hwdtSigGotTemperature(THWTempSensorID , float,float,float ,bool)),
+                    this,SLOT (hwdSloGotTemperature(THWTempSensorID , float,float,float ,bool)),Qt::QueuedConnection);
+        connect(HWDriverObject,SIGNAL(hwdtSigGotTemperature(THWTempSensorID , float,float,float, bool )),
+                    this,SIGNAL (hwdSigGotTemperature(float , float,float )),Qt::QueuedConnection);
 
         connect(HWDriverObject,SIGNAL(hwdtSigGotTilt(float,float)),
                     this,SLOT (hwdSloGotTilt(float,float)),Qt::QueuedConnection);
@@ -1063,7 +1117,7 @@ THWDriver::THWDriver()
     HWDriverObject->moveToThread(HWDriverThread);
     HWDriverThread->start();
     connect(HWDriverThread,SIGNAL(finished()),this,SLOT(hwdSlothreadFinished()));
-    TemperatureTimer->start(200);
+    TemperatureTimer->start(1000);
    // hwdSetComPort("/dev/ttyUSB0");
     WavelengthBuffer = TWavelengthbuffer::instance();
     SpectrCoefficients.uninitialized = true;
@@ -1110,19 +1164,14 @@ void THWDriver::hwdSlotTemperatureTimer(){
     emit hwdtSigAskTemperature(tsPeltier,true);
 }
 
-void THWDriver::hwdSloGotTemperature(THWTempSensorID sensorID, float Temperature, bool byTimer)
+void THWDriver::hwdSloGotTemperature(THWTempSensorID sensorID, float TemperaturePeltier, float TemperatureSpectr,float TemperatureHeatsink,bool byTimer)
 {
-    int i = sensorIDtoInt(sensorID);
-    Temperatures[i] = Temperature;
-    if (byTimer){
-        if (sensorID != tsSpectrometer){
-            if (sensorID == tsHeatSink)
-                sensorID = tsSpectrometer;
-            if (sensorID == tsPeltier)
-                sensorID = tsHeatSink;
-            emit hwdtSigAskTemperature(sensorID,byTimer);
-        }
-    }
+    (void)byTimer;
+    (void)sensorID;
+    Temperatures[sensorIDtoInt(tsPeltier)] = TemperaturePeltier;
+    Temperatures[sensorIDtoInt(tsSpectrometer)] = TemperatureSpectr;
+    Temperatures[sensorIDtoInt(tsHeatSink)] = TemperatureHeatsink;
+    emit hwdSigGotTemperatures(TemperaturePeltier,TemperatureSpectr,TemperatureHeatsink);
 }
 
 void THWDriver::hwdAskTemperature(THWTempSensorID sensorID)
