@@ -41,6 +41,12 @@ TfrmTempctrl::TfrmTempctrl(THWDriver *hwdriver, QWidget *parent) :
     showCurve(curvePeltier, true);
     showCurve(curveHeatsink, true);
     showCurve(curveSpectrometer, true);
+
+    this->m_sde = new SerialDeviceEnumerator(this);
+    connect(this->m_sde, SIGNAL(hasChanged(QStringList)),
+            this, SLOT(slotCOMPorts(QStringList)));
+    this->m_sde->setEnabled(true);
+
     show();
 }
 
@@ -85,8 +91,46 @@ void TfrmTempctrl::timerEvent(QTimerEvent *){
 
 }
 
+void TfrmTempctrl::slotCOMPorts(const QStringList &list)
+{
+    qDebug() << "\n ===> All devices: " << list;
+    ui->cbCOMPort->clear();
+    foreach (QString s, list) {
+        this->m_sde->setDeviceName(s);
+
+        ui->cbCOMPort->addItem(s+" | "+m_sde->description());
+//        qDebug() << "\n <<< info about: " << this->m_sde->name() << " >>>";
+//        qDebug() << "-> description  : " << this->m_sde->description();
+//        qDebug() << "-> driver       : " << this->m_sde->driver();
+//        qDebug() << "-> friendlyName : " << this->m_sde->friendlyName();
+//        qDebug() << "-> hardwareID   : " << this->m_sde->hardwareID();
+//        qDebug() << "-> locationInfo : " << this->m_sde->locationInfo();
+//        qDebug() << "-> manufacturer : " << this->m_sde->manufacturer();
+//        qDebug() << "-> productID    : " << this->m_sde->productID();
+//        qDebug() << "-> service      : " << this->m_sde->service();
+//        qDebug() << "-> shortName    : " << this->m_sde->shortName();
+//        qDebug() << "-> subSystem    : " << this->m_sde->subSystem();
+//        qDebug() << "-> systemPath   : " << this->m_sde->systemPath();
+//        qDebug() << "-> vendorID     : " << this->m_sde->vendorID();
+
+//        qDebug() << "-> revision     : " << this->m_sde->revision();
+//        qDebug() << "-> bus          : " << this->m_sde->bus();
+//        //
+//        qDebug() << "-> is exists    : " << this->m_sde->isExists();
+//        qDebug() << "-> is busy      : " << this->m_sde->isBusy();
+    }
+}
+
 
 TfrmTempctrl::~TfrmTempctrl()
 {
+    delete m_sde;
     delete ui;
+}
+
+void TfrmTempctrl::on_cbCOMPort_activated(QString s)
+{
+    int i = s.indexOf(" | ");
+    m_sde->setDeviceName(s.left(i));
+    ui->lblFixedName->setText(m_sde->systemPath());
 }

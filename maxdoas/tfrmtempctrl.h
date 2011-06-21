@@ -11,6 +11,7 @@
 #include <qwt_legend_item.h>
 #include <qwt_plot_canvas.h>
 #include "thwdriver.h"
+#include "serialdeviceenumerator.h"
 
 #define TEMPERAT_BUFFER_SIZE 100
 
@@ -40,10 +41,12 @@ private:
     int BufferFilled;
     double factor1,factor2;
     THWDriver *hwdriver;
-
+    SerialDeviceEnumerator *m_sde;
 private slots:
+    void on_cbCOMPort_activated(QString s);
     void showCurve(QwtPlotItem *item, bool on);
     void SloGotTemperature(float TemperaturePeltier, float TemperatureSpectr, float TemperatureHeatsink);
+    void slotCOMPorts(const QStringList &list);
 protected:
     virtual void timerEvent(QTimerEvent *e);
 };

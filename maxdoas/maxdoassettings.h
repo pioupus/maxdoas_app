@@ -21,6 +21,12 @@ struct TAutoIntegConf{
     uint fixedIntegtime;
 };
 
+struct TCOMPortConf{
+    bool ByName;
+    QString Name;
+    QString SysPath;
+};
+
 class TMaxdoasSettings
 {
 public:
@@ -36,6 +42,9 @@ public:
 
     TAutoIntegConf getAutoIntegrationRetrievalConf();
     void setAutoIntegrationRetrievalConf(TAutoIntegConf AutoIntegrationConf);
+
+    TCOMPortConf getComPortConfiguration();
+    void setComPortConfiguration(TCOMPortConf ComPortConfiguration);
 
     static TMaxdoasSettings* instance()
     {

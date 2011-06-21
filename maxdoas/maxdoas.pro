@@ -6,7 +6,7 @@ QT += core \
 TARGET = maxdoas
 TEMPLATE = app
 INCLUDEPATH += ../libs/qserialdevice/src/qserialdevice
-INCLUDEPATH += ../libs/qwt-6.0/src
+INCLUDEPATH += ../libs/qserialdevice/src/qserialdeviceenumerator
 INCLUDEPATH += ../libs/qwt-6.0/src
 INCLUDEPATH += /usr/lib/jvm/default-java/include
 INCLUDEPATH += /usr/lib/jvm/default-java/include/linux
@@ -18,6 +18,14 @@ QMAKE_LIBDIR += ../libs/qserialdevice/src/build/release
 QMAKE_LIBDIR += /opt/OceanOptics/OmniDriverSPAM/OOI_HOME
 QMAKE_CXXFLAGS += -DLINUX
 QMAKE_CXXFLAGS += -DMAXWAVELEGNTH_BUFFER_ELEMTENTS=4096
+
+win32 {
+    LIBS += -lsetupapi -luuid -ladvapi32
+}
+unix:!macx {
+    LIBS += -ludev
+}
+
 LIBS += -lqserialdevice
 LIBS += -lqwt
 LIBS += -lOmniDriver
