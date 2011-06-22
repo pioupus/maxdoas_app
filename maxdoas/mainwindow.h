@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QLabel>
 #include <qwt_color_map.h>
 #include <qwt_plot_spectrogram.h>
 #include <qwt_plot_layout.h>
@@ -49,6 +50,7 @@ private slots:
     void on_actionClose_triggered();
     void on_GotSpectrum();
     void StartMeasure();
+    void COMPortChanged(QString name, bool opened, bool error);
 
 private:
     Ui::MainWindow *ui;
@@ -60,6 +62,7 @@ private:
     QwtPlotMarker *marker_corr_top;
     QwtPlotMarker *marker_corr_bot;
     QwtPlotMarker *marker_target;
+    QLabel *lblComPortStatus;
     TSpectrum spectrum;
     TMaxdoasSettings *ms;
     void closeEvent(QCloseEvent *event);

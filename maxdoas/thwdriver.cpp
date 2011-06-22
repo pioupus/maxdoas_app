@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <qmath.h>
 #include <JString.h>
+#include <QTest>
 
 #define P0	2
 #define P1	3
@@ -133,9 +134,11 @@ THWDriverThread::~THWDriverThread(){
 void THWDriverThread::hwdtSloSetComPort(QString name)
 {
     hwdtSloSerOpenClose(false);
-    if (serial)
-        serial->setDeviceName(name);
-    hwdtSloSerOpenClose(true);
+    if(!name.isEmpty()){
+        if (serial)
+            serial->setDeviceName(name);
+        hwdtSloSerOpenClose(true);
+    }
 }
 
 
@@ -152,8 +155,9 @@ void THWDriverThread::hwdtSloSetBaud(AbstractSerial::BaudRate baud)
 }
 
 void THWDriverThread::hwdtSloSerOpenClose(bool open){
+    bool err = false;
     if (serial){
-        bool err = false;
+
         if (open){
             /*
             Here using the open flag "Unbuffered".
@@ -206,6 +210,7 @@ void THWDriverThread::hwdtSloSerOpenClose(bool open){
                 QString str;
                 QTextStream(&str) << "Serial device " << serial->deviceName() << " opened with " << serial->baudRate();
                 logger()->info(str);
+
             }
 
         }else{
@@ -215,6 +220,7 @@ void THWDriverThread::hwdtSloSerOpenClose(bool open){
             logger()->info(str);
         }
     }
+    emit hwdtSigCOMPortChanged(serial->deviceName(),(open && !err),err);
 }
 
 bool THWDriverThread::sendBuffer(char *TXBuffer,char *RXBuffer,uint size,uint timeout , bool TempCtrler){
@@ -972,7 +978,16 @@ THWDriver::THWDriver()
     CompassState = csNone;
     CompassHeading = INVALID_COMPASS_HEADING;
     CompassOffset = 0;
+
     LightSensorVal = INVALID_LIGHTSENSOR_VAL;
+    this->m_sde = new SerialDeviceEnumerator(this);
+    ComPortConf.valid = false;
+    COMPortOpened = false;
+    ComPortList = new QStringList();
+    connect(this->m_sde, SIGNAL(hasChanged(QStringList)),
+            this, SLOT(slotCOMPorts(QStringList)));
+    this->m_sde->setEnabled(true);
+
     HWDriverThread = new QThreadEx();
     HWDriverThread->setObjectName("DriverThread");
 
@@ -987,8 +1002,6 @@ THWDriver::THWDriver()
     {
         connect(HWDriverObject,SIGNAL(hwdtSigGotTemperature(THWTempSensorID , float,float,float ,bool)),
                     this,SLOT (hwdSloGotTemperature(THWTempSensorID , float,float,float ,bool)),Qt::QueuedConnection);
-        connect(HWDriverObject,SIGNAL(hwdtSigGotTemperature(THWTempSensorID , float,float,float, bool )),
-                    this,SIGNAL (hwdSigGotTemperature(float , float,float )),Qt::QueuedConnection);
 
         connect(HWDriverObject,SIGNAL(hwdtSigGotTilt(float,float)),
                     this,SLOT (hwdSloGotTilt(float,float)),Qt::QueuedConnection);
@@ -1048,6 +1061,11 @@ THWDriver::THWDriver()
 
         connect(HWDriverObject,SIGNAL(hwdtSigTransferDone(THWTransferState , uint )),
                     this,SIGNAL (hwdSigTransferDone(THWTransferState , uint )),Qt::QueuedConnection);
+
+        connect(HWDriverObject,SIGNAL(hwdtSigCOMPortChanged(QString, bool,bool )),
+                    this,SLOT (hwdSloCOMPortChanged(QString, bool,bool )),Qt::QueuedConnection);
+        connect(HWDriverObject,SIGNAL(hwdtSigCOMPortChanged(QString, bool,bool )),
+                    this,SIGNAL (hwdSigCOMPortChanged(QString, bool,bool )),Qt::QueuedConnection);
 
     }
     //for messages giong from this to thread..
@@ -1127,6 +1145,66 @@ THWDriver::~THWDriver(){
     //hopefully stop() was called for not deleting a running thread
     HWDriverObject->deleteLater();
     HWDriverThread->deleteLater();
+    delete m_sde;
+    delete ComPortList;
+}
+
+void THWDriver::hwdSetComPort(TCOMPortConf ComConf)
+{
+    QString name;
+
+    memcpy(&ComPortConf,&ComConf,sizeof(TCOMPortConf));
+    if (ComConf.valid){
+        if (ComConf.ByName){
+            name = ComConf.Name;
+            emit hwdtSigSetComPort(name);
+        }else{
+            QString SysPath;
+            for(int i = 0;i<ComPortList->count();i++){
+                m_sde->setDeviceName(ComPortList->at(i));
+                SysPath = m_sde->systemPath();
+                SysPath = SysPath.left(SysPath.indexOf("tty"));
+                if(SysPath == ComConf.SysPath){
+                    name = ComPortList->at(i);
+                    emit hwdtSigSetComPort(name);
+                    break;
+                }
+            }
+        }
+
+    }
+}
+
+void THWDriver::hwdSloCOMPortChanged(QString name, bool opened, bool error){
+    (void)name;
+    (void)error;
+    COMPortOpened = opened;
+}
+
+void THWDriver::slotCOMPorts(const QStringList &list){
+    ComPortList->clear();
+    ComPortList->append(list);
+    QTest::qWait(1000);
+    if(!COMPortOpened){
+        hwdSetComPort(ComPortConf);
+    }else{//if connected but now unplugged we should update state for
+        if (!ComPortConf.ByName){//actual COMPort-> close Comport
+            bool found=false;
+            QString SysPath;
+            for(int i = 0;i<ComPortList->count();i++){
+                m_sde->setDeviceName(ComPortList->at(i));
+                SysPath = m_sde->systemPath();
+                SysPath = SysPath.left(SysPath.indexOf("tty"));
+                if(SysPath == ComPortConf.SysPath){
+                    found=true;
+                    break;
+                }
+            }
+            if(!found){
+                emit hwdtSigSetComPort("");
+            }
+        }
+    }
 }
 
 void THWDriver::stop(){
@@ -1143,10 +1221,7 @@ TSPectrWLCoefficients THWDriver::hwdGetWLCoefficients()
 }
 
 
-void THWDriver::hwdSetComPort(QString name)
-{
-    emit hwdtSigSetComPort(name);
-}
+
 
 void THWDriver::hwdSetBaud(AbstractSerial::BaudRate baud)
 {

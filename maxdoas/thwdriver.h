@@ -7,6 +7,7 @@
 #include <QList>
 #include <QThread>
 #include <QReadWriteLock>
+#include <QStringList>
 #include <abstractserial.h>
 #include "wavelengthbuffer.h"
 #include "log4qt/consoleappender.h"
@@ -19,6 +20,7 @@
 #include <ArrayTypes.h>
 #include <iostream>
 #include <iomanip>
+#include "serialdeviceenumerator.h"
 
 #define INVALID_COMPASS_HEADING 400
 
@@ -128,6 +130,7 @@ signals:
     void hwdtSigGotSpectrum();
     void hwdtSigSpectrumeterOpened();
     void hwdtSigSpectrometersDicovered();
+    void hwdtSigCOMPortChanged(QString name, bool opened, bool error);
 private:
     bool sendBuffer(char *TXBuffer,char *RXBuffer,uint size,uint timeout , bool TempCtrler); //returns true if ok
     bool waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,int timeout, bool TempCtrler); //returns true if ok
@@ -187,7 +190,7 @@ public:
     void hwdOverwriteWLCoefficients(TSPectrWLCoefficients* WlCoefficients);
     TSPectrWLCoefficients hwdGetWLCoefficients();
 
-    void hwdSetComPort(QString name);
+    void hwdSetComPort(TCOMPortConf ComConf);
     void hwdSetBaud(AbstractSerial::BaudRate baud);
 
     float hwdGetTemperature(THWTempSensorID sensorID);
@@ -239,8 +242,10 @@ private slots:  //coming from thread
     void hwdSloSpectrumeterOpened();
     void hwdSloGotWLCoefficients();
     void hwdSlothreadFinished();
+    void hwdSloCOMPortChanged(QString name, bool opened, bool error);
 private slots:  //internal signals
     void hwdSlotTemperatureTimer();
+    void slotCOMPorts(const QStringList &list);
 signals: //thread -> outside
     void hwdSigHWThreadFinished();
     void hwdSigGotTemperatures(float TemperaturePeltier,float TemperatureSpectr,float TemperatureHeatsink);
@@ -256,6 +261,7 @@ signals: //thread -> outside
     void hwdSigSpectrumeterOpened();
     void hwdSigTransferDone(THWTransferState TransferState, uint ErrorParameter);
     void hwdSigSpectrometersDiscovered();
+    void hwdSigCOMPortChanged(QString name,bool opened,bool error);
     //commands for controlling thread
     void hwdtSigSetComPort(QString name);
     void hwdtSigSetBaud(AbstractSerial::BaudRate baud);
@@ -287,9 +293,9 @@ private:
     THWDriverThread *HWDriverObject;
     QThreadEx *HWDriverThread;
     TSPectrWLCoefficients SpectrCoefficients;
-
+    QStringList *ComPortList;
     QTimer *TemperatureTimer;
-
+    TCOMPortConf ComPortConf;
     TWavelengthbuffer *WavelengthBuffer; //for storing inside TSpectrum
     THWTempSensorID LastSensorID;
     float Temperatures[3];
@@ -297,7 +303,8 @@ private:
     float CompassHeading;
     float CompassOffset;
     THWCompassState CompassState;
-
+    bool COMPortOpened;
+    SerialDeviceEnumerator *m_sde;
     float LightSensorVal;
 
 };

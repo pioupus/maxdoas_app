@@ -57,6 +57,21 @@ void TMaxdoasSettings::setWaveLengthCoefficients(QString serial, TSPectrWLCoeffi
     }
 }
 
+TCOMPortConf TMaxdoasSettings::getComPortConfiguration(){
+    TCOMPortConf ret;
+    ret.valid = true;
+    ret.Name = settings->value("COMPort/Name","/dev/ttyUSB0").toString();
+    ret.SysPath = settings->value("COMPort/SysPath","").toString();
+    ret.ByName = settings->value("COMPort/SelectByName","").toBool();
+    return ret;
+}
+
+void TMaxdoasSettings::setComPortConfiguration(TCOMPortConf ComPortConfiguration){
+    settings->setValue("COMPort/Name",ComPortConfiguration.Name);
+    settings->setValue("COMPort/SysPath",ComPortConfiguration.SysPath);
+    settings->setValue("COMPort/SelectByName",ComPortConfiguration.ByName);
+}
+
 TAutoIntegConf TMaxdoasSettings::getAutoIntegrationRetrievalConf(){
     TAutoIntegConf ret;
     ret.autoenabled = settings->value("RetrievalParameters/AutoIntegration/AutoEnabled",false).toBool();

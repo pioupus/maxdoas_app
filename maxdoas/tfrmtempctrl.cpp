@@ -21,7 +21,9 @@ TfrmTempctrl::TfrmTempctrl(THWDriver *hwdriver, QWidget *parent) :
     plot->insertLegend(legend, QwtPlot::RightLegend);
   //  plot->aut
     ui->hbox->addWidget(plot);
-
+    ms = TMaxdoasSettings::instance();
+    ComPortSettings = ms->getComPortConfiguration();
+    ui->chbComBySysPath->setChecked(!ComPortSettings.ByName);
     startTimer(1000);
     curvePeltier->attach(plot);
     curveHeatsink->attach(plot);
@@ -93,12 +95,34 @@ void TfrmTempctrl::timerEvent(QTimerEvent *){
 
 void TfrmTempctrl::slotCOMPorts(const QStringList &list)
 {
-    qDebug() << "\n ===> All devices: " << list;
+
+    //qDebug() << "\n ===> All devices: " << list;
+    int SelectedIndex = -1;
+    int i=0;
     ui->cbCOMPort->clear();
+
     foreach (QString s, list) {
         this->m_sde->setDeviceName(s);
-
-        ui->cbCOMPort->addItem(s+" | "+m_sde->description());
+        QString syspath = m_sde->systemPath();
+        syspath = syspath.left(syspath.indexOf("tty"));
+        if (!ComPortSettings.ByName){
+            if (ComPortSettings.SysPath == syspath){
+                SelectedIndex = i;
+                ui->lblFixedName->setText(syspath);
+            }
+        }else{
+            if (ComPortSettings.Name == s){
+                SelectedIndex = i;
+            }
+        }
+        if ((ComPortSettings.ByName)&&(ComPortSettings.Name == s)){
+            ComPortSettings.SysPath = syspath;
+            ui->lblFixedName->setText(syspath);
+        }
+        if(s.indexOf("USB") > -1){
+            ui->cbCOMPort->addItem(s+" | "+m_sde->description());
+            i++;
+        }
 //        qDebug() << "\n <<< info about: " << this->m_sde->name() << " >>>";
 //        qDebug() << "-> description  : " << this->m_sde->description();
 //        qDebug() << "-> driver       : " << this->m_sde->driver();
@@ -119,8 +143,8 @@ void TfrmTempctrl::slotCOMPorts(const QStringList &list)
 //        qDebug() << "-> is exists    : " << this->m_sde->isExists();
 //        qDebug() << "-> is busy      : " << this->m_sde->isBusy();
     }
+    ui->cbCOMPort->setCurrentIndex(SelectedIndex);
 }
-
 
 TfrmTempctrl::~TfrmTempctrl()
 {
@@ -132,5 +156,24 @@ void TfrmTempctrl::on_cbCOMPort_activated(QString s)
 {
     int i = s.indexOf(" | ");
     m_sde->setDeviceName(s.left(i));
-    ui->lblFixedName->setText(m_sde->systemPath());
+
+
+    QString syspath = m_sde->systemPath();
+    syspath = syspath.left(syspath.indexOf("tty"));
+
+    ui->lblFixedName->setText(syspath);
+
+    ComPortSettings.Name = s.left(i);
+    ComPortSettings.SysPath = syspath;
+    ComPortSettings.ByName = !ui->chbComBySysPath->isChecked();
+}
+
+void TfrmTempctrl::on_buttonBox_accepted()
+{
+    ms->setComPortConfiguration(ComPortSettings);
+}
+
+void TfrmTempctrl::on_chbComBySysPath_stateChanged(int )
+{
+    ComPortSettings.ByName = !ui->chbComBySysPath->isChecked();
 }

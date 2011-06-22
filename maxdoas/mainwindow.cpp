@@ -93,6 +93,8 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     closenow = false;
     ui->setupUi(this);    
+    lblComPortStatus = new QLabel("");
+    statusBar()->addWidget(lblComPortStatus);
     HWDriver = new THWDriver();
     setupLog4Qt();    // Log first message, which initialises Log4Qt
     logger()->warn("test");
@@ -150,7 +152,9 @@ MainWindow::MainWindow(QWidget *parent) :
     }
 
     connect(HWDriver,SIGNAL(hwdSigGotSpectrum()),this,SLOT(on_GotSpectrum()));
-        connect(HWDriver,SIGNAL(hwdSigHWThreadFinished()),this,SLOT(HWThreadFinished()));
+    connect(HWDriver,SIGNAL(hwdSigHWThreadFinished()),this,SLOT(HWThreadFinished()));
+    connect(HWDriver,SIGNAL(hwdSigCOMPortChanged(QString,bool,bool)),this,SLOT(COMPortChanged(QString,bool,bool)));
+
     QMetaObject::invokeMethod(this,
                               "StartMeasure",
                               Qt::QueuedConnection);
@@ -159,7 +163,7 @@ MainWindow::MainWindow(QWidget *parent) :
 void MainWindow::StartMeasure(){
     TSPectrWLCoefficients wlcoef;
     TAutoIntegConf ac;
-    HWDriver->hwdSetComPort("/dev/ttyUSB1");
+    HWDriver->hwdSetComPort(ms->getComPortConfiguration());
     HWDriver->hwdOpenSpectrometer(ms->getPreferredSpecSerial());
     wlcoef = ms->getWaveLengthCoefficients(ms->getPreferredSpecSerial());
     HWDriver->hwdOverwriteWLCoefficients(&wlcoef);
@@ -181,6 +185,16 @@ void MainWindow::on_GotSpectrum(){
     HWDriver->hwdMeasureSpectrum(2,0,scNone);
 }
 
+void MainWindow::COMPortChanged(QString name, bool opened, bool error){
+    QString s;
+    if (opened)
+        s = " opened";
+    else
+        s = " closed";
+    if (error)
+        s = s + " (error)";
+    lblComPortStatus->setText("COM "+name+s);
+}
 
 void MainWindow::on_actionConfigSpectrometer_triggered(){
     TFrmSpectrConfig *tfrmspectrconfig = new TFrmSpectrConfig(HWDriver);
@@ -231,5 +245,6 @@ MainWindow::~MainWindow()
     delete ImagePlot;
     delete SpectrPlot;
     delete HWDriver;
+    delete lblComPortStatus;
     delete ui;
 }

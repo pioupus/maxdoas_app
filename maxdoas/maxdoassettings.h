@@ -22,6 +22,7 @@ struct TAutoIntegConf{
 };
 
 struct TCOMPortConf{
+    bool valid;
     bool ByName;
     QString Name;
     QString SysPath;

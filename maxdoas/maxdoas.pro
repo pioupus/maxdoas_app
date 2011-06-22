@@ -3,6 +3,7 @@
 # -------------------------------------------------
 QT += core \
     gui
+CONFIG += qtestlib
 TARGET = maxdoas
 TEMPLATE = app
 INCLUDEPATH += ../libs/qserialdevice/src/qserialdevice

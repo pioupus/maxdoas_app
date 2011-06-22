@@ -12,6 +12,7 @@
 #include <qwt_plot_canvas.h>
 #include "thwdriver.h"
 #include "serialdeviceenumerator.h"
+#include "maxdoassettings.h"
 
 #define TEMPERAT_BUFFER_SIZE 100
 
@@ -42,7 +43,11 @@ private:
     double factor1,factor2;
     THWDriver *hwdriver;
     SerialDeviceEnumerator *m_sde;
+    TMaxdoasSettings *ms;
+    TCOMPortConf ComPortSettings;
 private slots:
+    void on_chbComBySysPath_stateChanged(int );
+    void on_buttonBox_accepted();
     void on_cbCOMPort_activated(QString s);
     void showCurve(QwtPlotItem *item, bool on);
     void SloGotTemperature(float TemperaturePeltier, float TemperatureSpectr, float TemperatureHeatsink);
