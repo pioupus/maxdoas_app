@@ -978,7 +978,7 @@ THWDriver::THWDriver()
     CompassState = csNone;
     CompassHeading = INVALID_COMPASS_HEADING;
     CompassOffset = 0;
-
+    TempBufferPointer = 0;
     LightSensorVal = INVALID_LIGHTSENSOR_VAL;
     this->m_sde = new SerialDeviceEnumerator(this);
     ComPortConf.valid = false;
@@ -1246,6 +1246,23 @@ void THWDriver::hwdSloGotTemperature(THWTempSensorID sensorID, float Temperature
     Temperatures[sensorIDtoInt(tsPeltier)] = TemperaturePeltier;
     Temperatures[sensorIDtoInt(tsSpectrometer)] = TemperatureSpectr;
     Temperatures[sensorIDtoInt(tsHeatSink)] = TemperatureHeatsink;
+
+    if (byTimer){
+        TempBufferPointer++;
+        if (TempBufferPointer == TEMPERATURE_BUFFER_COUNT){
+            for (int i=1;i<TEMPERATURE_BUFFER_COUNT;i++){
+                TempBufferPeltier[i-1] = TempBufferPeltier[i];
+                TempBufferSpectr[i-1] = TempBufferSpectr[i];
+                TempBufferHeatSink[i-1] = TempBufferHeatSink[i];
+            }
+            TempBufferPointer = TEMPERATURE_BUFFER_COUNT-1;
+        }
+        TempBufferPeltier[TempBufferPointer] = TemperaturePeltier;
+        TempBufferHeatSink[TempBufferPointer] = TemperatureHeatsink;
+        TempBufferSpectr[TempBufferPointer] = TemperatureSpectr;
+    }
+
+
     emit hwdSigGotTemperatures(TemperaturePeltier,TemperatureSpectr,TemperatureHeatsink);
 }
 

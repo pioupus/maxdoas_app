@@ -23,6 +23,7 @@ TfrmTempctrl::TfrmTempctrl(THWDriver *hwdriver, QWidget *parent) :
     ui->hbox->addWidget(plot);
     ms = TMaxdoasSettings::instance();
     ComPortSettings = ms->getComPortConfiguration();
+    ui->sedtTargetTemp->setValue(ms->getTargetTemperature());
     ui->chbComBySysPath->setChecked(!ComPortSettings.ByName);
     startTimer(1000);
     curvePeltier->attach(plot);
@@ -63,26 +64,25 @@ void TfrmTempctrl::showCurve(QwtPlotItem *item, bool on)
 }
 
 void TfrmTempctrl::SloGotTemperature(float TemperaturePeltier, float TemperatureSpectr, float TemperatureHeatsink){
-        int i;
         (void)TemperaturePeltier;
         (void)TemperatureSpectr;
         (void)TemperatureHeatsink;
-        BufferFilled++;
-        if (BufferFilled == TEMPERAT_BUFFER_SIZE){
-            for (i=1;i<TEMPERAT_BUFFER_SIZE;i++){
-                BufferPeltier[i-1] = BufferPeltier[i];
-                BufferHeatSink[i-1] = BufferHeatSink[i];
-                BufferSpectrometer[i-1] = BufferSpectrometer[i];
-            }
-            BufferFilled = TEMPERAT_BUFFER_SIZE-1;
-        }
-        BufferPeltier[BufferFilled] = hwdriver->hwdGetTemperature(tsPeltier);
-        BufferHeatSink[BufferFilled] = hwdriver->hwdGetTemperature(tsHeatSink);
-        BufferSpectrometer[BufferFilled] = hwdriver->hwdGetTemperature(tsSpectrometer);
+//        BufferFilled++;
+//        if (BufferFilled == TEMPERAT_BUFFER_SIZE){
+//            for (i=1;i<TEMPERAT_BUFFER_SIZE;i++){
+//                BufferPeltier[i-1] = BufferPeltier[i];
+//                BufferHeatSink[i-1] = BufferHeatSink[i];
+//                BufferSpectrometer[i-1] = BufferSpectrometer[i];
+//            }
+//            BufferFilled = TEMPERAT_BUFFER_SIZE-1;
+//        }
+//        BufferPeltier[BufferFilled] = hwdriver->hwdGetTemperature(tsPeltier);
+//        BufferHeatSink[BufferFilled] = hwdriver->hwdGetTemperature(tsHeatSink);
+//        BufferSpectrometer[BufferFilled] = hwdriver->hwdGetTemperature(tsSpectrometer);
 
-        curvePeltier->setRawSamples(&BufferX1[0],&BufferPeltier[0],BufferFilled);
-        curveHeatsink->setRawSamples(&BufferX1[0],&BufferHeatSink[0],BufferFilled);
-        curveSpectrometer->setRawSamples(&BufferX1[0],&BufferSpectrometer[0],BufferFilled);
+        curvePeltier->setRawSamples(&BufferX1[0],&hwdriver->TempBufferPeltier[0],hwdriver->TempBufferPointer);
+        curveHeatsink->setRawSamples(&BufferX1[0],&hwdriver->TempBufferHeatSink[0],hwdriver->TempBufferPointer);
+        curveSpectrometer->setRawSamples(&BufferX1[0],&hwdriver->TempBufferSpectr[0],hwdriver->TempBufferPointer);
         plot->replot();
 }
 
@@ -171,6 +171,8 @@ void TfrmTempctrl::on_cbCOMPort_activated(QString s)
 void TfrmTempctrl::on_buttonBox_accepted()
 {
     ms->setComPortConfiguration(ComPortSettings);
+    ms->setTargetTemperature(ui->sedtTargetTemp->value());
+    hwdriver->hwdSetTargetTemperature(ui->sedtTargetTemp->value());
 }
 
 void TfrmTempctrl::on_chbComBySysPath_stateChanged(int )

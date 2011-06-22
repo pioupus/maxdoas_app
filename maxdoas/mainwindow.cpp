@@ -71,17 +71,19 @@ void MainWindow::setupLog4Qt()
     QSettings s;
 
     // Set logging level for Log4Qt to TRACE
+
     s.beginGroup("Log4Qt");
-    s.setValue("Debug", "ERROR");
+    if (!s.contains("Debug")){
+        s.setValue("Debug", "ERROR");
 
-    // Configure logging to log to the file C:/myapp.log using the level TRACE
-    s.beginGroup("Properties");
-    s.setValue("log4j.appender.A1", "org.apache.log4j.FileAppender");
-    s.setValue("log4j.appender.A1.file", "log4qt.log");
-    s.setValue("log4j.appender.A1.layout", "org.apache.log4j.TTCCLayout");
-    s.setValue("log4j.appender.A1.layout.DateFormat", "ISO8601");
-    s.setValue("log4j.rootLogger", "ERROR, A1");
-
+        // Configure logging to log to the file C:/myapp.log using the level TRACE
+        s.beginGroup("Properties");
+        s.setValue("log4j.appender.A1", "org.apache.log4j.FileAppender");
+        s.setValue("log4j.appender.A1.file", "log4qt.log");
+        s.setValue("log4j.appender.A1.layout", "org.apache.log4j.TTCCLayout");
+        s.setValue("log4j.appender.A1.layout.DateFormat", "ISO8601");
+        s.setValue("log4j.rootLogger", "ERROR, A1");
+    }
     // Settings will become active on next application startup
 }
 
@@ -164,6 +166,7 @@ void MainWindow::StartMeasure(){
     TSPectrWLCoefficients wlcoef;
     TAutoIntegConf ac;
     HWDriver->hwdSetComPort(ms->getComPortConfiguration());
+    HWDriver->hwdSetTargetTemperature(ms->getTargetTemperature());
     HWDriver->hwdOpenSpectrometer(ms->getPreferredSpecSerial());
     wlcoef = ms->getWaveLengthCoefficients(ms->getPreferredSpecSerial());
     HWDriver->hwdOverwriteWLCoefficients(&wlcoef);

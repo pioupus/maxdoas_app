@@ -27,6 +27,7 @@
 #define INVALID_LIGHTSENSOR_VAL -1
 
 #define HW_TRANSMISSION_TIMEOUT_FINAL_PARAMETER 100
+#define TEMPERATURE_BUFFER_COUNT 100
 
 enum THWTempSensorID {tsNone,tsPeltier=0,tsHeatSink=1,tsSpectrometer=2};
 Q_DECLARE_METATYPE(THWTempSensorID);
@@ -227,6 +228,11 @@ public:
     void hwdOpenSpectrometer(QString SerialNumber);
     void hwdCloseSpectrometer();
     void stop();
+
+    double TempBufferPeltier[TEMPERATURE_BUFFER_COUNT];
+    double TempBufferSpectr[TEMPERATURE_BUFFER_COUNT];
+    double TempBufferHeatSink[TEMPERATURE_BUFFER_COUNT];
+    int TempBufferPointer;
 
 private slots:  //coming from thread
     void hwdSloGotTemperature(THWTempSensorID sensorID, float TemperaturePeltier, float TemperatureSpectr,float TemperatureHeatsink,bool byTimer);

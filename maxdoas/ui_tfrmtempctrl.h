@@ -1,8 +1,8 @@
 /********************************************************************************
 ** Form generated from reading UI file 'tfrmtempctrl.ui'
 **
-** Created: Tue Jun 21 16:43:26 2011
-**      by: Qt User Interface Compiler version 4.7.0
+** Created: Tue Jun 21 23:24:24 2011
+**      by: Qt User Interface Compiler version 4.6.2
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -50,7 +50,7 @@ public:
     QSpacerItem *verticalSpacer;
     QHBoxLayout *horizontalLayout;
     QLabel *label;
-    QDoubleSpinBox *sbTargetTemp;
+    QDoubleSpinBox *sedtTargetTemp;
     QLabel *label_2;
     QSpacerItem *horizontalSpacer;
     QWidget *tab_2;
@@ -77,7 +77,7 @@ public:
         cbCOMPort = new QComboBox(TfrmTempctrl);
         cbCOMPort->setObjectName(QString::fromUtf8("cbCOMPort"));
         cbCOMPort->setMinimumSize(QSize(150, 0));
-        cbCOMPort->setEditable(true);
+        cbCOMPort->setEditable(false);
 
         horizontalLayout_2->addWidget(cbCOMPort);
 
@@ -125,15 +125,15 @@ public:
 
         horizontalLayout->addWidget(label);
 
-        sbTargetTemp = new QDoubleSpinBox(tab);
-        sbTargetTemp->setObjectName(QString::fromUtf8("sbTargetTemp"));
-        sbTargetTemp->setMinimumSize(QSize(100, 0));
-        sbTargetTemp->setDecimals(1);
-        sbTargetTemp->setMinimum(-50);
-        sbTargetTemp->setSingleStep(0.5);
-        sbTargetTemp->setValue(20);
+        sedtTargetTemp = new QDoubleSpinBox(tab);
+        sedtTargetTemp->setObjectName(QString::fromUtf8("sedtTargetTemp"));
+        sedtTargetTemp->setMinimumSize(QSize(100, 0));
+        sedtTargetTemp->setDecimals(1);
+        sedtTargetTemp->setMinimum(-50);
+        sedtTargetTemp->setSingleStep(0.5);
+        sedtTargetTemp->setValue(20);
 
-        horizontalLayout->addWidget(sbTargetTemp);
+        horizontalLayout->addWidget(sedtTargetTemp);
 
         label_2 = new QLabel(tab);
         label_2->setObjectName(QString::fromUtf8("label_2"));

@@ -47,6 +47,9 @@ public:
     TCOMPortConf getComPortConfiguration();
     void setComPortConfiguration(TCOMPortConf ComPortConfiguration);
 
+    float getTargetTemperature();
+    void setTargetTemperature(float Temperature);
+
     static TMaxdoasSettings* instance()
     {
         static QMutex mutex;

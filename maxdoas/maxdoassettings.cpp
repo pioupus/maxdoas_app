@@ -57,6 +57,14 @@ void TMaxdoasSettings::setWaveLengthCoefficients(QString serial, TSPectrWLCoeffi
     }
 }
 
+float TMaxdoasSettings::getTargetTemperature(){
+    return settings->value("TempController/Temperature",20.0).toFloat();
+}
+
+void TMaxdoasSettings::setTargetTemperature(float Temperature){
+    settings->setValue("TempController/Temperature",Temperature);
+}
+
 TCOMPortConf TMaxdoasSettings::getComPortConfiguration(){
     TCOMPortConf ret;
     ret.valid = true;
