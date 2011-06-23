@@ -71,20 +71,38 @@ void TBubbleWidget::paintEvent(QPaintEvent *)
 {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing, true);
-    painter.translate(width() / 2, height() / 2);
-
+    //painter.translate(width() / 2, height() / 2);
+    int left=0;
+    int top = 0;
+    int left_bu=0;
+    int top_bu = 0;
     int OutercircleRad = width();
-    if (OutercircleRad > height())
+    if (OutercircleRad > height()){
         OutercircleRad = height();
-    OutercircleRad /= 2;
-
-        painter.setPen(QPen(QColor(Qt::darkBlue), 2));
-
-
-        painter.drawEllipse(OutercircleRad / 100.0, OutercircleRad / 100.0,
-                                   OutercircleRad-OutercircleRad / 100.0, OutercircleRad-OutercircleRad / 100.0);
+        left = width()/2-height()/2;
+    }else{
+        top = height()/2-width()/2;
+    }
 
 
+    painter.setPen(QPen(QColor(Qt::darkBlue), 2));
 
+
+    painter.drawEllipse(QRectF(left+OutercircleRad / 100.0, top+OutercircleRad / 100.0,
+                                       OutercircleRad-OutercircleRad/50, OutercircleRad-OutercircleRad/50));
+
+
+
+    int bubbleradiant = OutercircleRad/1.5;
+        left_bu = width()/2-bubbleradiant/2;
+        top_bu = height()/2-bubbleradiant/2;
+    painter.setPen(QPen(QColor(Qt::darkBlue), 2));
+    painter.setBrush(QBrush(QColor(Qt::darkBlue),Qt::SolidPattern));
+    painter.drawEllipse(QRectF(left_bu+bubbleradiant / 100.0, top_bu+bubbleradiant / 100.0,
+                                       bubbleradiant-bubbleradiant/50, bubbleradiant-bubbleradiant/50));
+
+    painter.setPen(QPen(QColor(Qt::black), 1));
+    painter.drawLine(0,top+OutercircleRad/2,width(),OutercircleRad/2);
+    painter.drawLine(left+OutercircleRad/2,0,left+OutercircleRad/2,height());
 }
 
