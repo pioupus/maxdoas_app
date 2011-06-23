@@ -48,10 +48,6 @@
 TBubbleWidget::TBubbleWidget(QWidget *parent)
     : QWidget(parent)
 {
-    floatBased = false;
-    antialiased = false;
-    frameNo = 0;
-
     setBackgroundRole(QPalette::Base);
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 }
