@@ -46,7 +46,8 @@ SOURCES += main.cpp \
     crc8.c \
     tfrmspectrconfig.cpp \
     maxdoassettings.cpp \
-    wavelengthbuffer.cpp
+    wavelengthbuffer.cpp \
+    bubblewidget.cpp
 HEADERS += mainwindow.h \
     tfrmtempctrl.h \
     qwtsymbolarrow.h \
@@ -59,7 +60,8 @@ HEADERS += mainwindow.h \
     crc8.h \
     tfrmspectrconfig.h \
     maxdoassettings.h \
-    wavelengthbuffer.h
+    wavelengthbuffer.h \
+    bubblewidget.h
 FORMS += mainwindow.ui \
     tfrmtempctrl.ui \
     tfrmspectrconfig.ui

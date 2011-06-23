@@ -13,6 +13,7 @@
 #include "thwdriver.h"
 #include "serialdeviceenumerator.h"
 #include "maxdoassettings.h"
+#include "bubblewidget.h"
 
 #define TEMPERAT_BUFFER_SIZE 100
 
@@ -45,6 +46,7 @@ private:
     SerialDeviceEnumerator *m_sde;
     TMaxdoasSettings *ms;
     TCOMPortConf ComPortSettings;
+    TBubbleWidget *bubblewidget;
 private slots:
     void on_chbComBySysPath_stateChanged(int );
     void on_buttonBox_accepted();
@@ -52,6 +54,7 @@ private slots:
     void showCurve(QwtPlotItem *item, bool on);
     void SloGotTemperature(float TemperaturePeltier, float TemperatureSpectr, float TemperatureHeatsink);
     void slotCOMPorts(const QStringList &list);
+    void SlotGotTilt(float x,float y);
 protected:
     virtual void timerEvent(QTimerEvent *e);
 };

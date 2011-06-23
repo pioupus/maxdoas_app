@@ -17,6 +17,9 @@ TfrmTempctrl::TfrmTempctrl(THWDriver *hwdriver, QWidget *parent) :
     curveHeatsink = new QwtPlotCurve("Heatsink");
     curveSpectrometer = new QwtPlotCurve("Spectrometer");
     QwtLegend *legend = new QwtLegend;
+    bubblewidget = new TBubbleWidget;
+    ui->tiltlayout->addWidget(bubblewidget);
+
     legend->setItemMode(QwtLegend::CheckableItem);
     plot->insertLegend(legend, QwtPlot::RightLegend);
   //  plot->aut
@@ -149,6 +152,7 @@ void TfrmTempctrl::slotCOMPorts(const QStringList &list)
 TfrmTempctrl::~TfrmTempctrl()
 {
     delete m_sde;
+    delete bubblewidget;
     delete ui;
 }
 
@@ -173,6 +177,10 @@ void TfrmTempctrl::on_buttonBox_accepted()
     ms->setComPortConfiguration(ComPortSettings);
     ms->setTargetTemperature(ui->sedtTargetTemp->value());
     hwdriver->hwdSetTargetTemperature(ui->sedtTargetTemp->value());
+}
+
+void TfrmTempctrl::SlotGotTilt(float x,float y){
+
 }
 
 void TfrmTempctrl::on_chbComBySysPath_stateChanged(int )
