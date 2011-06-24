@@ -61,7 +61,9 @@ protected:
     void resizeEvent(QResizeEvent *event);
 
 private:
-
+    QRectF paintCircle( float sizeDeg, float OffsetX, float OffsetY);
+    float MaxDegree;
+    float BubbleSizeDeg;
 };
 
 

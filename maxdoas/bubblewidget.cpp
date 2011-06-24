@@ -67,42 +67,71 @@ void TBubbleWidget::resizeEvent(QResizeEvent *event){
     event->size();
 }
 
+QRectF TBubbleWidget::paintCircle(float sizeDeg, float OffsetX, float OffsetY){
+    float centerLeft;
+    float centerTop;
+    float OuterDiameter;
+    float CircleDiameter;
+    float CircleZero;
+    float CircleTop;
+    float CircleLeft;
+    (void)OffsetX;
+    (void)OffsetY;
+    if (width() > height()){
+        OuterDiameter = height()/1.1;
+    }else{
+        OuterDiameter = width()/1.1;
+    }
+    CircleZero = OuterDiameter*BubbleSizeDeg/(MaxDegree);
+
+    centerLeft = width()/2;
+    centerTop = height()/2;
+    CircleDiameter = CircleZero+(OuterDiameter-CircleZero)*sizeDeg/(MaxDegree);
+    OffsetX = (OuterDiameter-CircleZero)*OffsetX/(MaxDegree);
+    OffsetY = (OuterDiameter-CircleZero)*OffsetY/(MaxDegree);
+    OffsetX /= 2;
+    OffsetY /= 2;
+    CircleLeft = centerLeft-CircleDiameter/2.0;
+    CircleTop = centerTop-CircleDiameter/2.0;
+    return QRectF(CircleLeft+OffsetX, CircleTop+OffsetY,  CircleDiameter, CircleDiameter);
+}
+
 void TBubbleWidget::paintEvent(QPaintEvent *)
 {
+    QRectF ResolutionBorder;
+    QRectF ZeroBorder;
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing, true);
     //painter.translate(width() / 2, height() / 2);
-    int left=0;
-    int top = 0;
-    int left_bu=0;
-    int top_bu = 0;
-    int OutercircleRad = width();
-    if (OutercircleRad > height()){
-        OutercircleRad = height();
-        left = width()/2-height()/2;
-    }else{
-        top = height()/2-width()/2;
-    }
+    MaxDegree = 10.0;
+    BubbleSizeDeg = 1.0;
 
-
-    painter.setPen(QPen(QColor(Qt::darkBlue), 2));
-
-
-    painter.drawEllipse(QRectF(left+OutercircleRad / 100.0, top+OutercircleRad / 100.0,
-                                       OutercircleRad-OutercircleRad/50, OutercircleRad-OutercircleRad/50));
-
-
-
-    int bubbleradiant = OutercircleRad/1.5;
-        left_bu = width()/2-bubbleradiant/2;
-        top_bu = height()/2-bubbleradiant/2;
     painter.setPen(QPen(QColor(Qt::darkBlue), 2));
     painter.setBrush(QBrush(QColor(Qt::darkBlue),Qt::SolidPattern));
-    painter.drawEllipse(QRectF(left_bu+bubbleradiant / 100.0, top_bu+bubbleradiant / 100.0,
-                                       bubbleradiant-bubbleradiant/50, bubbleradiant-bubbleradiant/50));
+
+    painter.drawEllipse(paintCircle(0,0,0));
+
+    painter.setBrush(QBrush(QColor(Qt::darkBlue),Qt::NoBrush));
+
+    painter.setPen(QPen(QColor(Qt::gray), 2));
+
+
+    ResolutionBorder = paintCircle(10.0,0,0);
+
+    painter.drawEllipse(ResolutionBorder);
+
+    painter.drawText(round(width()/2)+2, ResolutionBorder.top()-2, "10");
+
+    ZeroBorder = paintCircle(0,0,0);
+    ResolutionBorder = paintCircle(5,0,0);
+
+    painter.drawText(round(width()/2)+2, ResolutionBorder.top()-2, "5");
+
+    painter.drawRoundedRect (ResolutionBorder, ZeroBorder.width()/2, ZeroBorder.width()/2);
 
     painter.setPen(QPen(QColor(Qt::black), 1));
-    painter.drawLine(0,top+OutercircleRad/2,width(),OutercircleRad/2);
-    painter.drawLine(left+OutercircleRad/2,0,left+OutercircleRad/2,height());
+
+    painter.drawLine(0,round(height()/2),width(),round(height()/2));
+    painter.drawLine(round(width()/2),0,round(width()/2),height());
 }
 
