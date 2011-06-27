@@ -45,6 +45,7 @@
 #include <stdlib.h>
 
 
+
 TBubbleWidget::TBubbleWidget(QWidget *parent)
     : QWidget(parent)
 {
@@ -52,16 +53,21 @@ TBubbleWidget::TBubbleWidget(QWidget *parent)
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 }
 
-QSize TBubbleWidget::minimumSizeHint() const
-{
-    return QSize(50, 50);
+void TBubbleWidget::SetGainRes(int Gain, int Resolution, float ResolutionBorder, float MaxTilt){
+    (void)Resolution;
+    this->Gain = Gain;
+    this->ResolutionBorder = ResolutionBorder;
+    this->MaxTilt = MaxTilt;
 }
 
-QSize TBubbleWidget::sizeHint() const
-{
-    return QSize(180, 180);
+void TBubbleWidget::SetTilt(float TiltX, float TiltY){
+    TiltValue.setX(TiltX);
+    TiltValue.setY(TiltY);
 }
 
+void TBubbleWidget::SetTiltOffset(QPointF Offset){
+    this->TiltOffset = Offset;
+}
 
 void TBubbleWidget::resizeEvent(QResizeEvent *event){
     event->size();
@@ -98,7 +104,7 @@ QRectF TBubbleWidget::paintCircle(float sizeDeg, float OffsetX, float OffsetY){
 
 void TBubbleWidget::paintEvent(QPaintEvent *)
 {
-    QRectF ResolutionBorder;
+    QRectF ResolutionBorderRect;
     QRectF ZeroBorder;
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing, true);
@@ -109,25 +115,25 @@ void TBubbleWidget::paintEvent(QPaintEvent *)
     painter.setPen(QPen(QColor(Qt::darkBlue), 2));
     painter.setBrush(QBrush(QColor(Qt::darkBlue),Qt::SolidPattern));
 
-    painter.drawEllipse(paintCircle(0,0,0));
+    painter.drawEllipse(paintCircle(0,TiltValue.x(),TiltValue.y()));
 
     painter.setBrush(QBrush(QColor(Qt::darkBlue),Qt::NoBrush));
 
     painter.setPen(QPen(QColor(Qt::gray), 2));
 
 
-    ResolutionBorder = paintCircle(10.0,0,0);
+    ResolutionBorderRect = paintCircle(MaxTilt,0,0);
 
-    painter.drawEllipse(ResolutionBorder);
+    painter.drawEllipse(ResolutionBorderRect);
 
-    painter.drawText(round(width()/2)+2, ResolutionBorder.top()-2, "10");
+    painter.drawText(round(width()/2)+2, ResolutionBorderRect.top()-2, "10");
 
     ZeroBorder = paintCircle(0,0,0);
-    ResolutionBorder = paintCircle(5,0,0);
+    ResolutionBorderRect = paintCircle(ResolutionBorder,-TiltOffset.x(),-TiltOffset.y());
 
-    painter.drawText(round(width()/2)+2, ResolutionBorder.top()-2, "5");
+    painter.drawText(round(width()/2)+2, ResolutionBorderRect.top()-2, "5");
 
-    painter.drawRoundedRect (ResolutionBorder, ZeroBorder.width()/2, ZeroBorder.width()/2);
+    painter.drawRoundedRect (ResolutionBorderRect, ZeroBorder.width()/2, ZeroBorder.width()/2);
 
     painter.setPen(QPen(QColor(Qt::black), 1));
 

@@ -85,7 +85,7 @@ public slots:
 
     void hwdtSloAskTilt();
     void hwdtSloConfigTilt(TTiltConfigRes Resolution,TTiltConfigGain Gain);
-    void hwdtSloOffsetTilt(float TiltX, float TiltY);
+  //  void hwdtSloOffsetTilt(float TiltX, float TiltY);
 
     void hwdtSloAskCompass();
     void hwdtSloStartCompassCal();
@@ -116,7 +116,7 @@ signals:
     void hwdtSigTransferDone(THWTransferState TransferState, uint ErrorParameter);
 
     void hwdtSigGotTemperature(THWTempSensorID sensorID, float TemperaturePeltier,float TemperatureSpectr,float TemperatureHeatsink, bool byTimer);
-    void hwdtSigGotTilt(float TiltX,float TiltY);
+    void hwdtSigGotTilt(float TiltX, float TiltY, int Gain, int Resolution);
 
     void hwdtSigGotCompassHeading(float Heading);
     void hwdtSigCompassStartedCalibrating();
@@ -149,10 +149,10 @@ private:
     uint TiltADC_Steps;
     uint TiltADC_Gain;
     float TiltADC_RefVoltage;
-    float TiltCalValNegGX;
-    float TiltCalValPosGX;
-    float TiltCalValNegGY;
-    float TiltCalValPosGY;
+//    float TiltCalValNegGX;
+//    float TiltCalValPosGX;
+//    float TiltCalValNegGY;
+//    float TiltCalValPosGY;
 
     TLightSensorGain LightSensorGain;
     TLightSensorIntegTime LightSensorIntegTime;
@@ -200,8 +200,8 @@ public:
 
     QPointF hwdGetTilt();
     void hwdAskTilt();
-    void hwdSetTiltZero();
-
+    void hwdSetTiltOffset(QPointF Offset);
+    void hwdSetTiltInterval(int ms);
     float hwdGetCompassHeading();
     void hwdAskCompass();
     void hwdStartCompassCal();
@@ -236,7 +236,7 @@ public:
 
 private slots:  //coming from thread
     void hwdSloGotTemperature(THWTempSensorID sensorID, float TemperaturePeltier, float TemperatureSpectr,float TemperatureHeatsink,bool byTimer);
-    void hwdSloGotTilt(float TiltX,float TiltY);
+    void hwdSloGotTilt(float TiltX, float TiltY, int Gain, int Resolution);
     void hwdSloGotCompassHeading(float Heading);
     void hwdSloCompassStartedCalibrating();
     void hwdSloCompassStoppedCalibrating();
@@ -251,11 +251,12 @@ private slots:  //coming from thread
     void hwdSloCOMPortChanged(QString name, bool opened, bool error);
 private slots:  //internal signals
     void hwdSlotTemperatureTimer();
+    void hwdSlotTiltTimer();
     void slotCOMPorts(const QStringList &list);
 signals: //thread -> outside
     void hwdSigHWThreadFinished();
     void hwdSigGotTemperatures(float TemperaturePeltier,float TemperatureSpectr,float TemperatureHeatsink);
-    void hwdSigGotTilt(float TiltX,float TiltY);
+    void hwdSigGotTilt(float TiltX,float TiltY,int Gain, int Resolution,float ResolutionBorder,float MaxTilt);
     void hwdSigGotCompassHeading(float Heading);
     void hwdSigCompassStartedCalibrating();
     void hwdSigCompassStoppedCalibrating();
@@ -277,7 +278,7 @@ signals: //thread -> outside
 
     void hwdtSigConfigTilt(TTiltConfigRes Resolution,TTiltConfigGain Gain);
     void hwdtSigAskTilt();
-    void hwdtSigOffsetTilt(float TiltX, float TiltY);
+    //void hwdtSigOffsetTilt(float TiltX, float TiltY);
 
     void hwdtSigAskCompass();
     void hwdtSigStartCompassCal();
@@ -301,13 +302,16 @@ private:
     TSPectrWLCoefficients SpectrCoefficients;
     QStringList *ComPortList;
     QTimer *TemperatureTimer;
+    QTimer *TiltTimer;
     TCOMPortConf ComPortConf;
     TWavelengthbuffer *WavelengthBuffer; //for storing inside TSpectrum
     THWTempSensorID LastSensorID;
     float Temperatures[3];
     QPointF *ActualTilt;
+    QPointF *TiltOffset;
     float CompassHeading;
     float CompassOffset;
+    float TiltResolutionBorder;
     THWCompassState CompassState;
     bool COMPortOpened;
     SerialDeviceEnumerator *m_sde;

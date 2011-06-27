@@ -165,6 +165,7 @@ MainWindow::MainWindow(QWidget *parent) :
 void MainWindow::StartMeasure(){
     TSPectrWLCoefficients wlcoef;
     TAutoIntegConf ac;
+    HWDriver->hwdSetTiltOffset(ms->getTiltOffset());
     HWDriver->hwdSetComPort(ms->getComPortConfiguration());
     HWDriver->hwdSetTargetTemperature(ms->getTargetTemperature());
     HWDriver->hwdOpenSpectrometer(ms->getPreferredSpecSerial());

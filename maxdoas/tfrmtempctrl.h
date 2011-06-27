@@ -48,13 +48,14 @@ private:
     TCOMPortConf ComPortSettings;
     TBubbleWidget *bubblewidget;
 private slots:
+    void on_btnSetTiltToZero_clicked();
     void on_chbComBySysPath_stateChanged(int );
     void on_buttonBox_accepted();
     void on_cbCOMPort_activated(QString s);
     void showCurve(QwtPlotItem *item, bool on);
     void SloGotTemperature(float TemperaturePeltier, float TemperatureSpectr, float TemperatureHeatsink);
     void slotCOMPorts(const QStringList &list);
-    void SlotGotTilt(float x,float y);
+    void SlotGotTilt(float x,float y,int Gain,int Resolution,float ResolutionBorder,float MaxTilt);
 protected:
     virtual void timerEvent(QTimerEvent *e);
 };

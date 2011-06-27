@@ -16,6 +16,9 @@
 #define P5	7
 #define P6	8
 
+#define TILT_MAX_8G                 14.83
+#define TILT_MAX_4G                 30.79
+
 #define CMD_TEMP_FIND_SENSORS		0xE3
 #define CMD_TEMP_ASSIGN_SENSORS		0xE4
 #define CMD_TEMP_READ_SENSORID		0xE5
@@ -83,10 +86,10 @@ void THWDriverThread::init(){
     TiltADC_Steps = 1<<12;  //lets calculate with 12 bits;
     TiltADC_Gain = 1;  //1,2,4,8 Gains available
     TiltADC_RefVoltage = 2.5;
-    TiltCalValNegGX = -1;
-    TiltCalValPosGX = 1;
-    TiltCalValNegGY = -1;
-    TiltCalValPosGY = 1;
+//    TiltCalValNegGX = -1;
+//    TiltCalValPosGX = 1;
+//    TiltCalValNegGY = -1;
+//    TiltCalValPosGY = 1;
 
     //HeadingOffset = 0;
 
@@ -327,6 +330,7 @@ bool THWDriverThread::waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,int 
             emit hwdtSigTransferDone(tsOK,RetransmissionCounter);
             logger()->debug("Transmission done and answer rxed");
         }
+        serial->flush();
         return TransmissionOK;
     }
     logger()->error("HWClass not initialized(serial == NULL)");
@@ -414,14 +418,14 @@ static int TiltGainToConfBit(TTiltConfigGain Gain){
     return 0;
 }
 
-void THWDriverThread::hwdtSloOffsetTilt(float TiltX, float TiltY){
-    TiltX = sin(TiltX);
-    TiltY = sin(TiltY);
-    TiltCalValPosGX = 1 + TiltX;
-    TiltCalValNegGX = -1 + TiltX;
-    TiltCalValPosGY = 1 + TiltY;
-    TiltCalValNegGY = -1 + TiltY;
-}
+//void THWDriverThread::hwdtSloOffsetTilt(float TiltX, float TiltY){
+//    TiltX = sin(TiltX);
+//    TiltY = sin(TiltY);
+//    TiltCalValPosGX = 1 + TiltX;
+//    TiltCalValNegGX = -1 + TiltX;
+//    TiltCalValPosGY = 1 + TiltY;
+//    TiltCalValNegGY = -1 + TiltY;
+//}
 
 
 void THWDriverThread::hwdtSloConfigTilt(TTiltConfigRes Resolution,TTiltConfigGain Gain){
@@ -459,8 +463,8 @@ void THWDriverThread::hwdtSloAskTilt()
     logger()->trace(QString("Tilt sensor Resolution: %1 steps, Gain: %2").arg((int)TiltADC_Steps).arg((int)TiltADC_Gain));
     if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false)){
         float TiltX,TiltY;
-        float XCalOffset,YCalOffset;
-        float XCalGain,YCalGain;
+      //  float XCalOffset,YCalOffset;
+      //  float XCalGain,YCalGain;
         int32_t liTiltX,liTiltY;
 
         //canal 0
@@ -481,14 +485,14 @@ void THWDriverThread::hwdtSloAskTilt()
         TiltY = 2*TiltADC_RefVoltage*(float)liTiltY/((float)TiltADC_Steps*(float)TiltADC_Gain);
         logger()->trace(QString("Tilt g calced X: %1 Y: %2" ).arg(TiltX).arg(TiltY));
 
-        XCalOffset  = (TiltCalValPosGX + TiltCalValNegGX)/2;
-        XCalGain    = (TiltCalValPosGX - TiltCalValNegGX)/2;
-        YCalOffset  = (TiltCalValPosGY + TiltCalValNegGY)/2;
-        YCalGain    = (TiltCalValPosGY - TiltCalValNegGY)/2;
-        logger()->trace(QString("Tilt g OffsetError X: %1 Y: %2").arg(XCalOffset).arg(YCalOffset));
-        logger()->trace(QString("Tilt g GainError X: %1 Y %2" ).arg(XCalGain).arg(YCalGain));
-        TiltX = XCalGain*TiltX+XCalOffset;
-        TiltY = YCalGain*TiltY+YCalOffset;
+//        XCalOffset  = (TiltCalValPosGX + TiltCalValNegGX)/2;
+//        XCalGain    = (TiltCalValPosGX - TiltCalValNegGX)/2;
+//        YCalOffset  = (TiltCalValPosGY + TiltCalValNegGY)/2;
+//        YCalGain    = (TiltCalValPosGY - TiltCalValNegGY)/2;
+//        logger()->trace(QString("Tilt g OffsetError X: %1 Y: %2").arg(XCalOffset).arg(YCalOffset));
+//      //  logger()->trace(QString("Tilt g GainError X: %1 Y %2" ).arg(XCalGain).arg(YCalGain));
+//        TiltX = XCalGain*TiltX+XCalOffset;
+//        TiltY = YCalGain*TiltY+YCalOffset;
 
         if(TiltX > 1)
             TiltX = 1.0;
@@ -503,7 +507,7 @@ void THWDriverThread::hwdtSloAskTilt()
         TiltX=asin((float)TiltX);
         TiltY=asin((float)TiltY);
         logger()->debug(QString("Tilt Sensor X: %1 Y: %2").arg(TiltX).arg(TiltY));
-        emit hwdtSigGotTilt(TiltX,TiltY);
+        emit hwdtSigGotTilt(TiltX,TiltY,TiltADC_Steps,TiltADC_Gain);
     }
 }
 
@@ -973,7 +977,9 @@ void THWDriverThread::hwdtSloCloseSpectrometer()
 THWDriver::THWDriver()
 {
     TemperatureTimer = new QTimer();
-    ActualTilt = new QPointF(100,100);
+    TiltTimer  = new QTimer();
+    ActualTilt = new QPointF(0,0);
+    TiltOffset = new QPointF(0,0);
     HWDriverObject = new THWDriverThread();
     CompassState = csNone;
     CompassHeading = INVALID_COMPASS_HEADING;
@@ -1003,10 +1009,10 @@ THWDriver::THWDriver()
         connect(HWDriverObject,SIGNAL(hwdtSigGotTemperature(THWTempSensorID , float,float,float ,bool)),
                     this,SLOT (hwdSloGotTemperature(THWTempSensorID , float,float,float ,bool)),Qt::QueuedConnection);
 
-        connect(HWDriverObject,SIGNAL(hwdtSigGotTilt(float,float)),
-                    this,SLOT (hwdSloGotTilt(float,float)),Qt::QueuedConnection);
-        connect(HWDriverObject,SIGNAL(hwdtSigGotTilt(float,float)),
-                    this,SIGNAL (hwdSigGotTilt(float,float)),Qt::QueuedConnection);
+        connect(HWDriverObject,SIGNAL(hwdtSigGotTilt(float,float,int,int)),
+                    this,SLOT (hwdSloGotTilt(float,float,int,int)),Qt::QueuedConnection);
+        //connect(HWDriverObject,SIGNAL(hwdtSigGotTilt(float,float,int,int)),
+        //            this,SIGNAL (hwdSigGotTilt(float,float,int,int)),Qt::QueuedConnection);
 
         connect(HWDriverObject,SIGNAL(hwdtSigGotCompassHeading( float )),
                     this,SLOT (hwdSloGotCompassHeading( float )),Qt::QueuedConnection);
@@ -1088,8 +1094,8 @@ THWDriver::THWDriver()
         connect(this,SIGNAL(hwdtSigAskTilt( )),
                     HWDriverObject,SLOT (hwdtSloAskTilt( )),Qt::QueuedConnection);
 
-        connect(this,SIGNAL(hwdtSigOffsetTilt(float,float)),
-                    HWDriverObject,SLOT (hwdtSloOffsetTilt(float,float)),Qt::QueuedConnection);
+     //   connect(this,SIGNAL(hwdtSigOffsetTilt(float,float)),
+     //               HWDriverObject,SLOT (hwdtSloOffsetTilt(float,float)),Qt::QueuedConnection);
 
         connect(this,SIGNAL(hwdtSigAskCompass( )),
                     HWDriverObject,SLOT (hwdtSloAskCompass( )),Qt::QueuedConnection);
@@ -1127,6 +1133,9 @@ THWDriver::THWDriver()
         connect(TemperatureTimer,SIGNAL(timeout()),
                     this,SLOT (hwdSlotTemperatureTimer( )));
 
+        connect(TiltTimer,SIGNAL(timeout()),
+                    this,SLOT (hwdSlotTiltTimer()));
+
         connect(this,SIGNAL(hwdtQuitThred()),
                             HWDriverObject,SLOT(CloseEverythingForLeaving()),Qt::QueuedConnection);
 
@@ -1136,6 +1145,7 @@ THWDriver::THWDriver()
     HWDriverThread->start();
     connect(HWDriverThread,SIGNAL(finished()),this,SLOT(hwdSlothreadFinished()));
     TemperatureTimer->start(1000);
+    TiltTimer->start(5000);
    // hwdSetComPort("/dev/ttyUSB0");
     WavelengthBuffer = TWavelengthbuffer::instance();
     SpectrCoefficients.uninitialized = true;
@@ -1143,10 +1153,18 @@ THWDriver::THWDriver()
 
 THWDriver::~THWDriver(){
     //hopefully stop() was called for not deleting a running thread
+    delete TiltTimer;
+    delete TemperatureTimer;
+    delete ActualTilt;
+    delete TiltOffset;
     HWDriverObject->deleteLater();
     HWDriverThread->deleteLater();
     delete m_sde;
     delete ComPortList;
+}
+
+void THWDriver::hwdSetTiltInterval(int ms){
+    TiltTimer->setInterval(ms);
 }
 
 void THWDriver::hwdSetComPort(TCOMPortConf ComConf)
@@ -1287,14 +1305,50 @@ void THWDriver::hwdAskTilt()
     emit hwdtSigAskTilt();
 }
 
-void THWDriver::hwdSloGotTilt(float TiltX,float TiltY){
-    ActualTilt->setX(TiltX);
-    ActualTilt->setY(TiltY);
+void THWDriver::hwdSlotTiltTimer(){
+    emit hwdAskTilt();
 }
 
-void THWDriver::hwdSetTiltZero()
+
+void THWDriver::hwdSloGotTilt(float TiltX, float TiltY, int Gain, int Resolution){
+//#define TILT_MAX_8G                 14.83
+//#define TILT_MAX_4G                 30.79
+
+    (void)Resolution;
+    float Border;
+    float MaxTilt;
+    if (Gain < 8){
+        MaxTilt = TILT_MAX_4G; // for bubble spirit use
+        Border = TILT_MAX_8G*0.75;
+        float MinTilt = TiltX;
+        if (MinTilt > TiltY){
+            MinTilt = TiltY;
+        }
+        if (MinTilt < TILT_MAX_8G*0.75){
+            hwdtSigConfigTilt(tcr18Bit,tcGain8);
+            //switch gain to 8
+        }
+    }else{
+        MaxTilt = TILT_MAX_4G*0.75;
+        Border = TILT_MAX_8G;
+        float MaxTilt = TiltX;
+        if (MaxTilt < TiltY){
+            MaxTilt = TiltY;
+        }
+        if (MaxTilt >= TILT_MAX_8G){
+            hwdtSigConfigTilt(tcr18Bit,tcGain4);
+            //switch gain to 4
+        }
+    }
+    ActualTilt->setX(TiltX);
+    ActualTilt->setY(TiltY);
+    *ActualTilt = *ActualTilt - *TiltOffset;
+    emit hwdSigGotTilt(ActualTilt->x(),ActualTilt->y(),Gain,Resolution,Border,MaxTilt);
+}
+
+void THWDriver::hwdSetTiltOffset(QPointF Offset)
 {
-    emit hwdtSigOffsetTilt(ActualTilt->x(),ActualTilt->y());
+    *TiltOffset = Offset;
 }
 
 

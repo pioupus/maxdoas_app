@@ -2,6 +2,7 @@
 #include <QSettings>
 #include <QString>
 #include "maxdoassettings.h"
+#include <QPointF>
 
 TMaxdoasSettings* TMaxdoasSettings::m_Instance = 0;
 
@@ -30,7 +31,13 @@ void TMaxdoasSettings::setRetrievalAvgCount(int s){
      settings->setValue("RetrievalParameters/AvgCount",s);
 }
 
+QPointF TMaxdoasSettings::getTiltOffset(){
+     return settings->value("TiltSensor/TiltOffset",QPointF(0,0)).toPointF();
+}
 
+void TMaxdoasSettings::setTiltOffset(QPointF TiltOffset){
+    settings->setValue("TiltSensor/TiltOffset",TiltOffset);
+}
 
 
 TSPectrWLCoefficients TMaxdoasSettings::getWaveLengthCoefficients(QString serial){

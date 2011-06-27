@@ -52,10 +52,9 @@ class TBubbleWidget : public QWidget
 public:
     TBubbleWidget(QWidget *parent = 0);
 
-
-    QSize minimumSizeHint() const;
-    QSize sizeHint() const;
-
+    void SetGainRes(int Gain, int Resolution, float ResolutionBorder, float MaxTilt);
+    void SetTilt(float TiltX, float TiltY);
+    void SetTiltOffset(QPointF Offset);
 protected:
     void paintEvent(QPaintEvent *event);
     void resizeEvent(QResizeEvent *event);
@@ -64,6 +63,11 @@ private:
     QRectF paintCircle( float sizeDeg, float OffsetX, float OffsetY);
     float MaxDegree;
     float BubbleSizeDeg;
+    QRectF TiltValue;
+    int Gain;
+    float ResolutionBorder;
+    float MaxTilt;
+    QPointF TiltOffset;
 };
 
 

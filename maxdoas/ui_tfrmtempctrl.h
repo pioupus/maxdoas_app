@@ -1,8 +1,8 @@
 /********************************************************************************
 ** Form generated from reading UI file 'tfrmtempctrl.ui'
 **
-** Created: Wed Jun 22 16:28:12 2011
-**      by: Qt User Interface Compiler version 4.7.0
+** Created: Sun Jun 26 19:56:10 2011
+**      by: Qt User Interface Compiler version 4.6.2
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -64,6 +64,8 @@ public:
     QVBoxLayout *verticalLayout_4;
     QLabel *label_7;
     QLabel *label_6;
+    QSpacerItem *verticalSpacer_4;
+    QPushButton *btnSetTiltToZero;
     QSpacerItem *verticalSpacer_3;
     QLabel *label_5;
     QLabel *label_4;
@@ -206,6 +208,15 @@ public:
 
         verticalLayout_4->addWidget(label_6);
 
+        verticalSpacer_4 = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
+
+        verticalLayout_4->addItem(verticalSpacer_4);
+
+        btnSetTiltToZero = new QPushButton(tab_2);
+        btnSetTiltToZero->setObjectName(QString::fromUtf8("btnSetTiltToZero"));
+
+        verticalLayout_4->addWidget(btnSetTiltToZero);
+
         verticalSpacer_3 = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
         verticalLayout_4->addItem(verticalSpacer_3);
@@ -302,6 +313,7 @@ public:
         tabWidget->setTabText(tabWidget->indexOf(tab), QApplication::translate("TfrmTempctrl", "Temperature", 0, QApplication::UnicodeUTF8));
         label_7->setText(QApplication::translate("TfrmTempctrl", "Roll:", 0, QApplication::UnicodeUTF8));
         label_6->setText(QApplication::translate("TfrmTempctrl", "Pitch:", 0, QApplication::UnicodeUTF8));
+        btnSetTiltToZero->setText(QApplication::translate("TfrmTempctrl", "Set to Zero", 0, QApplication::UnicodeUTF8));
         label_5->setText(QApplication::translate("TfrmTempctrl", "Gain:", 0, QApplication::UnicodeUTF8));
         label_4->setText(QApplication::translate("TfrmTempctrl", "Resolution:", 0, QApplication::UnicodeUTF8));
         tabWidget->setTabText(tabWidget->indexOf(tab_2), QApplication::translate("TfrmTempctrl", "Tilt", 0, QApplication::UnicodeUTF8));

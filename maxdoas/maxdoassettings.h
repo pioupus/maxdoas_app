@@ -50,6 +50,9 @@ public:
     float getTargetTemperature();
     void setTargetTemperature(float Temperature);
 
+    QPointF getTiltOffset();
+    void setTiltOffset(QPointF TiltOffset);
+
     static TMaxdoasSettings* instance()
     {
         static QMutex mutex;

@@ -19,7 +19,7 @@ TfrmTempctrl::TfrmTempctrl(THWDriver *hwdriver, QWidget *parent) :
     QwtLegend *legend = new QwtLegend;
     bubblewidget = new TBubbleWidget;
     ui->tiltlayout->addWidget(bubblewidget);
-
+    hwdriver->hwdSetTiltInterval(500);
     legend->setItemMode(QwtLegend::CheckableItem);
     plot->insertLegend(legend, QwtPlot::RightLegend);
   //  plot->aut
@@ -43,6 +43,11 @@ TfrmTempctrl::TfrmTempctrl(THWDriver *hwdriver, QWidget *parent) :
         SLOT(showCurve(QwtPlotItem *, bool)));
     connect(hwdriver, SIGNAL(hwdSigGotTemperatures(float , float, float)),
         SLOT(SloGotTemperature(float , float, float )));
+
+    connect(hwdriver, SIGNAL(hwdSigGotTilt(float , float, int,int,float,float)),
+        SLOT(SlotGotTilt(float , float, int,int ,float,float)));
+
+
 
     showCurve(curvePeltier, true);
     showCurve(curveHeatsink, true);
@@ -151,6 +156,7 @@ void TfrmTempctrl::slotCOMPorts(const QStringList &list)
 
 TfrmTempctrl::~TfrmTempctrl()
 {
+    hwdriver->hwdSetTiltInterval(5000);
     delete m_sde;
     delete bubblewidget;
     delete ui;
@@ -179,11 +185,27 @@ void TfrmTempctrl::on_buttonBox_accepted()
     hwdriver->hwdSetTargetTemperature(ui->sedtTargetTemp->value());
 }
 
-void TfrmTempctrl::SlotGotTilt(float x,float y){
 
+void TfrmTempctrl::SlotGotTilt(float x,float y,int Gain,int Resolution,float ResolutionBorder,float MaxTilt){
+    (void) x;
+    (void) y;
+    (void) Gain;
+    (void) Resolution;
+    (void) ResolutionBorder;
+    (void) MaxTilt;
+    bubblewidget->SetGainRes(Gain,Resolution,ResolutionBorder,MaxTilt);
+    bubblewidget->SetTilt(x,y);
+    bubblewidget->SetTiltOffset(ms->getTiltOffset());
 }
 
 void TfrmTempctrl::on_chbComBySysPath_stateChanged(int )
 {
     ComPortSettings.ByName = !ui->chbComBySysPath->isChecked();
+}
+
+void TfrmTempctrl::on_btnSetTiltToZero_clicked()
+{
+
+    ms->setTiltOffset(QPointF(hwdriver->hwdGetTilt()));
+    hwdriver->hwdSetTiltOffset(hwdriver->hwdGetTilt());
 }
