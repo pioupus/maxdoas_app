@@ -450,7 +450,7 @@ void THWDriverThread::hwdtSloConfigTilt(TTiltConfigRes Resolution,TTiltConfigGai
 void THWDriverThread::hwdtSloAskTilt()
 {
 
-    const uint Bufferlength = 10;
+   /* const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
     for (uint i = 0; i < Bufferlength;i++){
@@ -508,7 +508,7 @@ void THWDriverThread::hwdtSloAskTilt()
         TiltY=asin((float)TiltY);
         logger()->debug(QString("Tilt Sensor X: %1 Y: %2").arg(TiltX).arg(TiltY));
         emit hwdtSigGotTilt(TiltX,TiltY,TiltADC_Steps,TiltADC_Gain);
-    }
+    }*/
 }
 
 void THWDriverThread::hwdtSloAskCompass()
