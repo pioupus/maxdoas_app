@@ -4,6 +4,7 @@
 #include <QSettings>
 
 #include <QMutex>
+#define MAXWAVELEGNTH_BUFFER_ELEMTENTS 4096
 struct TSPectrWLCoefficients{
     double Offset;
     double Coeff1;

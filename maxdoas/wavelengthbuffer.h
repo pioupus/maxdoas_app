@@ -3,6 +3,8 @@
 #include <QString>
 #include <QSettings>
 
+#include "maxdoassettings.h"
+
 #include <QMutex>
 
 class TWavelengthbuffer

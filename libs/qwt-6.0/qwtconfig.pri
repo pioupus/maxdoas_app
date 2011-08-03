@@ -19,7 +19,8 @@ QWT_VERSION      = $${QWT_VER_MAJ}.$${QWT_VER_MIN}.$${QWT_VER_PAT}
 QWT_INSTALL_PREFIX = $$[QT_INSTALL_PREFIX]
 
 unix {
-    QWT_INSTALL_PREFIX    = /usr/local/qwt-$$QWT_VERSION-svn
+    #QWT_INSTALL_PREFIX    = /usr/local/qwt-$$QWT_VERSION-svn
+    QWT_INSTALL_PREFIX    = lib
 }
 
 win32 {
