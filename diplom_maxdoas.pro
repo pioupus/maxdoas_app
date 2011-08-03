@@ -7,10 +7,10 @@ include(libs/log4qt/src/log4qt/log4qt.pri)
 
 
 INCLUDEPATH += . \
-    libs/qwt-6.0/src \
-    maxdoas \
-    libs/qserialdevice/src/qserialdevice \
-    libs/qserialdevice/src/qserialdeviceenumerator \
+    ../diplom_maxdoas/libs/qwt-6.0/src \
+    ../diplom_maxdoas/maxdoas \
+    ../diplom_maxdoas/libs/qserialdevice/src/qserialdevice \
+    ../diplom_maxdoas/libs/qserialdevice/src/qserialdeviceenumerator \
     /home/arne/opt/OmniDriverSPAM-1.66/include \
     /usr/lib/jvm/default-java/include \
     /usr/lib/jvm/default-java/include/linux \
@@ -20,15 +20,15 @@ INCLUDEPATH += . \
 LIBS += -L/home/arne/opt/OmniDriverSPAM-1.66/_jvm/lib/i386/client -ljvm
 LIBS += -L/home/arne/opt/OmniDriverSPAM-1.66/OOI_HOME -lOmniDriver -lcommon
 #LIBS += -L/home/arne/opt/OmniDriverSPAM-1.66/OOI_HOME -lOmniDriver -lcommon
-LIBS += -Llibs/qwt-6.0/lib -lqwt
+LIBS += -L../diplom_maxdoas/libs/qwt-6.0/lib -lqwt
 #LIBS += -Llibs/qserialdevice/src/build/release -lqserialdevice
 LIBS += -ludev
 
 CONFIG(debug, debug|release) {
-    QMAKE_LIBDIR += libs/qserialdevice/src/build/debug
+    QMAKE_LIBDIR += ../diplom_maxdoas/libs/qserialdevice/src/build/debug
     LIBS += -lqserialdeviced
 } else {
-    QMAKE_LIBDIR += libs/qserialdevice/src/build/release
+    QMAKE_LIBDIR += ../diplom_maxdoas/libs/qserialdevice/src/build/release
     LIBS += -lqserialdevice
 }
 
