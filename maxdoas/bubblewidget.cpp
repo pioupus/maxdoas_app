@@ -109,7 +109,7 @@ void TBubbleWidget::paintEvent(QPaintEvent *)
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing, true);
     //painter.translate(width() / 2, height() / 2);
-    MaxDegree = 10.0;
+    MaxDegree = 20.0;
     BubbleSizeDeg = 1.0;
 
     painter.setPen(QPen(QColor(Qt::darkBlue), 2));

@@ -47,7 +47,7 @@ TfrmTempctrl::TfrmTempctrl(THWDriver *hwdriver, QWidget *parent) :
     connect(hwdriver, SIGNAL(hwdSigGotTilt(float , float, int,int,float,float)),
         SLOT(SlotGotTilt(float , float, int,int ,float,float)));
 
-
+ //   void hwdSigGotTilt(float TiltX,float TiltY,int Gain, int Resolution,float ResolutionBorder,float MaxTilt);
 
     showCurve(curvePeltier, true);
     showCurve(curveHeatsink, true);
@@ -196,6 +196,8 @@ void TfrmTempctrl::SlotGotTilt(float x,float y,int Gain,int Resolution,float Res
     bubblewidget->SetGainRes(Gain,Resolution,ResolutionBorder,MaxTilt);
     bubblewidget->SetTilt(x,y);
     bubblewidget->SetTiltOffset(ms->getTiltOffset());
+    ui->lblTiltRoll->setText(QString("Roll: %1").arg(x));
+    ui->lblTiltPitch->setText(QString("Pitch: %1").arg(y));
 }
 
 void TfrmTempctrl::on_chbComBySysPath_stateChanged(int )

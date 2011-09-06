@@ -133,8 +133,8 @@ signals:
     void hwdtSigSpectrometersDicovered();
     void hwdtSigCOMPortChanged(QString name, bool opened, bool error);
 private:
-    bool sendBuffer(char *TXBuffer,char *RXBuffer,uint size,uint timeout , bool TempCtrler); //returns true if ok
-    bool waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,int timeout, bool TempCtrler); //returns true if ok
+    bool sendBuffer(char *TXBuffer,char *RXBuffer,uint size,uint timeout , bool TempCtrler,bool RetransmitAllowed); //returns true if ok
+    bool waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,int timeout, bool TempCtrler,bool RetransmitAllowed); //returns true if ok
     float sensorTempToCelsius(short int Temperature);
     short int CelsiusToSensorTemp(float Temperature);
     void TakeSpectrum(int avg, uint IntegrTime);

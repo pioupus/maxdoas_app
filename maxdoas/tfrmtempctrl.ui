@@ -74,9 +74,9 @@
      <item>
       <widget class="QTabWidget" name="tabWidget">
        <property name="currentIndex">
-        <number>1</number>
+        <number>2</number>
        </property>
-       <widget class="QWidget" name="tab">
+       <widget class="QWidget" name="tabTemp">
         <attribute name="title">
          <string>Temperature</string>
         </attribute>
@@ -157,7 +157,7 @@
          </item>
         </layout>
        </widget>
-       <widget class="QWidget" name="tab_2">
+       <widget class="QWidget" name="tabTilt">
         <attribute name="title">
          <string>Tilt</string>
         </attribute>
@@ -191,14 +191,14 @@
            <item>
             <layout class="QVBoxLayout" name="verticalLayout_4">
              <item>
-              <widget class="QLabel" name="label_7">
+              <widget class="QLabel" name="lblTiltRoll">
                <property name="text">
                 <string>Roll:</string>
                </property>
               </widget>
              </item>
              <item>
-              <widget class="QLabel" name="label_6">
+              <widget class="QLabel" name="lblTiltPitch">
                <property name="text">
                 <string>Pitch:</string>
                </property>
@@ -269,7 +269,7 @@
          </item>
         </layout>
        </widget>
-       <widget class="QWidget" name="tab_3">
+       <widget class="QWidget" name="tabCompass">
         <attribute name="title">
          <string>Compass</string>
         </attribute>

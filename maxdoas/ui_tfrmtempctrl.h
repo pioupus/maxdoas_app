@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'tfrmtempctrl.ui'
 **
-** Created: Sun Jun 26 19:56:10 2011
+** Created: Fri Aug 26 20:41:59 2011
 **      by: Qt User Interface Compiler version 4.6.2
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -45,7 +45,7 @@ public:
     QSpacerItem *horizontalSpacer_2;
     QCheckBox *chbComBySysPath;
     QTabWidget *tabWidget;
-    QWidget *tab;
+    QWidget *tabTemp;
     QGridLayout *gridLayout_3;
     QVBoxLayout *verticalLayout;
     QHBoxLayout *hbox;
@@ -55,21 +55,21 @@ public:
     QDoubleSpinBox *sedtTargetTemp;
     QLabel *label_2;
     QSpacerItem *horizontalSpacer;
-    QWidget *tab_2;
+    QWidget *tabTilt;
     QGridLayout *gridLayout_2;
     QHBoxLayout *horizontalLayout_3;
     QVBoxLayout *tiltlayout;
     QSpacerItem *horizontalSpacer_3;
     QFrame *line;
     QVBoxLayout *verticalLayout_4;
-    QLabel *label_7;
-    QLabel *label_6;
+    QLabel *lblTiltRoll;
+    QLabel *lblTiltPitch;
     QSpacerItem *verticalSpacer_4;
     QPushButton *btnSetTiltToZero;
     QSpacerItem *verticalSpacer_3;
     QLabel *label_5;
     QLabel *label_4;
-    QWidget *tab_3;
+    QWidget *tabCompass;
     QGridLayout *gridLayout_4;
     QHBoxLayout *horizontalLayout_4;
     QVBoxLayout *verticalLayout_7;
@@ -126,9 +126,9 @@ public:
 
         tabWidget = new QTabWidget(TfrmTempctrl);
         tabWidget->setObjectName(QString::fromUtf8("tabWidget"));
-        tab = new QWidget();
-        tab->setObjectName(QString::fromUtf8("tab"));
-        gridLayout_3 = new QGridLayout(tab);
+        tabTemp = new QWidget();
+        tabTemp->setObjectName(QString::fromUtf8("tabTemp"));
+        gridLayout_3 = new QGridLayout(tabTemp);
         gridLayout_3->setObjectName(QString::fromUtf8("gridLayout_3"));
         verticalLayout = new QVBoxLayout();
         verticalLayout->setObjectName(QString::fromUtf8("verticalLayout"));
@@ -143,12 +143,12 @@ public:
 
         horizontalLayout = new QHBoxLayout();
         horizontalLayout->setObjectName(QString::fromUtf8("horizontalLayout"));
-        label = new QLabel(tab);
+        label = new QLabel(tabTemp);
         label->setObjectName(QString::fromUtf8("label"));
 
         horizontalLayout->addWidget(label);
 
-        sedtTargetTemp = new QDoubleSpinBox(tab);
+        sedtTargetTemp = new QDoubleSpinBox(tabTemp);
         sedtTargetTemp->setObjectName(QString::fromUtf8("sedtTargetTemp"));
         sedtTargetTemp->setMinimumSize(QSize(100, 0));
         sedtTargetTemp->setDecimals(1);
@@ -158,7 +158,7 @@ public:
 
         horizontalLayout->addWidget(sedtTargetTemp);
 
-        label_2 = new QLabel(tab);
+        label_2 = new QLabel(tabTemp);
         label_2->setObjectName(QString::fromUtf8("label_2"));
 
         horizontalLayout->addWidget(label_2);
@@ -173,10 +173,10 @@ public:
 
         gridLayout_3->addLayout(verticalLayout, 0, 0, 1, 1);
 
-        tabWidget->addTab(tab, QString());
-        tab_2 = new QWidget();
-        tab_2->setObjectName(QString::fromUtf8("tab_2"));
-        gridLayout_2 = new QGridLayout(tab_2);
+        tabWidget->addTab(tabTemp, QString());
+        tabTilt = new QWidget();
+        tabTilt->setObjectName(QString::fromUtf8("tabTilt"));
+        gridLayout_2 = new QGridLayout(tabTilt);
         gridLayout_2->setObjectName(QString::fromUtf8("gridLayout_2"));
         horizontalLayout_3 = new QHBoxLayout();
         horizontalLayout_3->setObjectName(QString::fromUtf8("horizontalLayout_3"));
@@ -189,7 +189,7 @@ public:
 
         horizontalLayout_3->addLayout(tiltlayout);
 
-        line = new QFrame(tab_2);
+        line = new QFrame(tabTilt);
         line->setObjectName(QString::fromUtf8("line"));
         line->setFrameShape(QFrame::VLine);
         line->setFrameShadow(QFrame::Sunken);
@@ -198,21 +198,21 @@ public:
 
         verticalLayout_4 = new QVBoxLayout();
         verticalLayout_4->setObjectName(QString::fromUtf8("verticalLayout_4"));
-        label_7 = new QLabel(tab_2);
-        label_7->setObjectName(QString::fromUtf8("label_7"));
+        lblTiltRoll = new QLabel(tabTilt);
+        lblTiltRoll->setObjectName(QString::fromUtf8("lblTiltRoll"));
 
-        verticalLayout_4->addWidget(label_7);
+        verticalLayout_4->addWidget(lblTiltRoll);
 
-        label_6 = new QLabel(tab_2);
-        label_6->setObjectName(QString::fromUtf8("label_6"));
+        lblTiltPitch = new QLabel(tabTilt);
+        lblTiltPitch->setObjectName(QString::fromUtf8("lblTiltPitch"));
 
-        verticalLayout_4->addWidget(label_6);
+        verticalLayout_4->addWidget(lblTiltPitch);
 
         verticalSpacer_4 = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
         verticalLayout_4->addItem(verticalSpacer_4);
 
-        btnSetTiltToZero = new QPushButton(tab_2);
+        btnSetTiltToZero = new QPushButton(tabTilt);
         btnSetTiltToZero->setObjectName(QString::fromUtf8("btnSetTiltToZero"));
 
         verticalLayout_4->addWidget(btnSetTiltToZero);
@@ -221,12 +221,12 @@ public:
 
         verticalLayout_4->addItem(verticalSpacer_3);
 
-        label_5 = new QLabel(tab_2);
+        label_5 = new QLabel(tabTilt);
         label_5->setObjectName(QString::fromUtf8("label_5"));
 
         verticalLayout_4->addWidget(label_5);
 
-        label_4 = new QLabel(tab_2);
+        label_4 = new QLabel(tabTilt);
         label_4->setObjectName(QString::fromUtf8("label_4"));
         label_4->setMinimumSize(QSize(150, 0));
         label_4->setFrameShape(QFrame::NoFrame);
@@ -240,10 +240,10 @@ public:
 
         gridLayout_2->addLayout(horizontalLayout_3, 0, 0, 1, 1);
 
-        tabWidget->addTab(tab_2, QString());
-        tab_3 = new QWidget();
-        tab_3->setObjectName(QString::fromUtf8("tab_3"));
-        gridLayout_4 = new QGridLayout(tab_3);
+        tabWidget->addTab(tabTilt, QString());
+        tabCompass = new QWidget();
+        tabCompass->setObjectName(QString::fromUtf8("tabCompass"));
+        gridLayout_4 = new QGridLayout(tabCompass);
         gridLayout_4->setObjectName(QString::fromUtf8("gridLayout_4"));
         horizontalLayout_4 = new QHBoxLayout();
         horizontalLayout_4->setObjectName(QString::fromUtf8("horizontalLayout_4"));
@@ -262,7 +262,7 @@ public:
 
         verticalLayout_6->addItem(verticalSpacer_2);
 
-        btnCompassCalibrate = new QPushButton(tab_3);
+        btnCompassCalibrate = new QPushButton(tabCompass);
         btnCompassCalibrate->setObjectName(QString::fromUtf8("btnCompassCalibrate"));
         btnCompassCalibrate->setCheckable(true);
         btnCompassCalibrate->setAutoDefault(true);
@@ -277,7 +277,7 @@ public:
 
         gridLayout_4->addLayout(horizontalLayout_4, 0, 0, 1, 1);
 
-        tabWidget->addTab(tab_3, QString());
+        tabWidget->addTab(tabCompass, QString());
 
         verticalLayout_2->addWidget(tabWidget);
 
@@ -296,7 +296,7 @@ public:
         QObject::connect(buttonBox, SIGNAL(accepted()), TfrmTempctrl, SLOT(accept()));
         QObject::connect(buttonBox, SIGNAL(rejected()), TfrmTempctrl, SLOT(reject()));
 
-        tabWidget->setCurrentIndex(1);
+        tabWidget->setCurrentIndex(2);
 
 
         QMetaObject::connectSlotsByName(TfrmTempctrl);
@@ -310,15 +310,15 @@ public:
         chbComBySysPath->setText(QApplication::translate("TfrmTempctrl", "Choose by Systempath", 0, QApplication::UnicodeUTF8));
         label->setText(QApplication::translate("TfrmTempctrl", "Target temp.", 0, QApplication::UnicodeUTF8));
         label_2->setText(QApplication::translate("TfrmTempctrl", "\302\260C", 0, QApplication::UnicodeUTF8));
-        tabWidget->setTabText(tabWidget->indexOf(tab), QApplication::translate("TfrmTempctrl", "Temperature", 0, QApplication::UnicodeUTF8));
-        label_7->setText(QApplication::translate("TfrmTempctrl", "Roll:", 0, QApplication::UnicodeUTF8));
-        label_6->setText(QApplication::translate("TfrmTempctrl", "Pitch:", 0, QApplication::UnicodeUTF8));
+        tabWidget->setTabText(tabWidget->indexOf(tabTemp), QApplication::translate("TfrmTempctrl", "Temperature", 0, QApplication::UnicodeUTF8));
+        lblTiltRoll->setText(QApplication::translate("TfrmTempctrl", "Roll:", 0, QApplication::UnicodeUTF8));
+        lblTiltPitch->setText(QApplication::translate("TfrmTempctrl", "Pitch:", 0, QApplication::UnicodeUTF8));
         btnSetTiltToZero->setText(QApplication::translate("TfrmTempctrl", "Set to Zero", 0, QApplication::UnicodeUTF8));
         label_5->setText(QApplication::translate("TfrmTempctrl", "Gain:", 0, QApplication::UnicodeUTF8));
         label_4->setText(QApplication::translate("TfrmTempctrl", "Resolution:", 0, QApplication::UnicodeUTF8));
-        tabWidget->setTabText(tabWidget->indexOf(tab_2), QApplication::translate("TfrmTempctrl", "Tilt", 0, QApplication::UnicodeUTF8));
+        tabWidget->setTabText(tabWidget->indexOf(tabTilt), QApplication::translate("TfrmTempctrl", "Tilt", 0, QApplication::UnicodeUTF8));
         btnCompassCalibrate->setText(QApplication::translate("TfrmTempctrl", "Calibration mode", 0, QApplication::UnicodeUTF8));
-        tabWidget->setTabText(tabWidget->indexOf(tab_3), QApplication::translate("TfrmTempctrl", "Compass", 0, QApplication::UnicodeUTF8));
+        tabWidget->setTabText(tabWidget->indexOf(tabCompass), QApplication::translate("TfrmTempctrl", "Compass", 0, QApplication::UnicodeUTF8));
     } // retranslateUi
 
 };

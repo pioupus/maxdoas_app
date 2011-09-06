@@ -1,8 +1,10 @@
 #ifndef TSPECTRUM_H
 #define TSPECTRUM_H
 #include <QPoint>
+#include <QDateTime>
 #include "wavelengthbuffer.h"
 #include "maxdoassettings.h"
+#include "tmirrorcoordinate.h"
 
 
 enum TSprectumType{stNone,stDarkOffset,stDarkNoise,stSunSpec,stMeasurement};
@@ -11,6 +13,21 @@ class TSpectrum
 {
 public:
     TSpectrum();
+
+    void SaveSpectrSTD(QString fn);
+    void SaveSpectrMetaAscii(QString fn);
+
+    void SaveSpectrSTD_DefaultName(QString Directory, QString BaseName, uint SquenceNr);
+    void SaveSpectrMetaAscii_DefaultName(QString Directory, QString BaseName, uint SquenceNr);
+
+
+    bool LoadSpectrSTD(QString fn);
+    bool LoadSpectrMetaAscii(QString fn);
+
+    bool LoadSpectrSTD_Sequ(QString Directory, QString BaseName, uint SequenceNr);
+
+    bool LoadSpectrEMT(QString fn);
+
     double spectrum[ MAXWAVELEGNTH_BUFFER_ELEMTENTS];
     TWavelengthbuffer *Wavelength;//points to global buffer
     int NumOfSpectrPixels;
@@ -21,7 +38,13 @@ public:
     uint AvgCount;
     TSPectrWLCoefficients WLCoefficients;
     double MaxPossibleValue;
-    private:
+    int SequenceNumber;
+    float Temperature;
+    TMirrorCoordinate MirrorCoordinate;
+    QDateTime datetime;
+
+private:
+    QString GetSequenceFileName(QString Directory, QString BaseName, uint Sequence);
 };
 
 #endif // TSPECTRUM_H
