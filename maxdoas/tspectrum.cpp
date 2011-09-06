@@ -15,18 +15,18 @@ TSpectrum::TSpectrum()
 }
 
 QString TSpectrum::GetSequenceFileName(QString Directory, QString BaseName, uint Sequence){
-    QDir dir(Directory);
-    dir.setFilter(QDir::Files);
-    dir.setSorting(QDir::Time);
-
-    QFileInfoList list = dir.entryInfoList();
-    std::cout << "     Bytes Filename" << std::endl;
-    for (int i = 0; i < list.size(); ++i) {
-        QFileInfo fileInfo = list.at(i);
-        std::cout << qPrintable(QString("%1 %2").arg(fileInfo.size(), 10)
-                                                .arg(fileInfo.fileName()));
-        std::cout << std::endl;
-    }
+//    QDir dir(Directory);
+//    dir.setFilter(QDir::Files);
+//    dir.setSorting(QDir::Time);
+//
+//    QFileInfoList list = dir.entryInfoList();
+//    std::cout << "     Bytes Filename" << std::endl;
+//    for (int i = 0; i < list.size(); ++i) {
+//        QFileInfo fileInfo = list.at(i);
+//        std::cout << qPrintable(QString("%1 %2").arg(fileInfo.size(), 10)
+//                                                .arg(fileInfo.fileName()));
+//        std::cout << std::endl;
+//    }
 
 }
 

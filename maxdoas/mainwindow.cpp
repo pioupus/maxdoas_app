@@ -153,6 +153,24 @@ MainWindow::MainWindow(QWidget *parent) :
         }
     }
 
+    ScriptEngine = new QScriptEngine();
+    ScriptEngine->setProcessEventsInterval(10);
+    scriptWrapper = new TScriptWrapper();
+    ScriptEngine = scriptWrapper->getScriptEngine();
+    ScriptDebugger = new QScriptEngineDebugger;
+    ScriptDebugger->attachTo(ScriptEngine);
+    ScriptDebugger->setAutoShowStandardWindow(false);
+    DebugOutputWidget = ScriptDebugger->widget(QScriptEngineDebugger::DebugOutputWidget);
+    DebugOutputWidget->setMaximumHeight(150)    ;
+    ui->debugoutLayout->addWidget(DebugOutputWidget);
+//    ui->debugoutLayout->addWidget(mDebugger->widget(QScriptEngineDebugger::CodeWidget));
+//     ui->hl->addWidget(mDebugger->widget(QScriptEngineDebugger::ConsoleWidget));
+//     ui->hl->addWidget(mDebugger->widget(QScriptEngineDebugger::LocalsWidget));
+//     ui->vl->addWidget(mDebugger->createStandardToolBar(          ));
+//     ui->hl->addWidget(mDebugger->widget(QScriptEngineDebugger::ScriptsWidget));
+//     ui->hl->addWidget(mDebugger->widget(QScriptEngineDebugger::BreakpointsWidget));
+
+
     connect(HWDriver,SIGNAL(hwdSigGotSpectrum()),this,SLOT(on_GotSpectrum()));
     connect(HWDriver,SIGNAL(hwdSigHWThreadFinished()),this,SLOT(HWThreadFinished()));
     connect(HWDriver,SIGNAL(hwdSigCOMPortChanged(QString,bool,bool)),this,SLOT(COMPortChanged(QString,bool,bool)));
@@ -243,6 +261,8 @@ void MainWindow::closeEvent(QCloseEvent *event){
 
 MainWindow::~MainWindow()
 {
+    delete scriptWrapper;
+    delete ScriptDebugger;
     delete marker_corr_top;
     delete marker_corr_bot;
     delete marker_target;

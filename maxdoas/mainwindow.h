@@ -25,6 +25,9 @@
 #include "log4qt/logger.h"
 #include "log4qt/ttcclayout.h"
 #include "thwdriver.h"
+#include <QScriptEngine>
+#include <QScriptEngineDebugger>
+#include "scriptwrapper.h"
 
 namespace Ui {
     class MainWindow;
@@ -53,7 +56,9 @@ private slots:
     void COMPortChanged(QString name, bool opened, bool error);
 
 private:
-    Ui::MainWindow *ui;
+    QScriptEngine *ScriptEngine;
+    QScriptEngineDebugger *ScriptDebugger;
+    QWidget *DebugOutputWidget;
     THWDriver *HWDriver;
     QwtPlot *ImagePlot;
     QwtPlot *SpectrPlot;
@@ -67,6 +72,8 @@ private:
     TMaxdoasSettings *ms;
     void closeEvent(QCloseEvent *event);
     bool closenow;
+    TScriptWrapper *scriptWrapper;
+    Ui::MainWindow *ui;
 
 };
 

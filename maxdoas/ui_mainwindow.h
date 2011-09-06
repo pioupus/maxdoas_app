@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'mainwindow.ui'
 **
-** Created: Fri Aug 26 20:41:59 2011
+** Created: Tue Sep 6 00:16:32 2011
 **      by: Qt User Interface Compiler version 4.6.2
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -22,6 +22,7 @@
 #include <QtGui/QMenuBar>
 #include <QtGui/QSpacerItem>
 #include <QtGui/QStatusBar>
+#include <QtGui/QTabWidget>
 #include <QtGui/QVBoxLayout>
 #include <QtGui/QWidget>
 
@@ -35,11 +36,19 @@ public:
     QAction *actionClose;
     QAction *actionHjkjhkj;
     QAction *actionConfigSpectrometer;
+    QAction *actionOpen;
     QWidget *centralWidget;
     QGridLayout *gridLayout;
+    QVBoxLayout *verticalLayout_2;
+    QTabWidget *tabWidget;
+    QWidget *tabPlot;
+    QGridLayout *gridLayout_2;
     QVBoxLayout *verticalLayout;
     QHBoxLayout *hbox;
-    QSpacerItem *verticalSpacer;
+    QSpacerItem *verticalSpacer_2;
+    QWidget *tabScript;
+    QHBoxLayout *debugoutLayout;
+    QSpacerItem *debugoutspcer;
     QMenuBar *menuBar;
     QMenu *menuFile;
     QMenu *menuConfiguration;
@@ -65,6 +74,8 @@ public:
         actionHjkjhkj->setObjectName(QString::fromUtf8("actionHjkjhkj"));
         actionConfigSpectrometer = new QAction(MainWindow);
         actionConfigSpectrometer->setObjectName(QString::fromUtf8("actionConfigSpectrometer"));
+        actionOpen = new QAction(MainWindow);
+        actionOpen->setObjectName(QString::fromUtf8("actionOpen"));
         centralWidget = new QWidget(MainWindow);
         centralWidget->setObjectName(QString::fromUtf8("centralWidget"));
         QSizePolicy sizePolicy1(QSizePolicy::Ignored, QSizePolicy::Ignored);
@@ -76,6 +87,18 @@ public:
         gridLayout->setSpacing(6);
         gridLayout->setContentsMargins(11, 11, 11, 11);
         gridLayout->setObjectName(QString::fromUtf8("gridLayout"));
+        verticalLayout_2 = new QVBoxLayout();
+        verticalLayout_2->setSpacing(6);
+        verticalLayout_2->setObjectName(QString::fromUtf8("verticalLayout_2"));
+        verticalLayout_2->setContentsMargins(-1, 0, -1, -1);
+        tabWidget = new QTabWidget(centralWidget);
+        tabWidget->setObjectName(QString::fromUtf8("tabWidget"));
+        tabPlot = new QWidget();
+        tabPlot->setObjectName(QString::fromUtf8("tabPlot"));
+        gridLayout_2 = new QGridLayout(tabPlot);
+        gridLayout_2->setSpacing(6);
+        gridLayout_2->setContentsMargins(11, 11, 11, 11);
+        gridLayout_2->setObjectName(QString::fromUtf8("gridLayout_2"));
         verticalLayout = new QVBoxLayout();
         verticalLayout->setSpacing(6);
         verticalLayout->setObjectName(QString::fromUtf8("verticalLayout"));
@@ -84,15 +107,36 @@ public:
         hbox->setSpacing(6);
         hbox->setObjectName(QString::fromUtf8("hbox"));
         hbox->setSizeConstraint(QLayout::SetDefaultConstraint);
-        verticalSpacer = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
+        verticalSpacer_2 = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
-        hbox->addItem(verticalSpacer);
+        hbox->addItem(verticalSpacer_2);
 
 
         verticalLayout->addLayout(hbox);
 
 
-        gridLayout->addLayout(verticalLayout, 0, 0, 1, 1);
+        gridLayout_2->addLayout(verticalLayout, 0, 0, 1, 1);
+
+        tabWidget->addTab(tabPlot, QString());
+        tabScript = new QWidget();
+        tabScript->setObjectName(QString::fromUtf8("tabScript"));
+        tabWidget->addTab(tabScript, QString());
+
+        verticalLayout_2->addWidget(tabWidget);
+
+        debugoutLayout = new QHBoxLayout();
+        debugoutLayout->setSpacing(6);
+        debugoutLayout->setObjectName(QString::fromUtf8("debugoutLayout"));
+        debugoutLayout->setContentsMargins(-1, 0, 0, -1);
+        debugoutspcer = new QSpacerItem(20, 100, QSizePolicy::Minimum, QSizePolicy::Maximum);
+
+        debugoutLayout->addItem(debugoutspcer);
+
+
+        verticalLayout_2->addLayout(debugoutLayout);
+
+
+        gridLayout->addLayout(verticalLayout_2, 2, 0, 1, 1);
 
         MainWindow->setCentralWidget(centralWidget);
         menuBar = new QMenuBar(MainWindow);
@@ -109,12 +153,16 @@ public:
 
         menuBar->addAction(menuFile->menuAction());
         menuBar->addAction(menuConfiguration->menuAction());
+        menuFile->addAction(actionOpen);
         menuFile->addAction(actionClose);
         menuConfiguration->addAction(actionTempctrler);
         menuConfiguration->addAction(actionSensors);
         menuConfiguration->addAction(actionConfigSpectrometer);
 
         retranslateUi(MainWindow);
+
+        tabWidget->setCurrentIndex(0);
+
 
         QMetaObject::connectSlotsByName(MainWindow);
     } // setupUi
@@ -127,6 +175,9 @@ public:
         actionClose->setText(QApplication::translate("MainWindow", "Close", 0, QApplication::UnicodeUTF8));
         actionHjkjhkj->setText(QApplication::translate("MainWindow", "hjkjhkj", 0, QApplication::UnicodeUTF8));
         actionConfigSpectrometer->setText(QApplication::translate("MainWindow", "Spectrometer", 0, QApplication::UnicodeUTF8));
+        actionOpen->setText(QApplication::translate("MainWindow", "Open Script", 0, QApplication::UnicodeUTF8));
+        tabWidget->setTabText(tabWidget->indexOf(tabPlot), QApplication::translate("MainWindow", "Plots", 0, QApplication::UnicodeUTF8));
+        tabWidget->setTabText(tabWidget->indexOf(tabScript), QApplication::translate("MainWindow", "Script", 0, QApplication::UnicodeUTF8));
         menuFile->setTitle(QApplication::translate("MainWindow", "File", 0, QApplication::UnicodeUTF8));
         menuConfiguration->setTitle(QApplication::translate("MainWindow", "Configuration", 0, QApplication::UnicodeUTF8));
     } // retranslateUi

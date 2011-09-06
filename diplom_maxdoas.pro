@@ -33,6 +33,8 @@ else {
     LIBS += -lqserialdevice
 }
 CONFIG += qtestlib
+QT += script
+QT += scripttools
 DEFINES += LINUX
 
 # Input
@@ -50,7 +52,8 @@ HEADERS += maxdoas/mainwindow.h \
     maxdoas/bubblewidget.h \
     maxdoas/wavelengthbuffer.h \
     maxdoas/crc8.h \
-    maxdoas/tmirrorcoordinate.h
+    maxdoas/tmirrorcoordinate.h \
+    maxdoas/scriptwrapper.h
 FORMS += maxdoas/mainwindow.ui \
     maxdoas/tfrmtempctrl.ui \
     maxdoas/tfrmspectrconfig.ui
@@ -69,4 +72,5 @@ SOURCES += maxdoas/main.cpp \
     maxdoas/bubblewidget.cpp \
     maxdoas/wavelengthbuffer.cpp \
     maxdoas/crc8.c \
-    maxdoas/tmirrorcoordinate.cpp
+    maxdoas/tmirrorcoordinate.cpp \
+    maxdoas/scriptwrapper.cpp
