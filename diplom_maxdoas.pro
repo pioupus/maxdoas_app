@@ -53,7 +53,11 @@ HEADERS += maxdoas/mainwindow.h \
     maxdoas/wavelengthbuffer.h \
     maxdoas/crc8.h \
     maxdoas/tmirrorcoordinate.h \
-    maxdoas/scriptwrapper.h
+    maxdoas/scriptwrapper.h \
+    jsedit/jsedit.h \
+    maxdoas/tspectralimage.h \
+    maxdoas/tscanpath.h \
+    maxdoas/tspectrumplotter.h
 FORMS += maxdoas/mainwindow.ui \
     maxdoas/tfrmtempctrl.ui \
     maxdoas/tfrmspectrconfig.ui
@@ -73,4 +77,8 @@ SOURCES += maxdoas/main.cpp \
     maxdoas/wavelengthbuffer.cpp \
     maxdoas/crc8.c \
     maxdoas/tmirrorcoordinate.cpp \
-    maxdoas/scriptwrapper.cpp
+    maxdoas/scriptwrapper.cpp \
+    jsedit/jsedit.cpp \
+    maxdoas/tspectralimage.cpp \
+    maxdoas/tscanpath.cpp \
+    maxdoas/tspectrumplotter.cpp

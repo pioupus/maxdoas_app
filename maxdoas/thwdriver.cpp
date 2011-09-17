@@ -913,6 +913,8 @@ void THWDriverThread::hwdtSloMeasureSpectrum(uint avg, uint integrTime,THWShutte
 
         if (wrapper){
             TakeSpectrum(avg,integrTime);
+            if (SpectrometerIndex > -1)
+                QTest::qWait(10);
             emit hwdtSigGotSpectrum();
         }
         if (SetShutter(shutterCMDtmp)){
@@ -1185,8 +1187,8 @@ THWDriver::THWDriver()
     HWDriverObject->moveToThread(HWDriverThread);
     HWDriverThread->start();
     connect(HWDriverThread,SIGNAL(finished()),this,SLOT(hwdSlothreadFinished()));
-    TemperatureTimer->start(500);
-    TiltTimer->start(500);
+    TemperatureTimer->start(5000);
+    TiltTimer->start(5000);
    // hwdSetComPort("/dev/ttyUSB0");
     WavelengthBuffer = TWavelengthbuffer::instance();
     SpectrCoefficients.uninitialized = true;

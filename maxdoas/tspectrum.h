@@ -1,6 +1,7 @@
 #ifndef TSPECTRUM_H
 #define TSPECTRUM_H
 #include <QPoint>
+#include <QObject>
 #include <QDateTime>
 #include "wavelengthbuffer.h"
 #include "maxdoassettings.h"
@@ -9,11 +10,14 @@
 
 enum TSprectumType{stNone,stDarkOffset,stDarkNoise,stSunSpec,stMeasurement};
 
-class TSpectrum
+class TSpectrum: public QObject
 {
+        Q_OBJECT
 public:
-    TSpectrum();
 
+
+    TSpectrum(QObject* parent = 0);
+    ~TSpectrum();
     void SaveSpectrSTD(QString fn);
     void SaveSpectrMetaAscii(QString fn);
 
@@ -28,6 +32,7 @@ public:
 
     bool LoadSpectrEMT(QString fn);
 
+    QDateTime GetDateTime();
     double spectrum[ MAXWAVELEGNTH_BUFFER_ELEMTENTS];
     TWavelengthbuffer *Wavelength;//points to global buffer
     int NumOfSpectrPixels;
@@ -40,7 +45,7 @@ public:
     double MaxPossibleValue;
     int SequenceNumber;
     float Temperature;
-    TMirrorCoordinate MirrorCoordinate;
+    TMirrorCoordinate *MirrorCoordinate;
     QDateTime datetime;
 
 private:

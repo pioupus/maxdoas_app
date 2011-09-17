@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'mainwindow.ui'
 **
-** Created: Tue Sep 6 00:16:32 2011
+** Created: Thu Sep 8 02:15:59 2011
 **      by: Qt User Interface Compiler version 4.6.2
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -23,6 +23,7 @@
 #include <QtGui/QSpacerItem>
 #include <QtGui/QStatusBar>
 #include <QtGui/QTabWidget>
+#include <QtGui/QToolButton>
 #include <QtGui/QVBoxLayout>
 #include <QtGui/QWidget>
 
@@ -39,7 +40,11 @@ public:
     QAction *actionOpen;
     QWidget *centralWidget;
     QGridLayout *gridLayout;
-    QVBoxLayout *verticalLayout_2;
+    QVBoxLayout *mainVertLayout;
+    QHBoxLayout *horizontalLayout_2;
+    QToolButton *BtnStop;
+    QToolButton *BtnStart;
+    QSpacerItem *horizontalSpacer;
     QTabWidget *tabWidget;
     QWidget *tabPlot;
     QGridLayout *gridLayout_2;
@@ -47,6 +52,13 @@ public:
     QHBoxLayout *hbox;
     QSpacerItem *verticalSpacer_2;
     QWidget *tabScript;
+    QGridLayout *gridLayout_4;
+    QHBoxLayout *ScriptLayout;
+    QWidget *tabDebug;
+    QGridLayout *gridLayout_3;
+    QHBoxLayout *horizontalLayout;
+    QVBoxLayout *code_vertLayout;
+    QHBoxLayout *code_horizLayout;
     QHBoxLayout *debugoutLayout;
     QSpacerItem *debugoutspcer;
     QMenuBar *menuBar;
@@ -87,10 +99,33 @@ public:
         gridLayout->setSpacing(6);
         gridLayout->setContentsMargins(11, 11, 11, 11);
         gridLayout->setObjectName(QString::fromUtf8("gridLayout"));
-        verticalLayout_2 = new QVBoxLayout();
-        verticalLayout_2->setSpacing(6);
-        verticalLayout_2->setObjectName(QString::fromUtf8("verticalLayout_2"));
-        verticalLayout_2->setContentsMargins(-1, 0, -1, -1);
+        mainVertLayout = new QVBoxLayout();
+        mainVertLayout->setSpacing(6);
+        mainVertLayout->setObjectName(QString::fromUtf8("mainVertLayout"));
+        mainVertLayout->setContentsMargins(-1, 0, -1, -1);
+        horizontalLayout_2 = new QHBoxLayout();
+        horizontalLayout_2->setSpacing(6);
+        horizontalLayout_2->setObjectName(QString::fromUtf8("horizontalLayout_2"));
+        horizontalLayout_2->setContentsMargins(-1, 0, -1, -1);
+        BtnStop = new QToolButton(centralWidget);
+        BtnStop->setObjectName(QString::fromUtf8("BtnStop"));
+        BtnStop->setEnabled(false);
+
+        horizontalLayout_2->addWidget(BtnStop);
+
+        BtnStart = new QToolButton(centralWidget);
+        BtnStart->setObjectName(QString::fromUtf8("BtnStart"));
+        BtnStart->setEnabled(false);
+
+        horizontalLayout_2->addWidget(BtnStart);
+
+        horizontalSpacer = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+
+        horizontalLayout_2->addItem(horizontalSpacer);
+
+
+        mainVertLayout->addLayout(horizontalLayout_2);
+
         tabWidget = new QTabWidget(centralWidget);
         tabWidget->setObjectName(QString::fromUtf8("tabWidget"));
         tabPlot = new QWidget();
@@ -120,9 +155,45 @@ public:
         tabWidget->addTab(tabPlot, QString());
         tabScript = new QWidget();
         tabScript->setObjectName(QString::fromUtf8("tabScript"));
-        tabWidget->addTab(tabScript, QString());
+        gridLayout_4 = new QGridLayout(tabScript);
+        gridLayout_4->setSpacing(6);
+        gridLayout_4->setContentsMargins(11, 11, 11, 11);
+        gridLayout_4->setObjectName(QString::fromUtf8("gridLayout_4"));
+        ScriptLayout = new QHBoxLayout();
+        ScriptLayout->setSpacing(6);
+        ScriptLayout->setObjectName(QString::fromUtf8("ScriptLayout"));
 
-        verticalLayout_2->addWidget(tabWidget);
+        gridLayout_4->addLayout(ScriptLayout, 0, 0, 1, 1);
+
+        tabWidget->addTab(tabScript, QString());
+        tabDebug = new QWidget();
+        tabDebug->setObjectName(QString::fromUtf8("tabDebug"));
+        gridLayout_3 = new QGridLayout(tabDebug);
+        gridLayout_3->setSpacing(6);
+        gridLayout_3->setContentsMargins(11, 11, 11, 11);
+        gridLayout_3->setObjectName(QString::fromUtf8("gridLayout_3"));
+        horizontalLayout = new QHBoxLayout();
+        horizontalLayout->setSpacing(6);
+        horizontalLayout->setObjectName(QString::fromUtf8("horizontalLayout"));
+        code_vertLayout = new QVBoxLayout();
+        code_vertLayout->setSpacing(6);
+        code_vertLayout->setObjectName(QString::fromUtf8("code_vertLayout"));
+        code_vertLayout->setContentsMargins(10, -1, -1, -1);
+
+        horizontalLayout->addLayout(code_vertLayout);
+
+        code_horizLayout = new QHBoxLayout();
+        code_horizLayout->setSpacing(6);
+        code_horizLayout->setObjectName(QString::fromUtf8("code_horizLayout"));
+
+        horizontalLayout->addLayout(code_horizLayout);
+
+
+        gridLayout_3->addLayout(horizontalLayout, 0, 0, 1, 1);
+
+        tabWidget->addTab(tabDebug, QString());
+
+        mainVertLayout->addWidget(tabWidget);
 
         debugoutLayout = new QHBoxLayout();
         debugoutLayout->setSpacing(6);
@@ -133,10 +204,10 @@ public:
         debugoutLayout->addItem(debugoutspcer);
 
 
-        verticalLayout_2->addLayout(debugoutLayout);
+        mainVertLayout->addLayout(debugoutLayout);
 
 
-        gridLayout->addLayout(verticalLayout_2, 2, 0, 1, 1);
+        gridLayout->addLayout(mainVertLayout, 2, 0, 1, 1);
 
         MainWindow->setCentralWidget(centralWidget);
         menuBar = new QMenuBar(MainWindow);
@@ -176,8 +247,11 @@ public:
         actionHjkjhkj->setText(QApplication::translate("MainWindow", "hjkjhkj", 0, QApplication::UnicodeUTF8));
         actionConfigSpectrometer->setText(QApplication::translate("MainWindow", "Spectrometer", 0, QApplication::UnicodeUTF8));
         actionOpen->setText(QApplication::translate("MainWindow", "Open Script", 0, QApplication::UnicodeUTF8));
+        BtnStop->setText(QApplication::translate("MainWindow", "stop", 0, QApplication::UnicodeUTF8));
+        BtnStart->setText(QApplication::translate("MainWindow", "start", 0, QApplication::UnicodeUTF8));
         tabWidget->setTabText(tabWidget->indexOf(tabPlot), QApplication::translate("MainWindow", "Plots", 0, QApplication::UnicodeUTF8));
         tabWidget->setTabText(tabWidget->indexOf(tabScript), QApplication::translate("MainWindow", "Script", 0, QApplication::UnicodeUTF8));
+        tabWidget->setTabText(tabWidget->indexOf(tabDebug), QApplication::translate("MainWindow", "Script Debugger", 0, QApplication::UnicodeUTF8));
         menuFile->setTitle(QApplication::translate("MainWindow", "File", 0, QApplication::UnicodeUTF8));
         menuConfiguration->setTitle(QApplication::translate("MainWindow", "Configuration", 0, QApplication::UnicodeUTF8));
     } // retranslateUi

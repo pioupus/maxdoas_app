@@ -28,6 +28,7 @@
 #include <QScriptEngine>
 #include <QScriptEngineDebugger>
 #include "scriptwrapper.h"
+#include "jsedit/jsedit.h"
 
 namespace Ui {
     class MainWindow;
@@ -47,18 +48,29 @@ private slots:
    // void startprogram();
 
 private slots:
+    void on_BtnStart_clicked();
+    void on_BtnStop_clicked();
     void HWThreadFinished();
     void on_actionTempctrler_triggered();
     void on_actionConfigSpectrometer_triggered();
     void on_actionClose_triggered();
+    void on_actionOpen_triggered();
     void on_GotSpectrum();
     void StartMeasure();
     void COMPortChanged(QString name, bool opened, bool error);
+    void onScriptTerminated();
 
 private:
     QScriptEngine *ScriptEngine;
     QScriptEngineDebugger *ScriptDebugger;
     QWidget *DebugOutputWidget;
+    QWidget *DebugLocalsWidget;
+    QWidget *DebugCodeWidget;
+    QWidget *DebugBPWidget;
+    QWidget *DebugStackWidget;
+    QWidget *DebugConsoleWidget;
+    QToolBar *DebugToolbar;
+    JSEdit *ScriptEditor;
     THWDriver *HWDriver;
     QwtPlot *ImagePlot;
     QwtPlot *SpectrPlot;
@@ -74,6 +86,7 @@ private:
     bool closenow;
     TScriptWrapper *scriptWrapper;
     Ui::MainWindow *ui;
+    bool HWThreadIsFinished;
 
 };
 

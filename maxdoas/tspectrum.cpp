@@ -1,17 +1,25 @@
 #include "tspectrum.h"
 #include <QSettings>
 #include <QDir>
+#include <QObject>
 
-
-TSpectrum::TSpectrum()
-{
+TSpectrum::TSpectrum(QObject* parent){
+    setParent(parent);
     Wavelength = TWavelengthbuffer::instance();
     type = stNone;
     position.setX(0);
     position.setY(0);
     IntegTime = 0;
     AvgCount = 0;
-    //TSPectrWLCoefficients WLCoefficients;
+}
+
+
+TSpectrum::~TSpectrum(){
+
+}
+
+QDateTime TSpectrum::GetDateTime(){
+    return datetime;
 }
 
 QString TSpectrum::GetSequenceFileName(QString Directory, QString BaseName, uint Sequence){
