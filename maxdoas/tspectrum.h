@@ -3,6 +3,8 @@
 #include <QPoint>
 #include <QObject>
 #include <QDateTime>
+#include <QTextStream>
+
 #include "wavelengthbuffer.h"
 #include "maxdoassettings.h"
 #include "tmirrorcoordinate.h"
@@ -18,17 +20,11 @@ public:
 
     TSpectrum(QObject* parent = 0);
     ~TSpectrum();
-    void SaveSpectrSTD(QString fn);
-    void SaveSpectrMetaAscii(QString fn);
-
-    void SaveSpectrSTD_DefaultName(QString Directory, QString BaseName, uint SquenceNr);
-    void SaveSpectrMetaAscii_DefaultName(QString Directory, QString BaseName, uint SquenceNr);
-
+    void SaveSpectrum(QTextStream &file);
 
     bool LoadSpectrSTD(QString fn);
-    bool LoadSpectrMetaAscii(QString fn);
 
-    bool LoadSpectrSTD_Sequ(QString Directory, QString BaseName, uint SequenceNr);
+    bool LoadSpectrDefaultName(QString Directory, QString BaseName,int seqnumber);
 
     bool LoadSpectrEMT(QString fn);
 
@@ -48,8 +44,35 @@ public:
     TMirrorCoordinate *MirrorCoordinate;
     QDateTime datetime;
 
+public slots:
+    void plot(int index);
+
+    void SaveSpectrum(QString fn);
+    void SaveSpectrumDefName(QString Directory, QString BaseName,int seqnumber);
+
+    void add(QObject *spect);
+    void add(double val);
+
+    void sub(QObject *spect);
+    void sub(double val);
+
+    void mul(QObject *spect);
+    void mul(double val);
+
+    void div(QObject *spect);
+    void div(double val);
+
+    double rms();
+    double mean();
+    double stddev();
+
 private:
     QString GetSequenceFileName(QString Directory, QString BaseName, uint Sequence);
+    bool isSpectrumChanged();
+    double rmsval;
+    double meanval;
+    double stddevval;
+    double changeindicator;
 };
 
 #endif // TSPECTRUM_H

@@ -2,22 +2,10 @@
 #include "ui_mainwindow.h"
 #include "tfrmtempctrl.h"
 #include "thwdriver.h"
+#include "tspectrumplotter.h"
 
-#include <qwt_color_map.h>
-#include <qwt_plot_spectrogram.h>
-#include <qwt_plot_layout.h>
-#include <qwt_matrix_raster_data.h>
-#include <qwt_scale_widget.h>
-#include <qwt_plot_magnifier.h>
-#include <qwt_plot_panner.h>
-#include <qwt_plot_renderer.h>
-#include <qwt_plot_grid.h>
-#include <qwt_plot_canvas.h>
-#include <qwtsymbolarrow.h>
-#include <qwtmarkerarrow.h>
 #include <qfiledialog.h>
 #include <qimagewriter.h>
-#include <qwt_plot_marker.h>
 #include <QSettings>
 #include <QCloseEvent>
 #include <QFileDialog>
@@ -113,50 +101,8 @@ MainWindow::MainWindow(QWidget *parent) :
     //  HWDriver->hwdGetListSpectrometer();
     //ui->cbSpectrList->addItems(HWDriver->hwdGetListSpectrometer());
 
-    ImagePlot = new QwtPlot(this);
-    ui->hbox->addWidget(ImagePlot);
-    SpectrPlot = new QwtPlot(this);
-    ui->hbox->addWidget(SpectrPlot);
-    SpectrPlot->setAxisScale(0,-2,7000);
-    SpectrPlotCurve = new QwtPlotCurve("Spectrum");
-    SpectrPlotCurve->attach(SpectrPlot);
-    d_spectrogram = new QwtPlotSpectrogram();
-    d_spectrogram->setRenderThreadCount(0); // use system specific thread count
-
-    d_spectrogram->setColorMap( new ColorMap() );
-
-    d_spectrogram->setData(new RasterData());
-    d_spectrogram->attach(ImagePlot);
-    marker_corr_top = new QwtPlotMarker();
-    marker_corr_bot = new QwtPlotMarker();
-    marker_target  = new QwtPlotMarker();
-    marker_corr_top->setSymbol( new QwtSymbol(QwtSymbol::NoSymbol  ,
-                          QColor(Qt::red), QPen(Qt::red,1), QSize(20,20)));
-    marker_corr_bot->setSymbol( new QwtSymbol(QwtSymbol::  NoSymbol,
-                          QColor(Qt::red), QPen(Qt::red,1), QSize(20,20)));
-    marker_target->setSymbol( new QwtSymbol(QwtSymbol::  NoSymbol,
-                          QColor(Qt::green), QPen(Qt::green,1), QSize(20,20)));
-
-    marker_corr_top->setLineStyle( QwtPlotMarker::HLine);
-    marker_corr_bot->setLineStyle( QwtPlotMarker::HLine);
-    marker_target->setLineStyle( QwtPlotMarker::HLine);
-
-    marker_corr_top->attach(SpectrPlot);
-    marker_corr_bot->attach(SpectrPlot);
-    marker_target->attach(SpectrPlot);
-
-    QwtMarkerArrow *d_marker2;
-    for (int i=0;i<32;i++){
-        for (int j=0;j<32;j++){
-
-            d_marker2 = new QwtMarkerArrow();
-
-            d_marker2->setSymbol( new QwtSymbolArrow(QwtSymbolArrow::  UserStyle,
-                                  QColor(Qt::white), QPen(Qt::white,1), QSize(20,20)));
-            d_marker2->setValue(j,i,cos(i/2)/2,sin(j/3)/2);
-            d_marker2->attach(ImagePlot);
-        }
-    }
+    TSpectrumPlotter* SpectrumPlotter = TSpectrumPlotter::instance();
+    SpectrumPlotter->setParentLayout(ui->hbox);
 
     ScriptEngine = new QScriptEngine();
     ScriptEngine->setProcessEventsInterval(10);
@@ -243,15 +189,9 @@ void MainWindow::StartMeasure(){
 
 void MainWindow::on_GotSpectrum(){
     TAutoIntegConf ac = ms->getAutoIntegrationRetrievalConf();
-    HWDriver->hwdGetSpectrum(&spectrum);
-    marker_corr_top->setValue(0, ac.targetPeak*spectrum.MaxPossibleValue/100 + ac.targetCorridor*spectrum.MaxPossibleValue/100);
-    marker_corr_bot->setValue(0,ac.targetPeak*spectrum.MaxPossibleValue/100 - ac.targetCorridor*spectrum.MaxPossibleValue/100);
-    marker_target->setValue(0,ac.targetPeak*spectrum.MaxPossibleValue/100);
-    SpectrPlot->setAxisScale(0,0,spectrum.MaxPossibleValue);
-    SpectrPlot->setAxisScale(1,spectrum.Wavelength->buf[0],spectrum.Wavelength->buf[spectrum.NumOfSpectrPixels-1]);
-    SpectrPlotCurve->setRawSamples(&spectrum.Wavelength->buf[0],&spectrum.spectrum[0],spectrum.NumOfSpectrPixels);
-    SpectrPlot->replot();
-    HWDriver->hwdMeasureSpectrum(2,0,scNone);
+   // HWDriver->hwdGetSpectrum(&spectrum);
+
+//    HWDriver->hwdMeasureSpectrum(2,0,scNone);
 }
 
 void MainWindow::COMPortChanged(QString name, bool opened, bool error){
@@ -385,11 +325,11 @@ MainWindow::~MainWindow()
 {
     delete scriptWrapper;
     delete ScriptDebugger;
-    delete marker_corr_top;
-    delete marker_corr_bot;
-    delete marker_target;
-    delete ImagePlot;
-    delete SpectrPlot;
+//    delete marker_corr_top;
+//    delete marker_corr_bot;
+//    delete marker_target;
+//    delete ImagePlot;
+//    delete SpectrPlot;
     delete HWDriver;
     delete lblComPortStatus;
     delete ui;

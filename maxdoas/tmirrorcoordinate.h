@@ -14,15 +14,7 @@ public:
     TMirrorCoordinate();
     QPoint getMotorCoordinate();
     QPointF getAngleCoordinate();
-//    TMirrorCoordinate & operator= (const TMirrorCoordinate & other)
-//    {
-//        if (this != &other) // protect against invalid self-assignment
-//        {
-//            AngleCoordinate = other.AngleCoordinate;
-//        }
-//        // by convention, always return *this
-//        return *this;
-//    }
+
 
 private:
     QPointF AngleCoordinate;

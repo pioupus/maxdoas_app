@@ -17,7 +17,7 @@
 #include <qwtmarkerarrow.h>
 #include <qwtsymbolarrow.h>
 #include <qwtmarkerarrow.h>
-#include <qwt_plot_curve.h>
+
 #include <qfiledialog.h>
 #include <qimagewriter.h>
 #include <qwt_plot_marker.h>
@@ -72,13 +72,13 @@ private:
     QToolBar *DebugToolbar;
     JSEdit *ScriptEditor;
     THWDriver *HWDriver;
-    QwtPlot *ImagePlot;
-    QwtPlot *SpectrPlot;
-    QwtPlotCurve *SpectrPlotCurve;
-    QwtPlotSpectrogram *d_spectrogram;
-    QwtPlotMarker *marker_corr_top;
-    QwtPlotMarker *marker_corr_bot;
-    QwtPlotMarker *marker_target;
+//    QwtPlot *ImagePlot;
+//    QwtPlot *SpectrPlot;
+//    QwtPlotCurve *SpectrPlotCurve;
+//    QwtPlotSpectrogram *d_spectrogram;
+//    QwtPlotMarker *marker_corr_top;
+//    QwtPlotMarker *marker_corr_bot;
+//    QwtPlotMarker *marker_target;
     QLabel *lblComPortStatus;
     TSpectrum spectrum;
     TMaxdoasSettings *ms;

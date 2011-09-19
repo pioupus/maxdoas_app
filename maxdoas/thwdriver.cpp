@@ -57,7 +57,7 @@
 #define CMD_TRNSMIT_OK			0xAA
 #define CMD_TRNSMIT_FAIL		0x55
 
-#define OMNI_ENABLED 1
+#define OMNI_ENABLED 0
 const uint TimeOutData  =  3000; //ms
 const uint TimeOutMotion  =  10000; //ms
 
@@ -107,6 +107,9 @@ void THWDriverThread::init(){
     SpectrometerList = new QList<QString>;
     IntegTimeConf.autoenabled = false;
     IntegTimeConf.fixedIntegtime = 10000;
+    #if !OMNI_ENABLED
+        qsrand(time(NULL));
+    #endif
 }
 
 void THWDriverThread::newOmniWrapper(){
@@ -738,16 +741,28 @@ void THWDriverThread::hwdtGetLastSpectrumBuffer(double *Spectrum,
                                                 double *MaxPossibleValue,
                                                 uint *Integrationtime)
 {
+    #if ! OMNI_ENABLED
+        NumOfPixels = 2048;
+    #endif
     uint i = NumOfPixels;
     if (size < i)
         i = size;
     MutexSpectrBuffer.lockForRead();
     {
-        memcpy(Spectrum,LastSpectr,sizeof(double)*i);
-        *MaxPossibleValue = SpectrMaxIntensity;
-        *NumberOfSpecPixels = NumOfPixels;
-        *Integrationtime = LastSpectrIntegTime;
-        memcpy(SpectrCoefficients,&(this->SpectrCoefficients),sizeof(TSPectrWLCoefficients));
+        #if ! OMNI_ENABLED
+            for (int n=0;n<i;n++){
+                Spectrum[n] = (float)(qrand() % 1000)/1000.0;
+            }
+            *MaxPossibleValue = 1;
+            *NumberOfSpecPixels = NumOfPixels;
+            *Integrationtime = 10;
+        #else
+            memcpy(Spectrum,LastSpectr,sizeof(double)*i);
+            *MaxPossibleValue = SpectrMaxIntensity;
+            *NumberOfSpecPixels = NumOfPixels;
+            *Integrationtime = LastSpectrIntegTime;
+            memcpy(SpectrCoefficients,&(this->SpectrCoefficients),sizeof(TSPectrWLCoefficients));
+        #endif
     }
     MutexSpectrBuffer.unlock();
 }
@@ -920,6 +935,9 @@ void THWDriverThread::hwdtSloMeasureSpectrum(uint avg, uint integrTime,THWShutte
         if (SetShutter(shutterCMDtmp)){
             emit hwdtSigShutterStateChanged(shutterCMDtmp);
         }
+    }else{
+        QTest::qWait(10);
+        emit hwdtSigGotSpectrum();
     }
 }
 

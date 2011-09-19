@@ -12,6 +12,8 @@ class TScanner: public QObject
     Q_OBJECT
 public:
     void WaitForSpectrum();
+    void startWaiting();
+
     THWDriver *getHWDriver();
     uint    IntegrationTime;
     static TScanner* instance(THWDriver* hwdriver)

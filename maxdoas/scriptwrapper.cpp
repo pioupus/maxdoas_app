@@ -30,8 +30,11 @@ TScanner::~TScanner(){
 
 }
 
-void TScanner::WaitForSpectrum(){
+void TScanner::startWaiting(){
     GotSpectrum = false;
+}
+
+void TScanner::WaitForSpectrum(){
     while(!GotSpectrum){
         QTest::qWait(1);
     }
@@ -146,6 +149,8 @@ QScriptValue MeasureSpektrum(QScriptContext *context, QScriptEngine *engine)
     QObject *MirrorCoordQObj = context->argument(0).toQObject();
     TMirrorCoordinate *MirrorCoord = dynamic_cast<TMirrorCoordinate*>(MirrorCoordQObj);
     uint avg = context->argument(1).toInteger();
+    if (avg < 1)
+        avg = 1;
     bool shutter = context->argument(2).toBool();
     bool plot = context->argument(3).toBool();
     (void)plot;
@@ -154,7 +159,9 @@ QScriptValue MeasureSpektrum(QScriptContext *context, QScriptEngine *engine)
     }else{
         shuttercmd = scClose;
     }
+    shuttercmd = scNone;
     if( MirrorCoord != NULL){
+        scanner->startWaiting();
         hwDriver->hwdMeasureSpectrum(avg,0,shuttercmd);
 //        hwDriver->hwdMeasureScanPixel(MirrorCoord->getMotorCoordinate(),avg,0);
         scanner->WaitForSpectrum();
