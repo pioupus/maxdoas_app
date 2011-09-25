@@ -35,6 +35,8 @@ else {
 CONFIG += qtestlib
 QT += script
 QT += scripttools
+QT += svg
+
 DEFINES += LINUX
 
 # Input

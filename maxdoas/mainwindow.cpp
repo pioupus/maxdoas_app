@@ -101,7 +101,7 @@ MainWindow::MainWindow(QWidget *parent) :
     //  HWDriver->hwdGetListSpectrometer();
     //ui->cbSpectrList->addItems(HWDriver->hwdGetListSpectrometer());
 
-    TSpectrumPlotter* SpectrumPlotter = TSpectrumPlotter::instance();
+    TSpectrumPlotter* SpectrumPlotter = TSpectrumPlotter::instance(this);
     SpectrumPlotter->setParentLayout(ui->hbox);
 
     ScriptEngine = new QScriptEngine();

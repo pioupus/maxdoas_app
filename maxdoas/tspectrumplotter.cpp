@@ -1,4 +1,6 @@
 #include "tspectrumplotter.h"
+#include <qwt_legend.h>
+#include <qwt_legend_item.h>
 #include <qwt_color_map.h>
 #include <qwt_plot_spectrogram.h>
 #include <qwt_plot_layout.h>
@@ -17,25 +19,60 @@
 
 TSpectrumPlotter* TSpectrumPlotter::m_Instance = 0;
 
+QColor intToColor(int i){
+    switch (i){
+        case 0: return Qt::black;
+        case 1: return Qt::white;
+        case 2: return Qt::darkGray;
+        case 3: return Qt::gray;
+        case 4: return Qt::lightGray;
+        case 5: return Qt::red;
+        case 6: return Qt::green;
+        case 7: return Qt::blue;
+        case 8: return Qt::cyan;
+        case 9: return Qt::magenta;
+        case 10: return Qt::yellow;
+        case 11: return Qt::darkRed;
+        case 12: return Qt::darkGreen;
+        case 13: return Qt::darkBlue;
+        case 14: return Qt::darkCyan;
+        case 15: return Qt::darkMagenta;
+        case 16: return Qt::darkYellow;
+        default: return Qt::black;
+    }
+}
+
+QwtPlot::LegendPosition intToLegendPos(int i){
+    switch (i){
+        case 0: return QwtPlot::LeftLegend;
+        case 1: return QwtPlot::RightLegend;
+        case 2: return QwtPlot::BottomLegend;
+        case 3: return QwtPlot::TopLegend;
+        default: return QwtPlot::LeftLegend;
+    }
+}
+
 TPlot::TPlot(QBoxLayout *parent){
     plot = new QwtPlot();
     parent->addWidget(plot);
+    legend = NULL;
+    AutoIntegMarkerTop=NULL;
+    AutoIntegMarkerCenter=NULL;
+    AutoIntegMarkerBot=NULL;
 }
 
 TPlot::~TPlot(){
-    QwtPlotCurve * curve;
-    for(int i = 0; i< CurveList.count();i++){
-        curve = CurveList[i];
-        delete curve;
-    }
+    clearMarkers();
+    clearCurves();
     delete plot;
+    delete legend;
 }
 
 QwtPlotCurve * TPlot::getLastCurve(){
     if (CurveList.count()>0){
-        return CurveList[CurveList.count()-1];
+        return CurveList.last();
     }else{
-        return NULL;
+        return getCurve(0);
     }
 }
 
@@ -55,7 +92,56 @@ void TPlot::addCurve(){
     CurveList.append(curve);
 }
 
-int TPlot::count(){
+QwtPlotMarker * TPlot::getMarker(int index){
+    QwtPlotMarker * marker = NULL;
+    if(MarkerList.count()<= index){
+        marker = MarkerList[index];
+    }
+    return marker;
+}
+
+QwtPlotMarker * TPlot::addMarker(){
+    QwtPlotMarker * marker = new QwtPlotMarker();
+    marker->attach(plot);
+    MarkerList.append(marker);
+    return marker;
+}
+
+QwtPlotMarker * TPlot::getAutoIntegTimeMarker(int index){
+    QwtPlotMarker * marker = NULL;
+
+    switch(index){
+        case 0: if (AutoIntegMarkerTop == NULL){
+                    AutoIntegMarkerTop = new QwtPlotMarker();
+                    AutoIntegMarkerTop->attach(plot);
+                    AutoIntegMarkerTop->setLineStyle( QwtPlotMarker::HLine);
+                }
+                marker = AutoIntegMarkerTop;
+                break;
+        case 1: if (AutoIntegMarkerCenter == NULL){
+                    AutoIntegMarkerCenter = new QwtPlotMarker();
+                    AutoIntegMarkerCenter->attach(plot);
+                    AutoIntegMarkerCenter->setLineStyle( QwtPlotMarker::HLine);
+                }
+                marker = AutoIntegMarkerCenter;
+                break;
+        case 2: if (AutoIntegMarkerBot == NULL){
+                    AutoIntegMarkerBot = new QwtPlotMarker();
+                    AutoIntegMarkerBot->attach(plot);
+                    AutoIntegMarkerBot->setLineStyle( QwtPlotMarker::HLine);
+                }
+                marker = AutoIntegMarkerBot;
+                break;
+    }
+
+    return marker;
+}
+
+int TPlot::MarkerCount(){
+    return MarkerList.count();
+}
+
+int TPlot::CurveCount(){
     return CurveList.count();
 }
 
@@ -63,40 +149,96 @@ QwtPlot *TPlot::getPlot(){
     return plot;
 }
 
-//QBoxLayout *parent;
-//QwtPlot *plot;
-//QList<QwtPlotCurve *> CurveList;
+QwtLegend *TPlot::getLegend(int pos){
+    if (legend==NULL){
+        legend = new QwtLegend();
+        plot->insertLegend(legend, intToLegendPos(pos));
+    }
+    return legend;
+}
 
-TSpectrumPlotter::TSpectrumPlotter()
+void TPlot::clearMarkers(){
+    QwtPlotMarker * marker;
+    for(int i = 0; i< MarkerList.count();i++){
+        marker = MarkerList[i];
+        delete marker;
+    }
+    clearAutoIntegTimeMarkers();
+    MarkerList.clear();
+}
+
+void TPlot::clearAutoIntegTimeMarkers(){
+    delete AutoIntegMarkerTop;
+    delete AutoIntegMarkerCenter;
+    delete AutoIntegMarkerBot;
+    AutoIntegMarkerTop=NULL;
+    AutoIntegMarkerCenter=NULL;
+    AutoIntegMarkerBot=NULL;
+}
+
+void TPlot::clearCurves(){
+    QwtPlotCurve * curve;
+    for(int i = 0; i< CurveList.count();i++){
+        curve = CurveList[i];
+        delete curve;
+    }
+    CurveList.clear();
+}
+
+void TPlot::clearLegend(){
+    delete legend;
+    legend = NULL;
+}
+
+void TPlot::setLastSpecDate(QDateTime  lastSpecDate){
+    this->lastSpecDate = lastSpecDate;
+
+}
+
+QDateTime TPlot::getLastSpecDate(){
+    return lastSpecDate;
+}
+
+
+
+TSpectrumPlotter::TSpectrumPlotter(QObject *parent)
 {
+    setParent(parent);
+    nextTitle = "";
+    nextXTitle = "";
+    nextYTitle = "";
+    nextXRange.first =  0.0;
+    nextXRange.second = 0.0;
+    nextYRange.first =  0.0;
+    nextYRange.second = 0.0;
+    nextColor = NULL;
+    plotAutoIntegrationtimeParametersEnabled = false;
+}
+
+
+TSpectrumPlotter::~TSpectrumPlotter()
+{
+    TPlot *plot = NULL;
+    for (int i = 0;i<PlotList.count();i++){
+        plot = PlotList[i];
+        delete plot;
+    }
+    PlotList.clear();
 }
 
 void TSpectrumPlotter::setParentLayout(QBoxLayout *parent)
 {
     parentLayout = parent;
 
-//    ImagePlot = new QwtPlot(this);
-//    parentLayout->addWidget(ImagePlot);
-//    SpectrPlot = new QwtPlot(this);
-//    parentLayout->addWidget(SpectrPlot);
-//    SpectrPlot->setAxisScale(0,-2,7000);
-    //SpectrPlotCurve = new QwtPlotCurve("Spectrum");
-  //  SpectrPlotCurve->attach(SpectrPlot);
-//    d_spectrogram = new QwtPlotSpectrogram();
-//    d_spectrogram->setRenderThreadCount(0); // use system specific thread count
-//
-//    d_spectrogram->setColorMap( new ColorMap() );
-//
-//    d_spectrogram->setData(new RasterData());
-//    d_spectrogram->attach(ImagePlot);
+
 }
 
-void TSpectrumPlotter::plotSpectrum(TSpectrum *spectrum, int plotIndex){
+TPlot* TSpectrumPlotter::getPlot(int index){
     TPlot *plot = NULL;
-    if (PlotList.count() <= plotIndex){
+    if (PlotList.count() <= index){
         int c = PlotList.count();
-        for(int i = c;i<=plotIndex;i++){
-            if (i == plotIndex){
+        for(int i = c;i<=index;i++){
+            if (i == index){
                 plot = new TPlot(parentLayout);
                 PlotList.append(plot);
             }else{
@@ -104,39 +246,277 @@ void TSpectrumPlotter::plotSpectrum(TSpectrum *spectrum, int plotIndex){
             }
         }
     }else{
-        plot = PlotList[plotIndex];
+        plot = PlotList[index];
+        if (plot == NULL){
+            plot = new TPlot(parentLayout);
+            PlotList[index] = plot;
+        }
     }
-    QwtPlot * p;
-    QwtPlotCurve * c;
-//    marker_corr_top->setValue(0, ac.targetPeak*spectrum.MaxPossibleValue/100 + ac.targetCorridor*spectrum.MaxPossibleValue/100);
-//    marker_corr_bot->setValue(0,ac.targetPeak*spectrum.MaxPossibleValue/100 - ac.targetCorridor*spectrum.MaxPossibleValue/100);
-//    marker_target->setValue(0,ac.targetPeak*spectrum.MaxPossibleValue/100);
-    p = plot->getPlot();
-    c = plot->getCurve(0);
+    return plot;
+}
+
+void TSpectrumPlotter::plotSpectrum(TSpectrum *spectrum, int plotIndex){
+    TPlot *plot = getPlot(plotIndex);
+    QwtPlot * p = plot->getPlot();
+    QwtPlotCurve * c = plot->getCurve(0);
+    QDateTime lastSpecDate;
+    QPen pe;
+   // pe.setWidthF(1.5);
     p->setAxisScale(0,0,spectrum->MaxPossibleValue);
     p->setAxisScale(1,spectrum->Wavelength->buf[0],spectrum->Wavelength->buf[spectrum->NumOfSpectrPixels-1]);
     c->setSamples(&spectrum->Wavelength->buf[0],&spectrum->spectrum[0],spectrum->NumOfSpectrPixels);
+    c->setPen(pe);
+    if(plotAutoIntegrationtimeParametersEnabled && spectrum->IntegConf.autoenabled){
+        float tp = spectrum->IntegConf.targetPeak;
+        float tc = spectrum->IntegConf.targetCorridor;
+        float mv = spectrum->MaxPossibleValue;
+        plot->getAutoIntegTimeMarker(0)->setYValue(tp*mv/100 + tc*mv/100);
+        plot->getAutoIntegTimeMarker(1)->setYValue(tp*mv/100 - tc*mv/100);
+        plot->getAutoIntegTimeMarker(2)->setYValue(tp*mv/100);
+    }else{
+        plot->clearAutoIntegTimeMarkers();
+    }
+    if(!nextTitle.isEmpty())
+        p->setTitle(nextTitle);
+    nextTitle = "";
+    if(!nextXTitle.isEmpty())
+        p->setAxisTitle(QwtPlot::xBottom,nextXTitle);
+    nextXTitle = "";
+    if(!nextYTitle.isEmpty())
+        p->setAxisTitle(QwtPlot::yLeft,nextYTitle);
+    nextYTitle = "";
+    if(nextXRange.first != nextXRange.second)
+        p->setAxisScale(QwtPlot::xBottom,nextXRange.first,nextXRange.second);
+    nextXRange.first = 0;
+    nextXRange.second = 0;
+    if(nextYRange.first != nextYRange.second)
+        p->setAxisScale(QwtPlot::yLeft,nextYRange.first,nextYRange.second);
+    nextYRange.first = 0;
+    nextYRange.second = 0;
+    if(nextColor != NULL)
+        c->setPen(*nextColor);
+    delete nextColor;
+    nextColor = NULL;
+
+    if (spectrum->datetime.isValid()){
+        plot->setLastSpecDate(spectrum->datetime);
+    }
     p->replot();
 
 }
 
+void TSpectrumPlotter::setTitle(QString text,int plotindex){
+    if (plotindex != -1){
+        TPlot *plot = getPlot(plotindex);
+        QwtPlot * p = plot->getPlot();
+        p->setTitle(text);
+    }else{
+        nextTitle = text;
+    }
+}
+
+void TSpectrumPlotter::setXAxisTitle(QString text,int plotindex){
+    if (plotindex != -1){
+        TPlot *plot = getPlot(plotindex);
+        QwtPlot * p = plot->getPlot();
+        p->setAxisTitle(QwtPlot::xBottom,text);
+    }else{
+        nextXTitle = text;
+    }
+}
+
+void TSpectrumPlotter::setYAxisTitle(QString text,int plotindex){
+    if (plotindex != -1){
+        TPlot *plot = getPlot(plotindex);
+        QwtPlot * p = plot->getPlot();
+        p->setAxisTitle(QwtPlot::yLeft,text);
+    }else{
+        nextYTitle = text;
+    }
+}
+
+
+void TSpectrumPlotter::setXAxisRange(double min,double max,int plotindex){
+    if (plotindex != -1){
+        TPlot *plot = getPlot(plotindex);
+        QwtPlot * p = plot->getPlot();
+        p->setAxisScale(QwtPlot::xBottom,min,max);
+    }else{
+        nextXRange.first = min;
+        nextXRange.second = max;
+    }
+}
+
+void TSpectrumPlotter::setYAxisRange(double min,double max,int plotindex){
+    if (plotindex != -1){
+        TPlot *plot = getPlot(plotindex);
+        QwtPlot * p = plot->getPlot();
+        p->setAxisScale(QwtPlot::yLeft,min,max);
+    }else{
+        nextYRange.first = min;
+        nextYRange.second = max;
+    }
+}
+
+void TSpectrumPlotter::setLegend(QString title,int pos, int plotindex,int curveindex){
+    if (plotindex != -1){
+        TPlot *plot = getPlot(plotindex);
+        //wtPlot * p = plot->getPlot();
+        plot->getLegend(pos);
+        QwtPlotCurve * c;
+        if (curveindex == -1)
+            c = plot->getLastCurve();
+        else
+            c = plot->getCurve(curveindex);
+
+        c->setTitle(title);
+    }else{
+
+    }
+
+}
+
+void TSpectrumPlotter::setCurveColor(int color,int plotindex){
+    if (plotindex != -1){
+        QPen p;
+       // p.setWidthF(1.5);
+        p.setColor(intToColor(color));
+        TPlot *plot = getPlot(plotindex);
+        QwtPlotCurve * c = plot->getCurve(0);
+        c->setPen(p);
+    }else{
+        delete nextColor;
+        nextColor = new QColor(intToColor(color));
+    }
+}
+
+void TSpectrumPlotter::plotVMarker(double x,QString title,int plotindex){
+    TPlot *plot = getPlot(plotindex);
+    if (plot != NULL){
+        QPen p;
+   //     p.setWidthF(1.5);
+        QwtPlotMarker * marker = plot->addMarker();
+        marker->setLineStyle( QwtPlotMarker::VLine);
+        marker->setLinePen(p);
+        marker->setXValue(x);
+        marker->setTitle(title);
+    }
+}
+
+void TSpectrumPlotter::plotHMarker(double y,QString title,int plotindex){
+    TPlot *plot = getPlot(plotindex);
+    if (plot != NULL){
+        QPen p;
+      //  p.setWidthF(1.5);
+        QwtPlotMarker * marker = plot->addMarker();
+        marker->setLineStyle( QwtPlotMarker::HLine);
+        marker->setLinePen(p);
+        marker->setYValue(y);
+        marker->setTitle(title);
+    }
+}
+
+void TSpectrumPlotter::plotXYMarker(double x,double y,QString title,int plotindex){
+    TPlot *plot = getPlot(plotindex);
+    if (plot != NULL){
+        QPen p;
+       // p.setWidthF(1.5);
+        QwtPlotMarker * marker = plot->addMarker();
+        marker->setLineStyle( QwtPlotMarker::Cross);
+        marker->setXValue(x);
+        marker->setYValue(y);
+        marker->setLinePen(p);
+//      marker->setSymbol( new QwtSymbol(QwtSymbol::Diamond  ,
+//                          Qt::NoBrush, QPen(Qt::red,1), QSize(10,10)));
+//      marker->setSymbol( new QwtSymbol(QwtSymbol::Diamond));
+        marker->setTitle(title);
+        marker->setLabel(title);
+        marker->setLabelAlignment(Qt::AlignLeft);
+    }
+}
+
+void TSpectrumPlotter::reset(int plotindex){
+    TPlot *plot = getPlot(plotindex);
+    if (plot != NULL){
+        plot->clearMarkers();
+        plot->clearCurves();
+        plot->clearLegend();
+    }
+}
+
+void TSpectrumPlotter::clearMarker(int plotindex){
+    TPlot *plot = getPlot(plotindex);
+    if (plot != NULL){
+        plot->clearMarkers();
+    }
+}
+
+void TSpectrumPlotter::plotAutoIntegrationtimeParameters(bool enabled){
+    plotAutoIntegrationtimeParametersEnabled = enabled;
+}
+
+void TSpectrumPlotter::plotToFile(QString format, QString Directory , QString BaseName, int SequenceNo , int plotindex,int width,int height, int resolution ){
+    TPlot *plot = getPlot(plotindex);
+    if (plot != NULL){
+        QDateTime lastSpecDate = plot->getLastSpecDate();
+        QString filename;
+        filename = DefaultFileNameFromSeqNumber(Directory,BaseName,SequenceNo,lastSpecDate)+".png";
+        plotToFile(format,filename,plotindex,width,height,resolution);
+    }
+}
+
+void TSpectrumPlotter::plotToFile(QString format, QString filename ,int plotindex,int width,int height, int resolution){
+    TPlot *plot = getPlot(plotindex);
+    if (plot != NULL){
+        QwtPlot * p = plot->getPlot();
+        if ( (!filename.isEmpty()) && p != NULL )
+        {
+            QwtPlotRenderer renderer;
+
+            QList<QPen>PenList;
+            for (int i = 0;i<plot->CurveCount();i++){
+                QPen pe = plot->getCurve(i)->pen();
+                PenList.append(pe);
+
+                pe.setWidthF(pe.widthF()+1);
+                plot->getCurve(i)->setPen(pe);
+            }
+            QwtScaleDraw * axisX;
+            QwtScaleDraw * axisY;
+            int axisXWidth;
+            int axisYWidth;
+            axisX = p->axisScaleDraw(QwtPlot::xBottom);
+            axisY = p->axisScaleDraw(QwtPlot::yLeft);
+            axisXWidth = axisX->penWidth();
+           // qDebug()<<axisXWidth;
+            axisYWidth = axisY->penWidth();
+            axisX->setPenWidth(axisYWidth+1);
+            axisY->setPenWidth(axisXWidth+1);
+            renderer.setDiscardFlag(QwtPlotRenderer::DiscardCanvasBackground,true);
+            renderer.renderDocument(p, filename,format, QSizeF(width, height), resolution);
+
+            for (int i = 0;i<plot->CurveCount();i++){
+                plot->getCurve(i)->setPen(PenList[i]);
+            }
+            axisX->setPenWidth(axisYWidth);
+            axisY->setPenWidth(axisXWidth);
+        }
+    }
+
+
+
+}
 //marker_corr_top = new QwtPlotMarker();
-//marker_corr_bot = new QwtPlotMarker();
-//marker_target  = new QwtPlotMarker();
 //marker_corr_top->setSymbol( new QwtSymbol(QwtSymbol::NoSymbol  ,
 //                      QColor(Qt::red), QPen(Qt::red,1), QSize(20,20)));
-//marker_corr_bot->setSymbol( new QwtSymbol(QwtSymbol::  NoSymbol,
-//                      QColor(Qt::red), QPen(Qt::red,1), QSize(20,20)));
-//marker_target->setSymbol( new QwtSymbol(QwtSymbol::  NoSymbol,
-//                      QColor(Qt::green), QPen(Qt::green,1), QSize(20,20)));
 //
 //marker_corr_top->setLineStyle( QwtPlotMarker::HLine);
-//marker_corr_bot->setLineStyle( QwtPlotMarker::HLine);
-//marker_target->setLineStyle( QwtPlotMarker::HLine);
 //
+//    marker_corr_top->setValue(0, ac.targetPeak*spectrum.MaxPossibleValue/100 + ac.targetCorridor*spectrum.MaxPossibleValue/100);
+//    marker_corr_bot->setValue(0,ac.targetPeak*spectrum.MaxPossibleValue/100 - ac.targetCorridor*spectrum.MaxPossibleValue/100);
+//    marker_target->setValue(0,ac.targetPeak*spectrum.MaxPossibleValue/100);
+
 //marker_corr_top->attach(SpectrPlot);
-//marker_corr_bot->attach(SpectrPlot);
-//marker_target->attach(SpectrPlot);
 //
 //QwtMarkerArrow *d_marker2;
 //for (int i=0;i<32;i++){
@@ -150,3 +530,19 @@ void TSpectrumPlotter::plotSpectrum(TSpectrum *spectrum, int plotIndex){
 //        d_marker2->attach(ImagePlot);
 //    }
 //}
+
+
+//    ImagePlot = new QwtPlot(this);
+//    parentLayout->addWidget(ImagePlot);
+//    SpectrPlot = new QwtPlot(this);
+//    parentLayout->addWidget(SpectrPlot);
+//    SpectrPlot->setAxisScale(0,-2,7000);
+//    SpectrPlotCurve = new QwtPlotCurve("Spectrum");
+//    SpectrPlotCurve->attach(SpectrPlot);
+//    d_spectrogram = new QwtPlotSpectrogram();
+//    d_spectrogram->setRenderThreadCount(0); // use system specific thread count
+//
+//    d_spectrogram->setColorMap( new ColorMap() );
+//
+//    d_spectrogram->setData(new RasterData());
+//    d_spectrogram->attach(ImagePlot);

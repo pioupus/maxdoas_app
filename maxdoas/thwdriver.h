@@ -316,7 +316,7 @@ private:
     bool COMPortOpened;
     SerialDeviceEnumerator *m_sde;
     float LightSensorVal;
-
+    TAutoIntegConf IntegTimeConf;
 };
 
 #endif // THWDRIVER_H

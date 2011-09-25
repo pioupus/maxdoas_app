@@ -9,6 +9,7 @@
 #include "tmirrorcoordinate.h"
 #include "tspectralimage.h"
 #include "tscanpath.h"
+#include "tspectrumplotter.h"
 
 TScanner* TScanner::m_Instance = 0;
 
@@ -36,6 +37,8 @@ void TScanner::startWaiting(){
 
 void TScanner::WaitForSpectrum(){
     while(!GotSpectrum){
+        if (ScriptAborting)
+            break;
         QTest::qWait(1);
     }
 }
@@ -131,44 +134,54 @@ QScriptValue FreeObject(QScriptContext *context, QScriptEngine *engine)
     (void)engine;
     QObject *obj = context->argument(0).toQObject();
     TSpectrum *Spektrum = dynamic_cast<TSpectrum*>(obj);
-    if (Spektrum != NULL)
+    if (Spektrum != NULL){
         delete Spektrum;
+    }else{
+        TSpectralImage *spimg = dynamic_cast<TSpectralImage*>(obj);
+        if (spimg != NULL)
+            delete spimg;
+    }
     return 0;
 }
 
 QScriptValue MeasureSpektrum(QScriptContext *context, QScriptEngine *engine)
 {
-    THWShutterCMD shuttercmd;
-    TScanner* scanner = TScanner::instance(NULL);
-    THWDriver* hwDriver = scanner->getHWDriver();
+    if (!ScriptAborting){
+        THWShutterCMD shuttercmd;
+        TScanner* scanner = TScanner::instance(NULL);
+        THWDriver* hwDriver = scanner->getHWDriver();
 
-    //pos: TMirrorCoordinate
-    //avg: int
-    //shutter: bool
-    //plot: bool
-    QObject *MirrorCoordQObj = context->argument(0).toQObject();
-    TMirrorCoordinate *MirrorCoord = dynamic_cast<TMirrorCoordinate*>(MirrorCoordQObj);
-    uint avg = context->argument(1).toInteger();
-    if (avg < 1)
-        avg = 1;
-    bool shutter = context->argument(2).toBool();
-    bool plot = context->argument(3).toBool();
-    (void)plot;
-    if (shutter){
-        shuttercmd = scOpen;
+        //pos: TMirrorCoordinate
+        //avg: int
+        //shutter: bool
+        //plot: bool
+        QObject *MirrorCoordQObj = context->argument(0).toQObject();
+        TMirrorCoordinate *MirrorCoord = dynamic_cast<TMirrorCoordinate*>(MirrorCoordQObj);
+        uint avg = context->argument(1).toInteger();
+        if (avg < 1)
+            avg = 1;
+        bool shutter = context->argument(2).toBool();
+        bool plot = context->argument(3).toBool();
+        (void)plot;
+        if (shutter){
+            shuttercmd = scOpen;
+        }else{
+            shuttercmd = scClose;
+        }
+        shuttercmd = scNone;
+        if( MirrorCoord != NULL){
+            scanner->startWaiting();
+            hwDriver->hwdMeasureSpectrum(avg,0,shuttercmd);
+    //        hwDriver->hwdMeasureScanPixel(MirrorCoord->getMotorCoordinate(),avg,0);
+            scanner->WaitForSpectrum();
+        }
+        TSpectrum *spektrum = new TSpectrum();
+        hwDriver->hwdGetSpectrum(spektrum);
+        spektrum->setMirrorCoordinate(MirrorCoord);
+        return engine->newQObject(spektrum, QScriptEngine::QtOwnership);
     }else{
-        shuttercmd = scClose;
+        return 0;
     }
-    shuttercmd = scNone;
-    if( MirrorCoord != NULL){
-        scanner->startWaiting();
-        hwDriver->hwdMeasureSpectrum(avg,0,shuttercmd);
-//        hwDriver->hwdMeasureScanPixel(MirrorCoord->getMotorCoordinate(),avg,0);
-        scanner->WaitForSpectrum();
-    }
-    TSpectrum *spektrum = new TSpectrum(NULL);
-    hwDriver->hwdGetSpectrum(spektrum);
-    return engine->newQObject(spektrum, QScriptEngine::ScriptOwnership);
 }
 
 
@@ -217,6 +230,8 @@ TScriptWrapper::TScriptWrapper(THWDriver* hwdriver)
     QScriptValue metaObjectmc = ScriptEngine->newQMetaObject(&QObject::staticMetaObject, ctormc);
     ScriptEngine->globalObject().setProperty("Mirrorcoordinate", metaObjectmc);
 
+    QScriptValue plotobj = ScriptEngine->newQObject(TSpectrumPlotter::instance(0),QScriptEngine::ScriptOwnership);
+    ScriptEngine->globalObject().setProperty("plot", plotobj);
 
 }
 

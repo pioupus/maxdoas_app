@@ -493,7 +493,7 @@ void THWDriverThread::hwdtSloConfigTilt(TTiltConfigRes Resolution,TTiltConfigGai
 
 void THWDriverThread::hwdtSloAskTilt()
 {
-
+#if 0
     const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
@@ -553,6 +553,8 @@ void THWDriverThread::hwdtSloAskTilt()
         logger()->debug(QString("Tilt Sensor X: %1 Y: %2").arg(TiltX).arg(TiltY));
         emit hwdtSigGotTilt(TiltX,TiltY,TiltADC_Steps,TiltADC_Gain);
     }
+#else
+#endif
 }
 
 void THWDriverThread::hwdtSloAskCompass()
@@ -1205,7 +1207,7 @@ THWDriver::THWDriver()
     HWDriverObject->moveToThread(HWDriverThread);
     HWDriverThread->start();
     connect(HWDriverThread,SIGNAL(finished()),this,SLOT(hwdSlothreadFinished()));
-    TemperatureTimer->start(5000);
+    TemperatureTimer->start(500);
     TiltTimer->start(5000);
    // hwdSetComPort("/dev/ttyUSB0");
     WavelengthBuffer = TWavelengthbuffer::instance();
@@ -1527,6 +1529,7 @@ uint THWDriver::hwdGetSpectrum(TSpectrum *Spectrum)
                                               &Spectrum->MaxPossibleValue,
                                               &Spectrum->IntegTime
                                               );
+    memcpy(&Spectrum->IntegConf,&IntegTimeConf,sizeof(TAutoIntegConf));
     if (SpectrCoefficients.uninitialized){
         memcpy(&SpectrCoefficients,&coef,sizeof(TSPectrWLCoefficients));
         if (WavelengthBuffer != NULL){
@@ -1543,6 +1546,7 @@ uint THWDriver::hwdGetSpectrum(TSpectrum *Spectrum)
 }
 
 void THWDriver::setIntegrationConfiguration(TAutoIntegConf *autoIntConf){
+    memcpy(&IntegTimeConf,autoIntConf,sizeof(IntegTimeConf));
     HWDriverObject->hwdtSetIntegrationConfiguration(autoIntConf);
 }
 

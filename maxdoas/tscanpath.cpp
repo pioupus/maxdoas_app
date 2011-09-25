@@ -216,6 +216,7 @@ TMirrorCoordinate *TScanPath::getPoint_(int index){
 
 QScriptValue TScanPath::getPoint(int index)
 {
-    return engine()->newQObject(getPoint_(index));
+    TMirrorCoordinate * mc = getPoint_(index);
+    return engine()->newQObject(mc);
 }
 

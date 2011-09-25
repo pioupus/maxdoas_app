@@ -19,6 +19,7 @@ public:
 
 
     TSpectrum(QObject* parent = 0);
+    TSpectrum(TSpectrum * other);
     ~TSpectrum();
     void SaveSpectrum(QTextStream &file);
 
@@ -28,22 +29,31 @@ public:
 
     bool LoadSpectrEMT(QString fn);
 
+    QString getDefaultFileName(QString Directory, QString BaseName,int seqnumber);
+
     QDateTime GetDateTime();
     double spectrum[ MAXWAVELEGNTH_BUFFER_ELEMTENTS];
+    double getHash();
+    void setMirrorCoordinate(TMirrorCoordinate * mc);
+    TMirrorCoordinate * getMirrorCoordinate();
+
     TWavelengthbuffer *Wavelength;//points to global buffer
     int NumOfSpectrPixels;
 
     TSprectumType type;
-    QPoint position;
     uint IntegTime;
+
+    TAutoIntegConf IntegConf;
+
     uint AvgCount;
     TSPectrWLCoefficients WLCoefficients;
     double MaxPossibleValue;
     int SequenceNumber;
+    QString BaseName;
     float Temperature;
-    TMirrorCoordinate *MirrorCoordinate;
-    QDateTime datetime;
 
+    QDateTime datetime;
+    void setZero();
 public slots:
     void plot(int index);
 
@@ -72,7 +82,10 @@ private:
     double rmsval;
     double meanval;
     double stddevval;
-    double changeindicator;
+    double hash;
+    TMirrorCoordinate *MirrorCoordinate;
 };
+
+QString DefaultFileNameFromSeqNumber(QString Directory, QString BaseName,int seqnumber,QDateTime datetime);
 
 #endif // TSPECTRUM_H

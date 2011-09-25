@@ -11,6 +11,8 @@ public:
 
     TMirrorCoordinate(QObject *parent = 0);
     TMirrorCoordinate(QPointF c);
+    TMirrorCoordinate(TMirrorCoordinate * other);
+
     TMirrorCoordinate();
     QPoint getMotorCoordinate();
     QPointF getAngleCoordinate();
