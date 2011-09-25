@@ -14,6 +14,9 @@ TSpectrum::TSpectrum(QObject* parent){
     setParent(parent);
     Wavelength = TWavelengthbuffer::instance();
     type = stNone;
+    memset(&IntegConf,0,sizeof(IntegConf));
+    memset(&WLCoefficients,0,sizeof(WLCoefficients));
+    WLCoefficients.Coeff1 = 1;
     IntegTime = 0;
     AvgCount = 0;
     SequenceNumber = -1;
@@ -31,6 +34,7 @@ TSpectrum::TSpectrum(TSpectrum * other){
     Wavelength = TWavelengthbuffer::instance();
     type = other->type;
     IntegTime = other->IntegTime;
+    IntegConf = other->IntegConf;
     AvgCount = other->AvgCount;
     SequenceNumber = other->SequenceNumber;
     datetime = other->datetime;
@@ -39,7 +43,13 @@ TSpectrum::TSpectrum(TSpectrum * other){
     meanval = other->meanval;
     stddevval = other->stddevval;
     BaseName = other->BaseName;
+    MirrorCoordinate = NULL;
+    Temperature = other->Temperature;
+    WLCoefficients = other->WLCoefficients;
+    NumOfSpectrPixels = other->NumOfSpectrPixels;
+    MaxPossibleValue = other->MaxPossibleValue;
     setMirrorCoordinate(other->getMirrorCoordinate());
+    memcpy(spectrum,other->spectrum,sizeof(double)*NumOfSpectrPixels);
 }
 
 TSpectrum::~TSpectrum(){
@@ -124,7 +134,10 @@ void TSpectrum::setMirrorCoordinate(TMirrorCoordinate* mc){
     if (MirrorCoordinate != NULL){
         delete MirrorCoordinate;
     }
-    MirrorCoordinate = new TMirrorCoordinate(mc);
+    if (mc == NULL)
+        MirrorCoordinate = NULL;
+    else
+        MirrorCoordinate = new TMirrorCoordinate(mc);
 }
 
 TMirrorCoordinate * TSpectrum::getMirrorCoordinate(){
@@ -303,8 +316,9 @@ double TSpectrum::stddev(){
         for(int i = 0;i<NumOfSpectrPixels;i++){
             stddevval += pow(this->spectrum[i]-m,2);
         }
-        stddevval /= (NumOfSpectrPixels-1);
         stddevval = sqrt(stddevval);
+        stddevval /= (NumOfSpectrPixels-1);
+
     }
     return stddevval;
 }

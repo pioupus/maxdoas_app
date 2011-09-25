@@ -164,8 +164,11 @@ TSpectrum* TSpectralImage::getRms_(){
                 rmsSpectrum->setZero();
             }
             for (int n = 0;n<spektrum->NumOfSpectrPixels;n++){
-                rmsSpectrum->spectrum[n] += pow(spektrum->spectrum[n],2);
+                double v = spektrum->spectrum[n];
+                v = pow(v,2);
+                rmsSpectrum->spectrum[n] += v;
             }
+            rmsSpectrum->MaxPossibleValue += pow(spektrum->MaxPossibleValue,2);
             if (changed){
                 val.second = spektrum->getHash();
                 spectrumtable[i.key()] = val;
@@ -176,6 +179,7 @@ TSpectrum* TSpectralImage::getRms_(){
         for (int n = 0;n<spektrum->NumOfSpectrPixels;n++){
             rmsSpectrum->spectrum[n] = sqrt(rmsSpectrum->spectrum[n]);
         }
+        rmsSpectrum->MaxPossibleValue = sqrt(rmsSpectrum->MaxPossibleValue);
     }
     return new TSpectrum(rmsSpectrum);
 }
@@ -206,16 +210,19 @@ TSpectrum* TSpectralImage::getStdDev_(){
             for (int n = 0;n<spektrum->NumOfSpectrPixels;n++){
                 stdDevSpectrum->spectrum[n] += pow((spektrum->spectrum[n] - meanSpectrum->spectrum[n]),2);
             }
+            stdDevSpectrum->MaxPossibleValue += pow(spektrum->MaxPossibleValue - spektrum->mean(),2);
             if (changed){
                 val.second = spektrum->getHash();
                 spectrumtable[i.key()] = val;
             }
             cnt++;
         }
+        stdDevSpectrum->div(cnt);
         for (int n = 0;n<spektrum->NumOfSpectrPixels;n++){
             stdDevSpectrum->spectrum[n] = sqrt(rmsSpectrum->spectrum[n]);
         }
-        stdDevSpectrum->div(cnt);
+        stdDevSpectrum->MaxPossibleValue = sqrt(stdDevSpectrum->MaxPossibleValue);
+
     }
     return new TSpectrum(stdDevSpectrum);
 }
