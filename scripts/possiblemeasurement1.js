@@ -50,6 +50,7 @@ while(1){
 	//spectr4 = SpecImg.getStdDev();
 	//spectr4.plot(4);
 	//free(spectr4);	
-	SpecImg.save('spektren/','Image',Sum)
+	//SpecImg.save('spektren/','Image',Sum)
+	SpecImg.plot(1)
 	free(SpecImg);
 }

@@ -15,7 +15,21 @@
 #include <qwtmarkerarrow.h>
 
 #include <qwt_plot_marker.h>
+#include <qwt_color_map.h>
+#include <qwt_interval.h>
 
+class ColorMap: public QwtLinearColorMap
+{
+public:
+    ColorMap():
+    QwtLinearColorMap(Qt::black, Qt::red)
+    {
+//        addColorStop(0.2, Qt::blue);
+//        addColorStop(0.4, Qt::cyan);
+//        addColorStop(0.6, Qt::yellow);
+//        addColorStop(0.8, Qt::red);
+    }
+};
 
 TSpectrumPlotter* TSpectrumPlotter::m_Instance = 0;
 
@@ -59,6 +73,7 @@ TPlot::TPlot(QBoxLayout *parent){
     AutoIntegMarkerTop=NULL;
     AutoIntegMarkerCenter=NULL;
     AutoIntegMarkerBot=NULL;
+    imgPlot = NULL;
 }
 
 TPlot::~TPlot(){
@@ -147,6 +162,23 @@ int TPlot::CurveCount(){
 
 QwtPlot *TPlot::getPlot(){
     return plot;
+}
+
+QwtPlotSpectroCurve *TPlot::getImgPlot(){
+    if (imgPlot == NULL){
+        imgPlot = new QwtPlotSpectroCurve();
+        QwtInterval interval(-1.0,1.0);
+        //imgPlot->
+       // imgPlot->setRenderThreadCount(1);
+        imgPlot->setColorMap( new ColorMap() );
+        imgPlot->setColorRange(interval);
+        imgPlot->attach(plot);
+    }
+    return imgPlot;
+
+    //    d_spectrogram->setData(new RasterData());
+
+
 }
 
 QwtLegend *TPlot::getLegend(int pos){
@@ -259,7 +291,6 @@ void TSpectrumPlotter::plotSpectrum(TSpectrum *spectrum, int plotIndex){
     TPlot *plot = getPlot(plotIndex);
     QwtPlot * p = plot->getPlot();
     QwtPlotCurve * c = plot->getCurve(0);
-    QDateTime lastSpecDate;
     QPen pe;
    // pe.setWidthF(1.5);
     p->setAxisScale(0,0,spectrum->MaxPossibleValue);
@@ -303,6 +334,51 @@ void TSpectrumPlotter::plotSpectrum(TSpectrum *spectrum, int plotIndex){
     }
     p->replot();
 
+}
+
+void TSpectrumPlotter::plotRetrievalImage(TRetrievalImage *img,int plotIndex){
+    TPlot *plot = getPlot(plotIndex);
+    QwtPlotSpectroCurve * s = plot->getImgPlot();
+    QVector< QwtPoint3D > * vec = new  QVector< QwtPoint3D >(100);
+    for(int i =0; i<100;i++){
+        QwtPoint3D  p3d;// = new QwtPoint3D();
+        p3d.setX(sin(2*M_PI*(float)i/100));
+        p3d.setY(cos(2*M_PI*(float)i/100)*10.0);
+        p3d.setZ(cos(2*M_PI*(float)i/10));
+
+        vec->replace(i,p3d);
+    }
+    s->setPenWidth(10);
+    //s->setInterval( Qt::ZAxis, QwtInterval(0, 1) );
+    s->setSamples(*vec);
+}
+
+void TSpectrumPlotter::plotSpectralImage(TSpectralImage *img,int plotIndex, int Pixelsize){
+    TPlot *plot = getPlot(plotIndex);
+    QwtPlotSpectroCurve * s = plot->getImgPlot();
+    QVector< QwtPoint3D > * vec = new  QVector< QwtPoint3D >(img->count());
+    double minval=0,maxval=0,val;
+    for(int i =0; i<img->count();i++){
+        QwtPoint3D  p3d;// = new QwtPoint3D();
+        TMirrorCoordinate * mc;
+        mc = img->getMirrorCoordinate(i);
+        p3d.setX(mc->getAngleCoordinate().x());
+        p3d.setY(mc->getAngleCoordinate().y());
+        val = img->getSpectrum(i)->rms();
+        p3d.setZ(val);
+        if ((minval > val)||i==0){
+            minval = val;
+        }
+        if ((maxval < val)||i==0){
+            maxval = val;
+        }
+        vec->replace(i,p3d);
+    }
+    s->setPenWidth(Pixelsize);
+    QwtInterval interval(minval,maxval);
+    s->setColorRange(interval);
+    s->setSamples(*vec);
+    plot->getPlot()->replot();
 }
 
 void TSpectrumPlotter::setTitle(QString text,int plotindex){

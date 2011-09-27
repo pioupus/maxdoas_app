@@ -8,8 +8,11 @@
 
 #include <qwt_plot_curve.h>
 #include <qwt_plot_marker.h>
-
+#include <qwt_plot_spectrogram.h>
+#include <qwt_plot_spectrocurve.h>
 #include "tspectrum.h"
+#include "tretrievalimage.h"
+#include "tspectralimage.h"
 
 class TPlot
 {
@@ -22,6 +25,7 @@ public:
     int CurveCount();
     int MarkerCount();
     QwtPlot *getPlot();
+    QwtPlotSpectroCurve *getImgPlot();
     QwtLegend * getLegend(int pos =-1);
     QwtPlotMarker * getMarker(int index);
     QwtPlotMarker * addMarker();
@@ -36,9 +40,11 @@ private:
     QBoxLayout *parent;
     QwtPlot *plot;
     QwtLegend *legend;
+    QwtPlotSpectroCurve *imgPlot;
     QList<QwtPlotCurve *> CurveList;
     QDateTime lastSpecDate;
     QList<QwtPlotMarker *> MarkerList;
+
 
     QwtPlotMarker * AutoIntegMarkerTop;
     QwtPlotMarker * AutoIntegMarkerCenter;
@@ -53,6 +59,8 @@ public:
     void setParentLayout(QBoxLayout *parent);
 
     void plotSpectrum(TSpectrum *spectrum,int plotIndex);
+    void plotRetrievalImage(TRetrievalImage *img,int plotIndex);
+    void plotSpectralImage(TSpectralImage *img,int plotIndex, int Pixelsize=10);
 
     static TSpectrumPlotter* instance(QObject *parent)
     {

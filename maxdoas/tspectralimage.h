@@ -26,22 +26,27 @@ public:
     TSpectrum* getStdDev_();
 
     TMirrorCoordinate* getMaxRMSPos_();
+    TMirrorCoordinate * getMirrorCoordinate(int index);
+    TSpectrum * getSpectrum(int index);
 
 private:
     QHash<QPair<int,int>, QPair<TSpectrum*,double> > spectrumtable;
     QDateTime FirstDate;
-
+    QList<TSpectrum*> spectrumlist;
     TSpectrum* meanSpectrum;
     TSpectrum* rmsSpectrum;
     TSpectrum* stdDevSpectrum;
     TMirrorCoordinate *maxRMSPos;
     double maxRMSVal;
     bool isChanged();
+
 public slots:
+    void plot(int plotIndex,int Pixelsize=10);
+
     void add(TMirrorCoordinate* coord, TSpectrum* spektrum);
     void save(QString Directory,QString BaseName,int SequenceNumber);
     void save(QString FileName);
-
+    int count();
     QScriptValue getMean();
     QScriptValue getRms();
     QScriptValue getStdDev();

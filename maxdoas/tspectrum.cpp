@@ -17,6 +17,7 @@ TSpectrum::TSpectrum(QObject* parent){
     memset(&IntegConf,0,sizeof(IntegConf));
     memset(&WLCoefficients,0,sizeof(WLCoefficients));
     WLCoefficients.Coeff1 = 1;
+    WLCoefficients.uninitialized = true;
     IntegTime = 0;
     AvgCount = 0;
     SequenceNumber = -1;

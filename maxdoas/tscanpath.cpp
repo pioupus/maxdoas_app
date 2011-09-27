@@ -165,7 +165,7 @@ int TScanPath::AddEllipseOutline(QPointF center,float MinorAxis, float MajorAxis
     transform[2] = -transform[1];//sin()
     transform[3] = transform[0]; //cos()
 
-    for (int i=0;i<Divisions;i++){
+    for (uint i=0;i<Divisions;i++){
         QPointF p;
         float param=(float)i*2*M_PI/(float)Divisions;
         p.setX(cos(param)*xaxis);

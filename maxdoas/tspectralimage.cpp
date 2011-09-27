@@ -4,7 +4,7 @@
 #include <QScriptEngine>
 #include <QScriptContext>
 #include <QScriptValue>
-
+#include <tspectrumplotter.h>
 #include <math.h>
 
 TSpectralImage::TSpectralImage(QObject *parent) :
@@ -31,7 +31,7 @@ TSpectralImage::~TSpectralImage(){
         delete spektrum;
     }
     spectrumtable.clear();
-
+    spectrumlist.clear();
 }
 
 void TSpectralImage::add(TMirrorCoordinate* coord, TSpectrum* spektrum){
@@ -51,6 +51,7 @@ void TSpectralImage::add(TMirrorCoordinate* coord, TSpectrum* spektrum){
             FirstDate = spektrum->GetDateTime() ;
         }
     }
+    spectrumlist.append(spektrum);
     delete meanSpectrum;
     delete rmsSpectrum;
     delete stdDevSpectrum;
@@ -260,4 +261,21 @@ QScriptValue TSpectralImage::getMaxRMSPos(){
 double TSpectralImage::getMaxRMSVal(){
     getMaxRMSPos();
     return maxRMSVal;
+}
+
+int TSpectralImage::count(){
+    return spectrumtable.count();
+}
+
+TMirrorCoordinate * TSpectralImage::getMirrorCoordinate(int index){
+    return spectrumlist[index]->getMirrorCoordinate();
+}
+
+TSpectrum * TSpectralImage::getSpectrum(int index){
+    return spectrumlist[index];
+}
+
+void TSpectralImage::plot(int plotIndex,int Pixelsize){
+    TSpectrumPlotter* SpectrumPlotter = TSpectrumPlotter::instance(0);
+    SpectrumPlotter->plotSpectralImage(this,plotIndex,Pixelsize);
 }
