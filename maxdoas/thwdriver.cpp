@@ -242,23 +242,40 @@ QString THWDriverThread::DoRS485Direction(bool TempCtrler, uint size){
        trace = "RTS cleared; ";
     }else{//for motion controll we have to controll direction pin
         serial->setRts(true);
-        char activateDirection = 0xF0 | size;
+        char activateDirection = (uint8_t)(0xF0 | size);
+        if(serial->bytesAvailable() > 0)
+            serial->reset();
         serial->write(&activateDirection,1);
         rtstimer.start();
-        while ((serial->bytesAvailable() == 0) && (rtstimer.elapsed() <= 500))  {
-            QTest::qSleep(1);
+        bool waiting = true;
+        while (waiting){
+            while(serial->bytesAvailable() > 0){
+                rtstimer.restart();
+                activateDirection = 0;
+                serial->read(&activateDirection, 1);
+                if ((uint8_t)activateDirection == (0xF0 | size)){
+                    trace = trace+"Direction set(ok); ";
+                    waiting = false;
+                    break;
+                }else{
+                    QString t;
+                    t.sprintf("0x%02X",(unsigned char )activateDirection);
+                    trace = trace+"Direction set(fail( "+t+") ); ";
+                }
+            }
+            if (waiting){
+                if (rtstimer.elapsed() > 500){
+                    waiting = false;
+                    trace = trace+"Direction set(to); ";
+                    break;
+                }else{
+                    QTest::qSleep(1);
+                }
+            }
+
         }
-        if(serial->bytesAvailable() > 0){
-            activateDirection = 0;
-            serial->read(&activateDirection, 1);
-            if ((uint8_t)activateDirection == (0xF0 | size))
-                trace = "Direction set(ok); ";
-            else
-                trace = "Direction set(fail); ";
-        }else{
-             trace = "Direction set(to); ";
-        }
-        serial->flush();
+
+        serial->reset();
         //serial->setRts(false);//for sending
 
     }
@@ -315,14 +332,14 @@ bool THWDriverThread::waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,int 
         timer.start();
         do{
             timer.restart();
-            while((timer.elapsed() <= 50) && (!TransmissionOK)){
+            while((timer.elapsed() <= 100) && (!TransmissionOK)){
                 QTest::qSleep(5);
 
                 if (serial->bytesAvailable() > 0)  {
                     uint8_t rxbyte;
                     serial->read(&RXBuffer[0], 1);
                     rxbyte = RXBuffer[0];
-                    if ((unsigned char)rxbyte == 0xF0+size){
+                    if ((unsigned char)rxbyte == (0xF0 | size)){
                         logger()->warn(QString("DirectCMDEcho Received"));
                         serial->read(&RXBuffer[0], 1);
                         rxbyte = RXBuffer[0];
@@ -330,8 +347,10 @@ bool THWDriverThread::waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,int 
                     if ((unsigned char)rxbyte == CMD_TRNSMIT_OK){
                         TransmissionOK = true;
                     }else{
+                        QString t;
+                        t.sprintf("0x%02X",(unsigned char )rxbyte);
                         emit hwdtSigTransferDone(tsCheckSumError,RetransmissionCounter);
-                        logger()->warn(QString("Transmission: Checksum error! tries: %1 ").arg(RetransmissionCounter));
+                        logger()->warn(QString("Transmission: Checksum error! (%1) tries: %2 ").arg(t).arg(RetransmissionCounter));
                         break;
                     }
                 }
@@ -399,7 +418,7 @@ bool THWDriverThread::waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,int 
             emit hwdtSigTransferDone(tsOK,RetransmissionCounter);
             logger()->debug("Transmission done and answer rxed");
         }
-        serial->flush();
+        serial->reset();
         return TransmissionOK;
     }
     logger()->error("HWClass not initialized(serial == NULL)");
@@ -1366,8 +1385,8 @@ THWDriver::THWDriver()
     HWDriverObject->moveToThread(HWDriverThread);
     HWDriverThread->start();
     connect(HWDriverThread,SIGNAL(finished()),this,SLOT(hwdSlothreadFinished()));
-    //TemperatureTimer->start(1000);
-    TiltTimer->start(1000);
+    TemperatureTimer->start(500);
+    TiltTimer->start(500);
    // hwdSetComPort("/dev/ttyUSB0");
     WavelengthBuffer = TWavelengthbuffer::instance();
     memset(&SpectrCoefficients,0,sizeof(SpectrCoefficients));
