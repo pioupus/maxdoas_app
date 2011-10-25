@@ -1,6 +1,7 @@
 #include "tspectralimage.h"
 #include <QHashIterator>
 #include <QFile>
+#include <QFileInfo>
 #include <QScriptEngine>
 #include <QScriptContext>
 #include <QScriptValue>
@@ -36,6 +37,7 @@ TSpectralImage::~TSpectralImage(){
 
 void TSpectralImage::add(TMirrorCoordinate* coord, TSpectrum* spektrum){
     QPair<int,int> key;
+
     QPair<TSpectrum*,double> val;
 
     key.first = coord->getMotorCoordinate().x();
@@ -44,6 +46,7 @@ void TSpectralImage::add(TMirrorCoordinate* coord, TSpectrum* spektrum){
     val.first = spektrum;
     val.second = -1;
     spectrumtable.insert(key,val);
+
     if (spectrumtable.count() == 1){
         FirstDate = spektrum->GetDateTime();
     }else{
@@ -63,19 +66,32 @@ void TSpectralImage::add(TMirrorCoordinate* coord, TSpectrum* spektrum){
 }
 
 void TSpectralImage::save(QString FileName){
-
     QFile data(FileName);
-    if (data.open(QFile::WriteOnly | QFile::Truncate)) {
-        QTextStream out(&data);
+    QFile meta(fnToMetafn(FileName));
+    if (data.open(QFile::WriteOnly | QFile::Truncate) && meta.open(QFile::WriteOnly | QFile::Truncate)) {
+        QTextStream datastream(&data);
+        QTextStream metastream(&meta);
         QHashIterator<QPair<int,int>, QPair<TSpectrum*,double> > i(spectrumtable);
-
-
         TSpectrum* spektrum;
+        metastream << "time" << '\t';
+
+        metastream << "Fixed Axis" << '\t';
+        metastream << "Mirror Axis" << '\t';
+
+        metastream << "IntegStyle" << '\t';
+        metastream << "targetPeak" << '\t';
+        metastream << "targetCorridor" << '\t';
+        metastream << "maxIntegTime" << '\t';
+
+        metastream << "IntegTime" << '\t';
+        metastream << "AvgCount" << '\t';
+        metastream << "Temperature" << '\t';
+        metastream << "Max possible value\n";
         while (i.hasNext()) {
              QPair<TSpectrum*,double> val;
             val = i.next().value();
             spektrum = val.first;
-            spektrum->SaveSpectrum(out);
+            spektrum->SaveSpectrum(datastream,metastream);
         }
         data.close();
     }
@@ -85,6 +101,42 @@ void TSpectralImage::save(QString Directory,QString BaseName,int SequenceNumber)
     QString fn;
     fn = DefaultFileNameFromSeqNumber(Directory,BaseName,SequenceNumber,FirstDate)+".spe";
     save(fn);
+}
+
+bool TSpectralImage::Load(QString Directory, QString BaseName,int seqnumber,uint groupindex){
+    QString filename = GetSequenceFileName(Directory,BaseName,seqnumber,groupindex);
+    return Load(filename);
+}
+
+bool TSpectralImage::Load(QString fn){
+    bool result=false;
+    if (fn == "")
+        return false;
+    QFile dataf(fn);
+    QFile metaf(fnToMetafn(fn));
+    if ((dataf.open(QIODevice::ReadOnly | QIODevice::Text))&&(metaf.open(QIODevice::ReadOnly | QIODevice::Text))){
+        bool ok;
+        TSpectrum *spec;
+        QTextStream data(&dataf);
+        QTextStream meta(&metaf);
+        meta.readLine();
+        ok = true;
+        while (ok){
+            spec = new TSpectrum();
+            ok = spec->LoadSpectrum(data,meta);
+            if(ok){
+                add(spec->getMirrorCoordinate(), spec);
+                result = true;
+            }else{
+                delete spec;
+            }
+        }
+        dataf.close();
+        metaf.close();
+
+    }
+
+    return result;
 }
 
 bool TSpectralImage::isChanged(){

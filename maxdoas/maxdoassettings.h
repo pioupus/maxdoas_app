@@ -51,8 +51,8 @@ public:
     float getTargetTemperature();
     void setTargetTemperature(float Temperature);
 
-    QPointF getTiltOffset();
-    void setTiltOffset(QPointF TiltOffset);
+    QPoint getTiltOffset();
+    void setTiltOffset(QPoint TiltOffset);
 
     static TMaxdoasSettings* instance()
     {

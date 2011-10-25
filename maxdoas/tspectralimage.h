@@ -46,6 +46,10 @@ public slots:
     void add(TMirrorCoordinate* coord, TSpectrum* spektrum);
     void save(QString Directory,QString BaseName,int SequenceNumber);
     void save(QString FileName);
+
+    bool Load(QString Directory, QString BaseName,int seqnumber,uint groupindex);
+    bool Load(QString fn);
+
     int count();
     QScriptValue getMean();
     QScriptValue getRms();

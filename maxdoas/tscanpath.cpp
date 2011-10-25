@@ -101,11 +101,11 @@ int TScanPath::AddRect(QPointF p1,QPointF p2, QPointF p3, QPointF p4, QPoint Div
         TParamLine* line2 = new TParamLine(p[2],p[3]);
         TParamLine* line3 = new TParamLine(p[0],p[2]);
         for(int n=0;n<Divisions.x();n++){
-            QPointF lp1 = line1->getPointbyParam((float)n/(float)Divisions.x());
-            QPointF lp2 = line2->getPointbyParam((float)n/(float)Divisions.x());
+            QPointF lp1 = line1->getPointbyParam((float)n/((float)Divisions.x()-1));
+            QPointF lp2 = line2->getPointbyParam((float)n/((float)Divisions.x()-1));
             line3->ini(lp1,lp2);
             for(int m=0;m<Divisions.y();m++){
-                TMirrorCoordinate *coord = new TMirrorCoordinate(line3->getPointbyParam((float)m/(float)Divisions.y()));
+                TMirrorCoordinate *coord = new TMirrorCoordinate(line3->getPointbyParam((float)m/((float)Divisions.y()-1)));
                 pointlist.append(coord);
             }
         }

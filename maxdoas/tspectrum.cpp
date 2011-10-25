@@ -10,6 +10,58 @@ QString DefaultFileNameFromSeqNumber(QString Directory, QString BaseName,int seq
     return Directory+'/'+BaseName+'_'+datetime.toString("dd_MM_yyyy__hh_mm_ss")+"_seq"+seq;
 }
 
+QString fnToMetafn(QString fn){
+    QFileInfo fi(fn);
+    QString fp = fi.absolutePath()+"/";
+    QString name = fi.baseName()+"_meta";
+    name = fp+name+"."+fi.completeSuffix();
+    return name;
+}
+
+
+QString GetSequenceFileName(QString Directory, QString BaseName, uint Sequence, uint groupindex){
+    QString result="";
+    QDir dir(Directory);
+    dir.setFilter(QDir::Files);
+    dir.setSorting(QDir::Name);
+    QStringList filters;
+    filters << BaseName+"_*_seq00001.spe";
+    QStringList list = dir.entryList(filters);
+    QDateTime dtprev,dtnext;
+    QString strprev,strnext;
+    //darkoffset_05_10_2011__09_19_34_seq00001.spe
+    if((int)groupindex < list.count()){
+        strprev = list[groupindex];
+        strprev = strprev.mid(strprev.indexOf("_")+1,20);
+        dtprev = QDateTime::fromString(strprev,"dd_MM_yyyy__hh_mm_ss");
+    }else{
+        return "";
+    }
+    if ((int)groupindex+1 < list.count()){
+        strnext = list[groupindex+1];
+        strnext = strnext.mid(strnext.indexOf("_")+1,20);
+        dtnext = QDateTime::fromString(strnext,"dd_MM_yyyy__hh_mm_ss");
+    }
+
+    filters.clear();
+    QString seq = QString::number(Sequence).rightJustified(5, '0');
+    filters << BaseName+"_*_seq"+seq+".spe";
+    list = dir.entryList(filters);
+
+    for (int i = 0; i < list.size(); ++i) {
+        QString t;
+        QDateTime dt;
+        t = list[i];
+        t = t.mid(t.indexOf("_")+1,20);
+        dt = QDateTime::fromString(t,"dd_MM_yyyy__hh_mm_ss");
+        if ((((dt >= dtprev)&&(dt < dtnext))||((dt >= dtprev) && (!dtnext.isValid())))){
+            result = Directory+"/"+list[i];
+            break;
+        }
+    }
+    return result;
+}
+
 TSpectrum::TSpectrum(QObject* parent){
     setParent(parent);
     Wavelength = TWavelengthbuffer::instance();
@@ -23,10 +75,12 @@ TSpectrum::TSpectrum(QObject* parent){
     SequenceNumber = -1;
     datetime = QDateTime::currentDateTime();
     rmsval = -1;
+    maxval = -1;
     hash = -1;
     meanval = -1;
     stddevval = -1;
     BaseName = "";
+    SpectrometerSerialNumber = "NULL";
     MirrorCoordinate = NULL;
 
 }
@@ -40,6 +94,7 @@ TSpectrum::TSpectrum(TSpectrum * other){
     SequenceNumber = other->SequenceNumber;
     datetime = other->datetime;
     rmsval = other->rmsval;
+    maxval = other->maxval;
     hash = other->hash;
     meanval = other->meanval;
     stddevval = other->stddevval;
@@ -50,6 +105,7 @@ TSpectrum::TSpectrum(TSpectrum * other){
     NumOfSpectrPixels = other->NumOfSpectrPixels;
     MaxPossibleValue = other->MaxPossibleValue;
     setMirrorCoordinate(other->getMirrorCoordinate());
+    SpectrometerSerialNumber = other->SpectrometerSerialNumber;
     memcpy(spectrum,other->spectrum,sizeof(double)*NumOfSpectrPixels);
 }
 
@@ -70,39 +126,87 @@ QDateTime TSpectrum::GetDateTime(){
     return datetime;
 }
 
-QString TSpectrum::GetSequenceFileName(QString Directory, QString BaseName, uint Sequence){
-    (void)Directory;
-    (void)BaseName;
-    (void)Sequence;
-//    QDir dir(Directory);
-//    dir.setFilter(QDir::Files);
-//    dir.setSorting(QDir::Time);
-//
-//    QFileInfoList list = dir.entryInfoList();
-//    std::cout << "     Bytes Filename" << std::endl;
-//    for (int i = 0; i < list.size(); ++i) {
-//        QFileInfo fileInfo = list.at(i);
-//        std::cout << qPrintable(QString("%1 %2").arg(fileInfo.size(), 10)
-//                                                .arg(fileInfo.fileName()));
-//        std::cout << std::endl;
-//    }
-    return "";
-}
 
-void TSpectrum::SaveSpectrum(QTextStream &file){
+
+void TSpectrum::SaveSpectrum(QTextStream &file, QTextStream &meta){
     file.setRealNumberPrecision(6);
+    if (MirrorCoordinate == NULL){
+        file << -1 << '\t';
+        file << -1 << '\t';
+    }else{
+        file << MirrorCoordinate->getAngleCoordinate().x() << '\t';
+        file << MirrorCoordinate->getAngleCoordinate().y() << '\t';
+    }
     for(int i = 0;i<NumOfSpectrPixels;i++){
         file << spectrum[i] << '\t';
     }
     file << '\n';
+
+    file.setRealNumberPrecision(6);     //metadata
+
+    meta << datetime.toString("dd.MM.yyyy hh:mm:ss") << '\t';
+
+    if (MirrorCoordinate == NULL){
+        meta << -1 << '\t';
+        meta << -1 << '\t';
+    }else{
+        meta << MirrorCoordinate->getAngleCoordinate().x() << '\t';
+        meta << MirrorCoordinate->getAngleCoordinate().y() << '\t';
+    }
+    if (IntegConf.autoenabled){
+        meta << "auto" << '\t';
+        meta << IntegConf.targetPeak << '\t';
+        meta << IntegConf.targetCorridor << '\t';
+        meta << IntegConf.maxIntegTime << '\t';
+    }else{
+       meta << "fixed" << '\t';
+       meta << "-1" << '\t';
+       meta << "-1" << '\t';
+       meta << "-1" << '\t';
+    }
+    meta << IntegTime << '\t';
+    meta << AvgCount << '\t';
+    meta << Temperature << '\t';
+    meta << MaxPossibleValue << '\t';
+    meta << WLCoefficients.Offset << '\t';
+    meta << WLCoefficients.Coeff1 << '\t';
+    meta << WLCoefficients.Coeff2 << '\t';
+    meta << WLCoefficients.Coeff3 << '\t';
+    meta << SpectrometerSerialNumber;
+    meta << '\n';
 }
+
+
 
 void TSpectrum::SaveSpectrum(QString fn){
     QFile data(fn);
-    if (data.open(QFile::WriteOnly | QFile::Truncate)) {
-        QTextStream out(&data);
-        SaveSpectrum(out);
+
+    QFile meta(fnToMetafn(fn));
+    if (data.open(QFile::WriteOnly | QFile::Truncate) && meta.open(QFile::WriteOnly | QFile::Truncate)) {
+        QTextStream datastream(&data);
+        QTextStream metastream(&meta);
+        metastream << "time" << '\t';
+
+        metastream << "Fixed Axis" << '\t';
+        metastream << "Mirror Axis" << '\t';
+
+        metastream << "IntegStyle" << '\t';
+        metastream << "targetPeak" << '\t';
+        metastream << "targetCorridor" << '\t';
+        metastream << "maxIntegTime" << '\t';
+
+        metastream << "IntegTime" << '\t';
+        metastream << "AvgCount" << '\t';
+        metastream << "Temperature" << '\t';
+        metastream << "Max possible value" << '\t';
+        metastream << "WLOffs" << '\t';
+        metastream << "WLCoeff1" << '\t';
+        metastream << "WLCoeff2" << '\t';
+        metastream << "WLCoeff3" << '\t';
+        metastream << "SpectmerSerial\n";
+        SaveSpectrum(datastream,metastream);
         data.close();
+        meta.close();
     }
 }
 
@@ -145,19 +249,113 @@ TMirrorCoordinate * TSpectrum::getMirrorCoordinate(){
     return MirrorCoordinate;
 }
 
-bool TSpectrum::LoadSpectrSTD(QString fn){
-    (void)fn;
-    hash = -1;
-    return false;
+bool TSpectrum::LoadSpectrum(QTextStream &file, QTextStream &meta){
+    float x;
+    float y;
+    int index=0;
+    bool result = true;
+    QString nl;
+    if (!file.atEnd()) {
+        bool ok;
+        QString w;
+        file >> x;
+        file >> y;
+        ok = true;
+
+        while(!file.atEnd() && ok){
+            nl = file.read(1);
+            if (nl[0] == QChar('\n'))
+                break;
+            file >> w;
+
+            spectrum[index] = w.toDouble(&ok);
+            nl = file.read(1);
+            index++;
+            if(index >= MAXWAVELEGNTH_BUFFER_ELEMTENTS)
+                break;
+        }
+        NumOfSpectrPixels = index;
+        hash = -1;
+        if(index == 0)
+            result = false;
+    }else{
+        result = false;
+    }
+    if (!meta.atEnd()){
+        TMirrorCoordinate mc;
+        QPointF ac;
+        QString tm1;
+        QString tm2;
+        meta >> tm1;
+        meta >> tm2;
+        tm1 = tm1+" "+tm2;
+        datetime = QDateTime::fromString(tm1,"dd.MM.yyyy hh:mm:ss");
+        meta >> x; ac.setX(x);
+        meta >> y; ac.setY(y);
+        mc.setAngleCoordinate(ac);
+        setMirrorCoordinate(&mc);
+        QString integstyle;
+        meta >> integstyle;
+
+        if(integstyle == "auto"){
+            IntegConf.autoenabled = true;
+            meta >> IntegConf.targetPeak;
+            meta >> IntegConf.targetCorridor;
+            meta >> IntegConf.maxIntegTime;
+            meta >> IntegTime;
+        }else{
+            bool ok;
+            IntegConf.autoenabled = false;
+            meta >> IntegConf.targetPeak;
+            meta >> IntegConf.targetCorridor;
+            meta >> integstyle;
+            if (integstyle == "nan")
+                IntegConf.maxIntegTime = 0;
+            else
+                IntegConf.maxIntegTime = integstyle.toDouble(&ok);
+            meta >> IntegConf.fixedIntegtime;
+            IntegTime = IntegConf.fixedIntegtime;
+        }
+        meta >> AvgCount;
+        meta >> Temperature;
+        meta >> MaxPossibleValue;
+        meta >> WLCoefficients.Offset;
+        meta >> WLCoefficients.Coeff1;
+        meta >> WLCoefficients.Coeff2;
+        meta >> WLCoefficients.Coeff3;
+        WLCoefficients.uninitialized = false;
+        meta >> SpectrometerSerialNumber;
+        hash = -1;
+      //  HWDriver->hwdOverwriteWLCoefficients(&WLCoefficients);
+    }else{
+        result = false;
+    }
+    return result;
 }
 
-bool TSpectrum::LoadSpectrDefaultName(QString Directory, QString BaseName,int seqnumber){
-    QString seq;
-    if (SequenceNumber==-1)
-        SequenceNumber = seqnumber;
-    seq = QString::number(SequenceNumber).rightJustified(5, '0');
-    return LoadSpectrSTD(Directory+'/'+BaseName+'_'+datetime.toString("dd_MM_yyyy__hh_mm_ss")+"_seq"+seq+".spe");
+bool TSpectrum::LoadSpectrum(QString fn){
+    bool result=false;
+    if (fn == "")
+        return false;
+    QFile dataf(fn);
+    QFile metaf(fnToMetafn(fn));
+    if ((dataf.open(QIODevice::ReadOnly | QIODevice::Text))&&(metaf.open(QIODevice::ReadOnly | QIODevice::Text))){
+        QTextStream data(&dataf);
+        QTextStream meta(&metaf);
+        meta.readLine();
+        result = LoadSpectrum(data,meta);
+        dataf.close();
+        metaf.close();
 
+    }
+
+    return result;
+}
+
+bool TSpectrum::LoadSpectrDefaultName(QString Directory, QString BaseName,int seqnumber,uint groupindex){
+    SequenceNumber = seqnumber;
+    this->BaseName = BaseName;
+    return LoadSpectrum(GetSequenceFileName(Directory,BaseName,seqnumber,groupindex));
 }
 
 
@@ -279,6 +477,7 @@ bool TSpectrum::isSpectrumChanged(){
        rmsval = -1;
        meanval = -1;
        stddevval = -1;
+       maxval = -1;
    }
     this->hash = hash;
     return result;
@@ -295,6 +494,18 @@ double TSpectrum::rms(){
         rmsval = sqrt(rmsval);
     }
     return rmsval;
+}
+
+double TSpectrum::max(){
+    isSpectrumChanged();
+    if (maxval == -1){
+        maxval = 0;
+        for(int i = 0;i<NumOfSpectrPixels;i++){
+            if (maxval < this->spectrum[i])
+                maxval = this->spectrum[i];
+        }
+    }
+    return maxval;
 }
 
 double TSpectrum::mean(){

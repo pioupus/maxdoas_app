@@ -70,10 +70,11 @@ public:
     THWDriverThread();
     ~THWDriverThread();
 
-    void hwdtGetLastSpectrumBuffer(double *Spectrum,int *NumberOfSpecPixels, TSPectrWLCoefficients *SpectrCoefficients, uint size, double *MaxPossibleValue,uint *Integrationtime, uint *avg);
+    void hwdtGetLastSpectrumBuffer(double *Spectrum,int *NumberOfSpecPixels, TSPectrWLCoefficients *SpectrCoefficients, uint size, double *MaxPossibleValue,uint *Integrationtime, uint *avg,TMirrorCoordinate *mc,QString *SpectrSerial);
     void hwdtSetIntegrationConfiguration(TAutoIntegConf *autoIntConf);
     QList<QString> hwdtGetSpectrometerList();
-
+    uint hwdtGetMinimumIntegrationTime();
+    QPoint hwdtGetLastRawTilt();
 public slots:
 
     void hwdtSloSetComPort(QString name);
@@ -84,6 +85,7 @@ public slots:
     void hwdtSloSetTargetTemperature(float temperature);
 
     void hwdtSloAskTilt();
+    void hwdtSloSetTiltOffset(int x, int y);
     void hwdtSloConfigTilt(TTiltConfigRes Resolution,TTiltConfigGain Gain);
   //  void hwdtSloOffsetTilt(float TiltX, float TiltY);
 
@@ -100,6 +102,8 @@ public slots:
 
     void hwdtSloMeasureScanPixel(int PosX, int PosY ,uint avg, uint integrTime);
 
+    bool hwdtSloMotGoto(int PosX, int PosY);
+
     void hwdtSloMeasureSpectrum(uint avg, uint integrTime,THWShutterCMD shutterCMD);
 
     void hwdtSloDiscoverSpectrometers();
@@ -109,6 +113,10 @@ public slots:
     void hwdtSloCloseSpectrometer();
 
     void CloseEverythingForLeaving();
+
+    void hwdtSloMotIdleState(bool idle);
+
+
 private slots:
    // void threadTerminated();
     void init();
@@ -132,6 +140,7 @@ signals:
     void hwdtSigSpectrumeterOpened();
     void hwdtSigSpectrometersDicovered();
     void hwdtSigCOMPortChanged(QString name, bool opened, bool error);
+    void hwdtSigMotMoved();
 private:
     bool sendBuffer(char *TXBuffer,char *RXBuffer,uint size,uint timeout , bool TempCtrler,bool RetransmitAllowed); //returns true if ok
     bool waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,int timeout, bool TempCtrler,bool RetransmitAllowed); //returns true if ok
@@ -142,6 +151,7 @@ private:
     bool CalcAndSetAutoIntegTime();
     double getMaxIntensityOfLastSpect();
 
+    QString DoRS485Direction(bool TempCtrler,uint size);
     int CRCError;
 
     //float HeadingOffset;
@@ -149,6 +159,8 @@ private:
     uint TiltADC_Steps;
     uint TiltADC_Gain;
     float TiltADC_RefVoltage;
+    QPoint TiltRaw;
+    QPoint TiltRawOffset;
 //    float TiltCalValNegGX;
 //    float TiltCalValPosGX;
 //    float TiltCalValNegGY;
@@ -158,6 +170,9 @@ private:
     TLightSensorIntegTime LightSensorIntegTime;
 
     QReadWriteLock MutexSpectrBuffer;
+    QReadWriteLock MutexMinIntegrationTime;
+    QReadWriteLock MutexRawTiltPoint;
+
     double LastSpectr[MAXWAVELEGNTH_BUFFER_ELEMTENTS];
 
     uint SpectrAvgCount;
@@ -169,12 +184,14 @@ private:
     int NumOfPixels;
     double SpectrMinIntegTime;
     double SpectrMaxIntensity;
+    QString SpectrometerSerial;
     QReadWriteLock MutexintegTime;
     TAutoIntegConf IntegTimeConf;
     AbstractSerial *serial;
     THWShutterCMD LastShutterCMD;
     QReadWriteLock MutexSpectrList;
     QList<QString> *SpectrometerList;
+    TMirrorCoordinate *mc;
 
 
 };
@@ -200,7 +217,8 @@ public:
 
     QPointF hwdGetTilt();
     void hwdAskTilt();
-    void hwdSetTiltOffset(QPointF Offset);
+    void hwdSetTiltOffset(QPoint Offset);
+    QPoint hwdGetRawTilt();
     void hwdSetTiltInterval(int ms);
     float hwdGetCompassHeading();
     void hwdAskCompass();
@@ -218,7 +236,8 @@ public:
 
 
     void hwdMeasureScanPixel(QPoint pos,uint avg, uint integrTime);
-
+    void hwdMotMove(QPoint pos);
+    void hwdMotIdleState(bool idle);
     void hwdMeasureSpectrum(uint avg, uint integrTime,THWShutterCMD shutterCMD);
 
     uint hwdGetSpectrum(TSpectrum *Spectrum);
@@ -228,6 +247,7 @@ public:
     void hwdOpenSpectrometer(QString SerialNumber);
     void hwdCloseSpectrometer();
     void stop();
+    uint hwdGetMinimumIntegrationTime();
 
     double TempBufferPeltier[TEMPERATURE_BUFFER_COUNT];
     double TempBufferSpectr[TEMPERATURE_BUFFER_COUNT];
@@ -249,6 +269,7 @@ private slots:  //coming from thread
     void hwdSloGotWLCoefficients();
     void hwdSlothreadFinished();
     void hwdSloCOMPortChanged(QString name, bool opened, bool error);
+
 private slots:  //internal signals
     void hwdSlotTemperatureTimer();
     void hwdSlotTiltTimer();
@@ -265,6 +286,7 @@ signals: //thread -> outside
     void hwdSigShutterStateChanged(THWShutterCMD LastShutterCMD);
     void hwdSigScanPixelMeasured();
     void hwdSigGotSpectrum();
+    void hwdSigMotMoved();
     void hwdSigSpectrumeterOpened();
     void hwdSigTransferDone(THWTransferState TransferState, uint ErrorParameter);
     void hwdSigSpectrometersDiscovered();
@@ -278,15 +300,20 @@ signals: //thread -> outside
 
     void hwdtSigConfigTilt(TTiltConfigRes Resolution,TTiltConfigGain Gain);
     void hwdtSigAskTilt();
-    //void hwdtSigOffsetTilt(float TiltX, float TiltY);
+    void hwdtSigSetTiltOffset(int TiltX, int TiltY);
 
     void hwdtSigAskCompass();
     void hwdtSigStartCompassCal();
     void hwdtSigStopCompassCal();
     void hwdtSigAskLightSensor();
     void hwdtSigGoMotorHome();
+    void hwdtSigMotoIdleState(bool idle);
 
     void hwdtSigSetShutter(THWShutterCMD ShutterCMD);
+
+    bool hwdtMotGoto(int PosX, int PosY);
+
+    bool hwdtMotIdleState(bool idle);
 
     void hwdtSigMeasureScanPixel(int PosX, int PosY ,uint avg, uint integrTime);
 
@@ -295,6 +322,7 @@ signals: //thread -> outside
     void hwdtSigOpenSpectrometer(QString SerialNumber);
     void hwdtSigCloseSpectrometer();
     void hwdtQuitThred();
+
 private:
 
     THWDriverThread *HWDriverObject;
@@ -308,7 +336,6 @@ private:
     THWTempSensorID LastSensorID;
     float Temperatures[3];
     QPointF *ActualTilt;
-    QPointF *TiltOffset;
     float CompassHeading;
     float CompassOffset;
     float TiltResolutionBorder;

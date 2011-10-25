@@ -12,6 +12,7 @@ class TScanner: public QObject
     Q_OBJECT
 public:
     void WaitForSpectrum();
+    void WaitForMotMoved();
     void startWaiting();
 
     THWDriver *getHWDriver();
@@ -43,6 +44,8 @@ public:
     }
 private slots:
     void on_GotSpectrum();
+    void on_MotMoved();
+    void on_MotTimeOut(THWTransferState TransferState, uint ErrorParameter);
 private:
     TScanner();
     ~TScanner();
@@ -55,6 +58,7 @@ private:
     void setHWDriver(THWDriver* hwdriver);
     THWDriver* hwdriver;
     bool GotSpectrum;
+    bool MotMoved;
 };
 
 class TScriptWrapper

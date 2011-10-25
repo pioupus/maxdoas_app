@@ -31,11 +31,11 @@ void TMaxdoasSettings::setRetrievalAvgCount(int s){
      settings->setValue("RetrievalParameters/AvgCount",s);
 }
 
-QPointF TMaxdoasSettings::getTiltOffset(){
-     return settings->value("TiltSensor/TiltOffset",QPointF(0,0)).toPointF();
+QPoint TMaxdoasSettings::getTiltOffset(){
+     return settings->value("TiltSensor/TiltOffset",QPoint(0,0)).toPoint();
 }
 
-void TMaxdoasSettings::setTiltOffset(QPointF TiltOffset){
+void TMaxdoasSettings::setTiltOffset(QPoint TiltOffset){
     settings->setValue("TiltSensor/TiltOffset",TiltOffset);
 }
 

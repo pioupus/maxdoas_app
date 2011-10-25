@@ -21,11 +21,9 @@ public:
     TSpectrum(QObject* parent = 0);
     TSpectrum(TSpectrum * other);
     ~TSpectrum();
-    void SaveSpectrum(QTextStream &file);
+    void SaveSpectrum(QTextStream &file, QTextStream &meta);
 
-    bool LoadSpectrSTD(QString fn);
-
-    bool LoadSpectrDefaultName(QString Directory, QString BaseName,int seqnumber);
+    bool LoadSpectrum(QTextStream &file, QTextStream &meta);
 
     bool LoadSpectrEMT(QString fn);
 
@@ -52,6 +50,8 @@ public:
     QString BaseName;
     float Temperature;
 
+    QString SpectrometerSerialNumber;
+
     QDateTime datetime;
     void setZero();
 public slots:
@@ -59,6 +59,9 @@ public slots:
 
     void SaveSpectrum(QString fn);
     void SaveSpectrumDefName(QString Directory, QString BaseName,int seqnumber);
+
+    bool LoadSpectrum(QString fn);
+    bool LoadSpectrDefaultName(QString Directory, QString BaseName,int seqnumber,uint groupindex);
 
     void add(QObject *spect);
     void add(double val);
@@ -75,11 +78,12 @@ public slots:
     double rms();
     double mean();
     double stddev();
+    double max();
 
 private:
-    QString GetSequenceFileName(QString Directory, QString BaseName, uint Sequence);
     bool isSpectrumChanged();
     double rmsval;
+    double maxval;
     double meanval;
     double stddevval;
     double hash;
@@ -87,5 +91,7 @@ private:
 };
 
 QString DefaultFileNameFromSeqNumber(QString Directory, QString BaseName,int seqnumber,QDateTime datetime);
+QString GetSequenceFileName(QString Directory, QString BaseName, uint Sequence, uint groupindex);
+QString fnToMetafn(QString fn);
 
 #endif // TSPECTRUM_H

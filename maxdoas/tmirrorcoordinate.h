@@ -13,11 +13,14 @@ public:
     TMirrorCoordinate(QPointF c);
     TMirrorCoordinate(TMirrorCoordinate * other);
 
-    TMirrorCoordinate();
+    //TMirrorCoordinate();
+    ~TMirrorCoordinate();
     QPoint getMotorCoordinate();
     QPointF getAngleCoordinate();
 
-
+    void setAngleCoordinate(QPointF ac);
+    void setMotorCoordinate(QPoint mc);
+    void setMotorCoordinate(int X, int Y);
 private:
     QPointF AngleCoordinate;
 };

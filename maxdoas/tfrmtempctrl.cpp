@@ -208,6 +208,6 @@ void TfrmTempctrl::on_chbComBySysPath_stateChanged(int )
 void TfrmTempctrl::on_btnSetTiltToZero_clicked()
 {
 
-    ms->setTiltOffset(QPointF(hwdriver->hwdGetTilt()));
-    hwdriver->hwdSetTiltOffset(hwdriver->hwdGetTilt());
+    ms->setTiltOffset(QPoint(hwdriver->hwdGetRawTilt()));
+    hwdriver->hwdSetTiltOffset(hwdriver->hwdGetRawTilt());
 }

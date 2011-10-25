@@ -67,6 +67,7 @@ private:
     int Gain;
     float ResolutionBorder;
     float MaxTilt;
+    int Resolution;
     QPointF TiltOffset;
 };
 

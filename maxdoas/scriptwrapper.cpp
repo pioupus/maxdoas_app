@@ -21,6 +21,11 @@ TScanner::TScanner(){
 void TScanner::setHWDriver(THWDriver* hwdriver){
     this->hwdriver = hwdriver;
     connect(hwdriver,SIGNAL(hwdSigGotSpectrum()),this,SLOT(on_GotSpectrum()));
+    connect(hwdriver,SIGNAL(hwdSigMotMoved()),this,SLOT(on_MotMoved()));
+    connect(hwdriver,SIGNAL(hwdSigMotorIsHome()),this,SLOT(on_MotMoved()));
+    connect(hwdriver,SIGNAL(hwdSigTransferDone(THWTransferState,uint)),this,SLOT(on_MotTimeOut(THWTransferState,uint)));
+
+
 }
 
 THWDriver *TScanner::getHWDriver(){
@@ -33,6 +38,7 @@ TScanner::~TScanner(){
 
 void TScanner::startWaiting(){
     GotSpectrum = false;
+    MotMoved = false;
 }
 
 void TScanner::WaitForSpectrum(){
@@ -43,8 +49,26 @@ void TScanner::WaitForSpectrum(){
     }
 }
 
+void TScanner::WaitForMotMoved(){
+    while(!MotMoved){
+        if (ScriptAborting)
+            break;
+        QTest::qWait(1);
+    }
+}
+
+
 void TScanner::on_GotSpectrum(){
     GotSpectrum = true;
+}
+
+void TScanner::on_MotMoved(){
+    MotMoved = true;
+}
+
+void TScanner::on_MotTimeOut(THWTransferState TransferState, uint ErrorParameter){
+    if(TransferState == tsTimeOut)
+        MotMoved = true;
 }
 
 QScriptValue DoSleep(QScriptContext *context, QScriptEngine *engine)
@@ -154,30 +178,35 @@ QScriptValue MeasureSpektrum(QScriptContext *context, QScriptEngine *engine)
         //pos: TMirrorCoordinate
         //avg: int
         //shutter: bool
-        //plot: bool
+
         QObject *MirrorCoordQObj = context->argument(0).toQObject();
         TMirrorCoordinate *MirrorCoord = dynamic_cast<TMirrorCoordinate*>(MirrorCoordQObj);
         uint avg = context->argument(1).toInteger();
         if (avg < 1)
             avg = 1;
         bool shutter = context->argument(2).toBool();
+        if (!context->argument(2).isBoolean()){
+            shutter = true;
+        }
         bool plot = context->argument(3).toBool();
-        (void)plot;
+
         if (shutter){
             shuttercmd = scOpen;
         }else{
             shuttercmd = scClose;
         }
         shuttercmd = scNone;
-        if( MirrorCoord != NULL){
+        //if( MirrorCoord != NULL){
             scanner->startWaiting();
             hwDriver->hwdMeasureSpectrum(avg,0,shuttercmd);
     //        hwDriver->hwdMeasureScanPixel(MirrorCoord->getMotorCoordinate(),avg,0);
             scanner->WaitForSpectrum();
-        }
+      //  }
         TSpectrum *spektrum = new TSpectrum();
         hwDriver->hwdGetSpectrum(spektrum);
-        spektrum->setMirrorCoordinate(MirrorCoord);
+        if (MirrorCoord != NULL){
+            spektrum->setMirrorCoordinate(MirrorCoord);
+        }
         return engine->newQObject(spektrum, QScriptEngine::QtOwnership);
     }else{
         return 0;
@@ -185,7 +214,104 @@ QScriptValue MeasureSpektrum(QScriptContext *context, QScriptEngine *engine)
 }
 
 
+QScriptValue GetMinimumIntegrationTime(QScriptContext *context, QScriptEngine *engine)
+{
+    (void)engine;
+    (void)context;
+    int mininteg;
+    if (!ScriptAborting){
+        TScanner* scanner = TScanner::instance(NULL);
+        THWDriver* hwDriver = scanner->getHWDriver();
+        mininteg = hwDriver->hwdGetMinimumIntegrationTime();
+        return mininteg;
+    }else{
+        return 0;
+    }
+}
 
+QScriptValue MotMove(QScriptContext *context, QScriptEngine *engine)
+{
+    (void)engine;
+    if (!ScriptAborting){
+        TScanner* scanner = TScanner::instance(NULL);
+        THWDriver* hwDriver = scanner->getHWDriver();
+
+        //pos: TMirrorCoordinate
+
+        QObject *MirrorCoordQObj = context->argument(0).toQObject();
+        TMirrorCoordinate *MirrorCoord;
+        if (MirrorCoordQObj == NULL){
+            QPointF p;
+            p.setX(context->argument(0).toNumber());
+            p.setY(context->argument(1).toNumber());
+            MirrorCoord = new TMirrorCoordinate(p);
+        }else{
+            MirrorCoord = dynamic_cast<TMirrorCoordinate*>(MirrorCoordQObj);
+        }
+        if( MirrorCoord != NULL){
+            scanner->startWaiting();
+            hwDriver->hwdMotMove(MirrorCoord->getMotorCoordinate());
+            scanner->WaitForMotMoved();
+             if (MirrorCoordQObj == NULL){
+                 delete MirrorCoord;
+             }
+        }
+        return 0;
+    }else{
+        return 0;
+    }
+}
+
+QScriptValue MotHome(QScriptContext *context, QScriptEngine *engine)
+{
+    (void)engine;
+    (void)context;
+    if (!ScriptAborting){
+        TScanner* scanner = TScanner::instance(NULL);
+        THWDriver* hwDriver = scanner->getHWDriver();
+
+        //pos: TMirrorCoordinate
+        scanner->startWaiting();
+        hwDriver->hwdGoMotorHome();
+        scanner->WaitForMotMoved();
+        return 0;
+    }else{
+        return 0;
+    }
+}
+
+QScriptValue SetShutter(QScriptContext *context, QScriptEngine *engine){
+    (void)engine;
+    if (!ScriptAborting){
+        TScanner* scanner = TScanner::instance(NULL);
+        THWDriver* hwDriver = scanner->getHWDriver();
+        bool shutteropen = context->argument(0).toBool();
+        //idle bool
+        if (shutteropen){
+            hwDriver->hwdSetShutter(scOpen);
+        }else{
+            hwDriver->hwdSetShutter(scClose);
+        }
+        return 0;
+    }else{
+        return 0;
+    }
+}
+
+QScriptValue MotIdle(QScriptContext *context, QScriptEngine *engine)
+{
+    (void)engine;
+    if (!ScriptAborting){
+        TScanner* scanner = TScanner::instance(NULL);
+        THWDriver* hwDriver = scanner->getHWDriver();
+        bool idle = context->argument(0).toBool();
+        //idle bool
+        hwDriver->hwdMotIdleState(idle);
+        return 0;
+    }else{
+        return 0;
+    }
+}
 
 
 TScriptWrapper::TScriptWrapper(THWDriver* hwdriver)
@@ -213,6 +339,22 @@ TScriptWrapper::TScriptWrapper(THWDriver* hwdriver)
 
     QScriptValue MeasureSpektrumFun = ScriptEngine->newFunction(MeasureSpektrum);
     ScriptEngine->globalObject().setProperty("MeasureSpektrum", MeasureSpektrumFun);
+
+    QScriptValue MotMoveFun = ScriptEngine->newFunction(MotMove);
+    ScriptEngine->globalObject().setProperty("MotMove", MotMoveFun);
+
+    QScriptValue MotHomeFun = ScriptEngine->newFunction(MotHome);
+    ScriptEngine->globalObject().setProperty("MotHome", MotHomeFun);
+
+
+    QScriptValue MotIdleFun = ScriptEngine->newFunction(MotIdle);
+    ScriptEngine->globalObject().setProperty("SetMotIdle", MotIdleFun);
+
+    QScriptValue SetShutterFun = ScriptEngine->newFunction(SetShutter);
+    ScriptEngine->globalObject().setProperty("SetShutterOpen", SetShutterFun);
+
+    QScriptValue GetMinimumIntegrationTimeFun = ScriptEngine->newFunction(GetMinimumIntegrationTime);
+    ScriptEngine->globalObject().setProperty("GetMinimumIntegrationTime", GetMinimumIntegrationTimeFun);
 
     QScriptValue ctorSpec = ScriptEngine->newFunction(TSpectrumConstructor);
     QScriptValue metaObjectSpec = ScriptEngine->newQMetaObject(&QObject::staticMetaObject, ctorSpec);

@@ -54,7 +54,7 @@ TBubbleWidget::TBubbleWidget(QWidget *parent)
 }
 
 void TBubbleWidget::SetGainRes(int Gain, int Resolution, float ResolutionBorder, float MaxTilt){
-    (void)Resolution;
+    this->Resolution = Resolution;
     this->Gain = Gain;
     this->ResolutionBorder = ResolutionBorder;
     this->MaxTilt = MaxTilt;
@@ -66,7 +66,24 @@ void TBubbleWidget::SetTilt(float TiltX, float TiltY){
 }
 
 void TBubbleWidget::SetTiltOffset(QPointF Offset){
-    this->TiltOffset = Offset;
+    float TiltX,TiltY;
+    TiltX = 2*2.048*(float)Offset.x()/((float)Resolution*(float)Gain);
+    TiltY = 2*2.048*(float)Offset.y()/((float)Resolution*(float)Gain);
+    if(TiltX > 1)
+        TiltX = 1.0;
+    if(TiltX < -1)
+        TiltX = -1.0;
+
+    if(TiltY > 1)
+        TiltY = 1.0;
+    if(TiltY < -1)
+        TiltY = -1.0;
+
+    TiltX=asin((float)TiltX)*180/M_PI;
+    TiltY=asin((float)TiltY)*180/M_PI;
+
+    TiltOffset.setX(TiltX);
+    TiltOffset.setY(TiltY);
 }
 
 void TBubbleWidget::resizeEvent(QResizeEvent *event){
@@ -126,12 +143,12 @@ void TBubbleWidget::paintEvent(QPaintEvent *)
 
     painter.drawEllipse(ResolutionBorderRect);
 
-    painter.drawText(round(width()/2)+2, ResolutionBorderRect.top()-2, "10");
+   // painter.drawText(round(width()/2)+2, ResolutionBorderRect.top()-2, "10");
 
     ZeroBorder = paintCircle(0,0,0);
     ResolutionBorderRect = paintCircle(ResolutionBorder,-TiltOffset.x(),-TiltOffset.y());
 
-    painter.drawText(round(width()/2)+2, ResolutionBorderRect.top()-2, "5");
+   // painter.drawText(round(width()/2)+2, ResolutionBorderRect.top()-2, "5");
 
     painter.drawRoundedRect (ResolutionBorderRect, ZeroBorder.width()/2, ZeroBorder.width()/2);
 
