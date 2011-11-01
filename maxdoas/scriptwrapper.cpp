@@ -4,6 +4,7 @@
 #include <QTest>
 #include <QObject>
 #include <QScriptValue>
+#include <QDir>
 #include "tspectrum.h"
 #include "scriptwrapper.h"
 #include "tmirrorcoordinate.h"
@@ -78,7 +79,7 @@ QScriptValue DoSleep(QScriptContext *context, QScriptEngine *engine)
         return 0;
     }
     QScriptValue ms = context->argument(0);
-    QTest::qSleep(ms.toNumber());
+    QTest::qWait(ms.toNumber());
     return 0;
 }
 
@@ -280,6 +281,100 @@ QScriptValue MotHome(QScriptContext *context, QScriptEngine *engine)
     }
 }
 
+QScriptValue MKDir(QScriptContext *context, QScriptEngine *engine)
+{
+    (void)engine;
+    (void)context;
+    bool result = false;
+    if (!ScriptAborting){
+        QString path = context->argument(0).toString();
+        QDir dir(".");
+        result = dir.mkpath(path);
+
+    }
+    return result;
+}
+
+QScriptValue GetDateStr(QScriptContext *context, QScriptEngine *engine)
+{
+    (void)engine;
+    (void)context;
+    QString result = "";
+    if (!ScriptAborting){
+        result = QDateTime::currentDateTime().toString("yyyyMMdd");
+    }
+    return result;
+}
+
+QScriptValue GetTimeStr(QScriptContext *context, QScriptEngine *engine)
+{
+    (void)engine;
+    (void)context;
+    QString result = "";
+    if (!ScriptAborting){
+        result = QDateTime::currentDateTime().toString("hhmmss");
+    }
+    return result;
+}
+
+bool TimePassed_raw(uint hour,uint minute)
+{
+    bool result = false;
+    QDateTime now = QDateTime::currentDateTime();
+    if ((now.time().hour() == hour) && (now.time().minute() >= minute))
+        result = true;
+    if (now.time().hour() > hour)
+        result = true;
+    return result;
+}
+
+bool WaitUntilToday_raw(uint hour,uint minute)
+{
+    while (!TimePassed_raw(hour,minute) && !ScriptAborting ){
+        QTest::qWait(500);
+    }
+    return TimePassed_raw(hour,minute);
+}
+
+QScriptValue TimePassed(QScriptContext *context, QScriptEngine *engine)
+{
+    (void)engine;
+    (void)context;
+    bool result = false;
+    if (!ScriptAborting){
+        uint hour = context->argument(0).toInteger();
+        uint minute = context->argument(1).toInteger();
+        result =  TimePassed_raw(hour,minute);
+    }
+    return result;
+}
+
+QScriptValue WaitUntilToday(QScriptContext *context, QScriptEngine *engine)
+{
+    (void)engine;
+    (void)context;
+    bool result = false;
+    if (!ScriptAborting){
+        uint hour = context->argument(0).toInteger();
+        uint minute = context->argument(1).toInteger();
+        result = WaitUntilToday_raw(hour,minute);
+    }
+    return result;
+}
+
+QScriptValue WaitUntilTomorrow(QScriptContext *context, QScriptEngine *engine)
+{
+    (void)engine;
+    (void)context;
+    bool result = true;
+    uint hour = context->argument(0).toInteger();
+    uint minute = context->argument(1).toInteger();
+    WaitUntilToday_raw(23,59);
+    result = WaitUntilToday_raw(hour,minute);
+
+    return result;
+}
+
 QScriptValue SetShutter(QScriptContext *context, QScriptEngine *engine){
     (void)engine;
     if (!ScriptAborting){
@@ -353,8 +448,23 @@ TScriptWrapper::TScriptWrapper(THWDriver* hwdriver)
     QScriptValue SetShutterFun = ScriptEngine->newFunction(SetShutter);
     ScriptEngine->globalObject().setProperty("SetShutterOpen", SetShutterFun);
 
-    QScriptValue GetMinimumIntegrationTimeFun = ScriptEngine->newFunction(GetMinimumIntegrationTime);
-    ScriptEngine->globalObject().setProperty("GetMinimumIntegrationTime", GetMinimumIntegrationTimeFun);
+    QScriptValue TimePassedFun = ScriptEngine->newFunction(TimePassed);
+    ScriptEngine->globalObject().setProperty("TimePassed", TimePassedFun);
+
+    QScriptValue WaitUntilTodayFun = ScriptEngine->newFunction(WaitUntilToday);
+    ScriptEngine->globalObject().setProperty("WaitUntilToday", WaitUntilTodayFun);
+
+    QScriptValue WaitUntilTomorrowFun = ScriptEngine->newFunction(WaitUntilTomorrow);
+    ScriptEngine->globalObject().setProperty("WaitUntilTomorrow", WaitUntilTomorrowFun);
+
+    QScriptValue MKDirFun = ScriptEngine->newFunction(MKDir);
+    ScriptEngine->globalObject().setProperty("mkdir", MKDirFun);
+
+    QScriptValue GetDateStrFun = ScriptEngine->newFunction(GetDateStr);
+    ScriptEngine->globalObject().setProperty("GetDateStr", GetDateStrFun);
+
+    QScriptValue GetTimeStrFun = ScriptEngine->newFunction(GetTimeStr);
+    ScriptEngine->globalObject().setProperty("GetTimeStr", GetTimeStrFun);
 
     QScriptValue ctorSpec = ScriptEngine->newFunction(TSpectrumConstructor);
     QScriptValue metaObjectSpec = ScriptEngine->newQMetaObject(&QObject::staticMetaObject, ctorSpec);

@@ -10,10 +10,10 @@ while(next){
 	plot.setXAxisTitle("Wavelength")
 	plot.setYAxisTitle("Intensity")
 
-	SpecImg.plot(0);
-
+	SpecImg.plot(0,30);
+	print("spectr "+Index.toString());
 	//print('max: '+Spectrum.max().toString());
-	sleep(1000)
+	sleep(1)
 	free(SpecImg);
 	
 	Index = Index +1;

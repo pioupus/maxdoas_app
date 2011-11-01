@@ -255,6 +255,7 @@ bool TSpectrum::LoadSpectrum(QTextStream &file, QTextStream &meta){
     int index=0;
     bool result = true;
     QString nl;
+    QString nln;
     if (!file.atEnd()) {
         bool ok;
         QString w;
@@ -263,16 +264,57 @@ bool TSpectrum::LoadSpectrum(QTextStream &file, QTextStream &meta){
         ok = true;
 
         while(!file.atEnd() && ok){
+            double val;
+            bool end=false;
             nl = file.read(1);
-            if (nl[0] == QChar('\n'))
+            int chaindex=0;
+            if (file.atEnd()){
+                end = true;
                 break;
-            file >> w;
+            }
+            while (nl[chaindex].isSpace() && (!file.atEnd())){
+                if (nl[chaindex] == QChar('\n')){
+                    end = true;
+                    break;
+                }
+                nl = nl + file.read(1);
+                if(file.atEnd()){
+                    end = true;
+                    break;
+                }
 
-            spectrum[index] = w.toDouble(&ok);
-            nl = file.read(1);
+                chaindex++;
+            }
+            if (end){
+               // index++;
+                break;
+            }
+            end = false;
+            while ((!nl[chaindex].isSpace()) && (!file.atEnd())){
+
+                nl = nl + file.read(1);
+                if(file.atEnd()){
+                    end = true;
+                    break;
+                }
+                chaindex++;
+                if (nl[chaindex] == QChar('\n')){
+                    end = true;
+                    break;
+                }
+            }
+
+            w = nl;
+            val  = w.toDouble(&ok);
+            spectrum[index] = val;
+
             index++;
+            if(end)
+                break;
             if(index >= MAXWAVELEGNTH_BUFFER_ELEMTENTS)
                 break;
+            if(index >= 2047)
+                w = "";
         }
         NumOfSpectrPixels = index;
         hash = -1;
