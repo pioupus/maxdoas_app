@@ -141,6 +141,7 @@ signals:
     void hwdtSigSpectrometersDicovered();
     void hwdtSigCOMPortChanged(QString name, bool opened, bool error);
     void hwdtSigMotMoved();
+    void hwdtSigMotFailed();
 private:
     bool sendBuffer(char *TXBuffer,char *RXBuffer,uint size,uint timeout , bool TempCtrler,bool RetransmitAllowed); //returns true if ok
     bool waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,int timeout, bool TempCtrler,bool RetransmitAllowed); //returns true if ok
@@ -287,6 +288,7 @@ signals: //thread -> outside
     void hwdSigScanPixelMeasured();
     void hwdSigGotSpectrum();
     void hwdSigMotMoved();
+    void hwdSigMotFailed();
     void hwdSigSpectrumeterOpened();
     void hwdSigTransferDone(THWTransferState TransferState, uint ErrorParameter);
     void hwdSigSpectrometersDiscovered();

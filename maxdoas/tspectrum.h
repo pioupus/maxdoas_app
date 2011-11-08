@@ -33,6 +33,7 @@ public:
     double spectrum[ MAXWAVELEGNTH_BUFFER_ELEMTENTS];
     double getHash();
     void setMirrorCoordinate(TMirrorCoordinate * mc);
+    void setPixelIndex(int index);
     TMirrorCoordinate * getMirrorCoordinate();
 
     TWavelengthbuffer *Wavelength;//points to global buffer
@@ -49,11 +50,12 @@ public:
     int SequenceNumber;
     QString BaseName;
     float Temperature;
-
+    QPointF Tilt;
     QString SpectrometerSerialNumber;
 
     QDateTime datetime;
     void setZero();
+    uint ScanPixelIndex;
 public slots:
     void plot(int index);
 
@@ -61,7 +63,7 @@ public slots:
     void SaveSpectrumDefName(QString Directory, QString BaseName,int seqnumber);
 
     bool LoadSpectrum(QString fn);
-    bool LoadSpectrDefaultName(QString Directory, QString BaseName,int seqnumber,uint groupindex);
+    bool LoadSpectrDefaultName(QString Directory, QString BaseName,int seqnumber,uint startindex, uint groupindex );
 
     void add(QObject *spect);
     void add(double val);
@@ -91,7 +93,7 @@ private:
 };
 
 QString DefaultFileNameFromSeqNumber(QString Directory, QString BaseName,int seqnumber,QDateTime datetime);
-QString GetSequenceFileName(QString Directory, QString BaseName, uint Sequence, uint groupindex);
+QString GetSequenceFileName(QString Directory, QString BaseName, uint Sequence, uint firstindex ,uint groupindex);
 QString fnToMetafn(QString fn);
 
 #endif // TSPECTRUM_H

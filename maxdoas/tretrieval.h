@@ -15,10 +15,14 @@ class TRetrieval
 {
 public:
     TRetrieval();
-private:
+    ~TRetrieval();
+    void setMirrorCoordinate(TMirrorCoordinate *mc);
+
     double val;
-    QString symbName;
     TMirrorCoordinate *mirrorCoordinate;
+private:
+
+    QString symbName;
     QPointF WindVector;
 };
 

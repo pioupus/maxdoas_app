@@ -57,7 +57,7 @@
 #define CMD_TRNSMIT_OK			0xAA
 #define CMD_TRNSMIT_FAIL		0x55
 
-#define OMNI_ENABLED 1
+#define OMNI_ENABLED 0
 const uint TimeOutData  =  3000; //ms
 const uint TimeOutMotion  =  5000; //ms
 
@@ -315,9 +315,10 @@ bool THWDriverThread::sendBuffer(char *TXBuffer,char *RXBuffer,uint size,uint ti
 }
 
 bool THWDriverThread::waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,int timeout , bool TempCtrler, bool RetransmitAllowed){
-    QTime timer,rtstimer;
+    QTime timer;
     bool TransmissionOK = false;
     bool TransmissionError = false;
+    bool firsttimeout = true;
     uint RetransmissionCounter = 0;
     if (serial){
         uint BufferIndex = 0;
@@ -346,14 +347,19 @@ bool THWDriverThread::waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,int 
                     }
                     if ((unsigned char)rxbyte == CMD_TRNSMIT_OK){
                         TransmissionOK = true;
+                        firsttimeout = false;
                     }else{
                         QString t;
                         t.sprintf("0x%02X",(unsigned char )rxbyte);
                         emit hwdtSigTransferDone(tsCheckSumError,RetransmissionCounter);
                         logger()->warn(QString("Transmission: Checksum error! (%1) tries: %2 ").arg(t).arg(RetransmissionCounter));
+                        firsttimeout = false;
                         break;
                     }
                 }
+            }
+            if(firsttimeout){
+                logger()->warn(QString("CRC Response timeout"));
             }
             if (!RetransmitAllowed){
                 break;
@@ -416,7 +422,7 @@ bool THWDriverThread::waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,int 
         }
         if (TransmissionOK){
             emit hwdtSigTransferDone(tsOK,RetransmissionCounter);
-            logger()->debug("Transmission done and answer rxed");
+            logger()->trace("Transmission done and answer rxed");
         }
         serial->reset();
         return TransmissionOK;
@@ -441,7 +447,7 @@ void THWDriverThread::hwdtSloAskTemperature(THWTempSensorID sensorID, bool byTim
     const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
-    logger()->debug(QString("Asking for Temperature. SensorID: %1").arg(sensorIDtoInt(sensorID)));
+    logger()->debug(QString("Asking for Temperature."));
     for (uint i = 0; i < Bufferlength;i++){
         txBuffer[i] =  0;
         rxBuffer[i] =  0;
@@ -780,7 +786,10 @@ void THWDriverThread::hwdtSloGoMotorHome(void)
     if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutMotion,false,true)){
         mc->setMotorCoordinate(0,0);
         emit hwdtSigMotorIsHome();
-    }
+    }else{
+        logger()->error(QString("Moving Motor failed"));
+        emit hwdtSigMotFailed();
+    };
 }
 
 bool THWDriverThread::SetShutter(THWShutterCMD ShutterCMD){
@@ -1017,6 +1026,8 @@ bool THWDriverThread::hwdtSloMotGoto(int PosX, int PosY){
         return true;
 
     }else{
+        logger()->error(QString("Moving Motor failed"));
+        emit hwdtSigMotFailed();
         return false;
     }
 }
@@ -1287,6 +1298,9 @@ THWDriver::THWDriver()
         connect(HWDriverObject,SIGNAL(hwdtSigMotMoved( )),
                     this,SIGNAL (hwdSigMotMoved( )),Qt::QueuedConnection);
 
+        connect(HWDriverObject,SIGNAL(hwdtSigMotFailed( )),
+                    this,SIGNAL (hwdSigMotFailed( )),Qt::QueuedConnection);
+
         connect(HWDriverObject,SIGNAL(hwdtSigGotWLCoefficients( )),
                     this,SLOT (hwdSloGotWLCoefficients( )),Qt::QueuedConnection);
 
@@ -1385,8 +1399,8 @@ THWDriver::THWDriver()
     HWDriverObject->moveToThread(HWDriverThread);
     HWDriverThread->start();
     connect(HWDriverThread,SIGNAL(finished()),this,SLOT(hwdSlothreadFinished()));
-    TemperatureTimer->start(500);
-    TiltTimer->start(500);
+    TemperatureTimer->start(5000);
+    TiltTimer->start(5000);
    // hwdSetComPort("/dev/ttyUSB0");
     WavelengthBuffer = TWavelengthbuffer::instance();
     memset(&SpectrCoefficients,0,sizeof(SpectrCoefficients));
@@ -1566,7 +1580,7 @@ void THWDriver::hwdAskTilt()
 }
 
 void THWDriver::hwdSlotTiltTimer(){
-    emit hwdAskTilt();
+    hwdAskTilt();
 }
 
 
@@ -1747,6 +1761,10 @@ uint THWDriver::hwdGetSpectrum(TSpectrum *Spectrum)
                                               &Spectrum->SpectrometerSerialNumber);
     Spectrum->setMirrorCoordinate(&mc);
     memcpy(&Spectrum->IntegConf,&IntegTimeConf,sizeof(TAutoIntegConf));
+    memcpy(&Spectrum->WLCoefficients,&coef,sizeof(TSPectrWLCoefficients));
+    Spectrum->Tilt = *ActualTilt;
+    Spectrum->Temperature = (Temperatures[sensorIDtoInt(tsPeltier)]+Temperatures[sensorIDtoInt(tsSpectrometer)])/2;
+
     if (SpectrCoefficients.uninitialized){
         memcpy(&SpectrCoefficients,&coef,sizeof(TSPectrWLCoefficients));
         if (WavelengthBuffer != NULL){

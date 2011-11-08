@@ -1,4 +1,5 @@
 #include "tspectralimage.h"
+#include "tscanpath.h"
 #include <QHashIterator>
 #include <QFile>
 #include <QFileInfo>
@@ -8,7 +9,7 @@
 #include <tspectrumplotter.h>
 #include <math.h>
 
-TSpectralImage::TSpectralImage(QObject *parent) :
+TSpectralImage::TSpectralImage(TScanPath *parent) :
     QObject(parent)
 {
   //  FirstDate = 0;
@@ -16,6 +17,14 @@ TSpectralImage::TSpectralImage(QObject *parent) :
     rmsSpectrum = NULL;
     stdDevSpectrum = NULL;
     maxRMSPos = NULL;
+    if (parent != NULL){
+        QList<TPatternType*> ps = parent->getPatternSources();
+        TPatternType *pt;
+        for(int i=0;i<ps.count();i++){
+           pt = new TPatternType(ps[i]);
+           Patternsources.append(pt);
+        }
+    }
 }
 
 TSpectralImage::~TSpectralImage(){
@@ -33,6 +42,203 @@ TSpectralImage::~TSpectralImage(){
     }
     spectrumtable.clear();
     spectrumlist.clear();
+    TPatternType *pt;
+    for(int i = 0;i<Patternsources.count();i++){
+        pt = Patternsources.at(i);
+        delete pt;
+    }
+    Patternsources.clear();
+}
+
+int TSpectralImage::getxCount(){
+    TPatternType *pt;
+    if (Patternsources.count() == 1){
+        pt = Patternsources[0];
+        return pt->divx;
+    }else{
+        return -1;
+    }
+}
+
+int TSpectralImage::getyCount(){
+    TPatternType *pt;
+    if (Patternsources.count() == 1){
+        pt = Patternsources[0];
+        return pt->divy;
+    }else{
+        return -1;
+    }
+}
+
+bool TSpectralImage::getPositionLine(QPointF P1, QPointF P2, QList<TMirrorCoordinate*> &Points, int div, QMap<float, TMirrorCoordinate*> &line, bool PermitRemovePoints){
+    int i;
+    bool result = false;
+    TParamLine test = TParamLine(P1,P2);
+    i=0;
+    while (i < Points.count()){
+        float key;
+        bool ok;
+
+        key = test.containsPoint(Points[i]->getAngleCoordinate(),ok);
+        if (ok){
+            result = true;
+            line.insert(key, Points[i]);
+            if (PermitRemovePoints)
+                Points.removeAt(i);
+            else
+                i++;
+            if (line.count() == div)
+                break;
+        }else{
+            i++;
+        }
+
+    }
+    return result;
+}
+
+bool TSpectralImage::getPositionArrayRect(TPatternType *pt, TRetrieval* **buffer, int cntX, int cntY){
+    QList<TMirrorCoordinate*> PointList;
+    QMap<float, TMirrorCoordinate*>  LineRight;
+    QMap<float, TMirrorCoordinate*>  LineLeft;
+    QMap<float, TMirrorCoordinate*>  LineHoriz;
+
+    bool result = true;
+    for (int i = 0;i<spectrumlist.count();i++){
+        PointList.append(spectrumlist[i]->getMirrorCoordinate());
+    }
+    //        p[1]------p[3]
+    //        |         |
+    //        |         |
+    //        p[2]------p[4]
+    getPositionLine(pt->edge1, pt->edge2, PointList, pt->divy, LineRight,false);
+    getPositionLine(pt->edge3, pt->edge4, PointList, pt->divy, LineLeft,false);
+
+
+    result = LineLeft.count()==LineRight.count();
+    int i=0;
+
+    QMapIterator<float, TMirrorCoordinate*> i_r(LineRight);
+    QMapIterator<float, TMirrorCoordinate*> i_l(LineLeft);
+    while (i_r.hasNext() && i_l.hasNext()) {
+        TMirrorCoordinate* mc_l;
+        TMirrorCoordinate* mc_r;
+        i_l.next();
+        i_r.next();
+        mc_l = i_l.value();
+        mc_r = i_r.value();
+        LineHoriz.clear();
+        getPositionLine(mc_l->getAngleCoordinate(), mc_r->getAngleCoordinate(), PointList, pt->divx, LineHoriz,true);
+        QMapIterator<float, TMirrorCoordinate*> i_h(LineHoriz);
+        i_h.toBack();
+        int n=0;
+        if (cntY > i){
+            while (i_h.hasPrevious()){
+                i_h.previous();
+                if (cntX > n)
+                    buffer[i][n]->setMirrorCoordinate(i_h.value());
+                else
+                    result = false;
+
+                n++;
+            }
+            i++;
+        }else
+            result = false;
+
+    }
+
+    return result;
+
+}
+
+bool TSpectralImage::getPositionArrayLine(TPatternType *pt,  TRetrieval* **buffer, int cntX, int cntY){
+    QList<TMirrorCoordinate*> PointList;
+    QMap<float, TMirrorCoordinate*>  Line;
+
+    bool result = true;
+    for (int i = 0;i<spectrumlist.count();i++){
+        PointList.append(spectrumlist[i]->getMirrorCoordinate());
+    }
+
+    getPositionLine(pt->edge1, pt->edge2, PointList, pt->divx, Line,true);
+    QMapIterator<float, TMirrorCoordinate*> i_l(Line);
+    int n = 0;
+    if(cntY > 0){
+        while (i_l.hasNext()) {
+            TMirrorCoordinate* mc_l;
+            i_l.next();
+            mc_l = i_l.value();
+            if (cntX > n)
+                buffer[0][n]->setMirrorCoordinate(mc_l);
+            else
+                result = false;
+
+            n++;
+        }
+    }
+    else
+        result = false;
+    return result;
+}
+
+bool TSpectralImage::getPositionArray( TRetrieval* **buffer, int cntX, int cntY){
+    TPatternType *pt;
+    bool result = false;
+    if (Patternsources.count() == 1){
+        pt = Patternsources[0];
+        switch (pt->Patternstyle){
+            case psRect:
+                result = getPositionArrayRect(pt,buffer,cntX,cntY);
+                break;
+            case psLine:
+                result = getPositionArrayLine(pt,buffer,cntX,cntY);
+                break;
+            case psEllipse:
+            case psNone:
+                break;
+
+        }
+
+    }
+    return result;
+}
+
+TRetrievalImage* TSpectralImage::getIntensityImage(){
+    TRetrievalImage* result=new TRetrievalImage(getxCount(),getyCount());
+    if  (getPositionArray( result->valueBuffer, result->getWidth(), result->getHeight())){
+        for(int i = 0;i<result->getHeight();i++){
+            for(int n = 0;n<result->getWidth();n++){
+                TRetrieval *tr = result->valueBuffer[i][n];
+                int index = tr->mirrorCoordinate->pixelIndex;
+                //double val = spectrumlist[index]->ScanPixelIndex;//for testing porpuses
+                double val = spectrumlist[index]->rms();
+                result->valueBuffer[i][n]->val = val;
+            }
+        }
+    }
+
+    //buffer
+    return result;
+}
+
+QScriptValue TSpectralImage::getIntensityArray(){
+    TRetrievalImage * ri = getIntensityImage();
+    return engine()->newQObject(ri);
+}
+
+int TSpectralImage::getPixelIndex(TMirrorCoordinate* mc){
+    QPair<int,int> key;
+
+    QPair<TSpectrum*,double> val;
+
+    key.first = mc->getMotorCoordinate().x();
+    key.second = mc->getMotorCoordinate().y();
+    if (spectrumtable.contains(key)){
+        val = spectrumtable.value(key);
+        return val.first->ScanPixelIndex;
+    }
+    return -1;
 }
 
 void TSpectralImage::add(TMirrorCoordinate* coord, TSpectrum* spektrum){
@@ -54,7 +260,9 @@ void TSpectralImage::add(TMirrorCoordinate* coord, TSpectrum* spektrum){
             FirstDate = spektrum->GetDateTime() ;
         }
     }
+    spektrum->setPixelIndex(spectrumlist.count());
     spectrumlist.append(spektrum);
+
     delete meanSpectrum;
     delete rmsSpectrum;
     delete stdDevSpectrum;
@@ -86,14 +294,35 @@ void TSpectralImage::save(QString FileName){
         metastream << "IntegTime" << '\t';
         metastream << "AvgCount" << '\t';
         metastream << "Temperature" << '\t';
-        metastream << "Max possible value\n";
-        while (i.hasNext()) {
-             QPair<TSpectrum*,double> val;
-            val = i.next().value();
-            spektrum = val.first;
+        metastream << "Max possible value" << '\t';
+        metastream << "WLOffs" << '\t';
+        metastream << "WLCoeff1" << '\t';
+        metastream << "WLCoeff2" << '\t';
+        metastream << "WLCoeff3" << '\t';
+        metastream << "SpectmerSerial\t";
+        metastream << "TiltX\t";
+        metastream << "TiltY\t";
+        metastream << "PixelIndexX\t";
+        metastream << "PixelIndexY\n";
+        for (int n = 0; n < spectrumlist.count();n++){
+            spektrum = spectrumlist[n];
             spektrum->SaveSpectrum(datastream,metastream);
         }
+        //while (i.hasNext()) {
+        //    QPair<TSpectrum*,double> val;
+        //   val = i.next().value();
+        //   spektrum = val.first;
+        //   spektrum->SaveSpectrum(datastream,metastream);
+        //}
+        TPatternType *pt;
+        metastream << "pattern:\n";
+        for(int i = 0;i<Patternsources.count();i++){
+            pt = Patternsources.at(i);
+            pt->save(metastream);
+        }
+
         data.close();
+        meta.close();
     }
 }
 
@@ -103,8 +332,8 @@ void TSpectralImage::save(QString Directory,QString BaseName,int SequenceNumber)
     save(fn);
 }
 
-bool TSpectralImage::Load(QString Directory, QString BaseName,int seqnumber,uint groupindex){
-    QString filename = GetSequenceFileName(Directory,BaseName,seqnumber,groupindex);
+bool TSpectralImage::Load(QString Directory, QString BaseName,int seqnumber,uint startindex,uint groupindex){
+    QString filename = GetSequenceFileName(Directory,BaseName,seqnumber,startindex,groupindex);
     return Load(filename);
 }
 
@@ -129,6 +358,25 @@ bool TSpectralImage::Load(QString fn){
                 result = true;
             }else{
                 delete spec;
+            }
+        }
+        ok = true;
+        while(!meta.atEnd()){
+
+            QString line_str = meta.readLine();
+            QTextStream line(&line_str);
+            QString t;
+            line >> t;
+            if (t.startsWith("pattern")){
+                while (ok){
+                    TPatternType *pt = new(TPatternType);
+                    ok = pt->load(meta);
+                    if(ok)
+                        Patternsources.append(pt);
+                    else
+                        delete pt;
+                }
+
             }
         }
         dataf.close();

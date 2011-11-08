@@ -12,17 +12,24 @@ int constructioncounter=0;
 TMirrorCoordinate::TMirrorCoordinate(QObject *parent)
 {
     constructioncounter++;
+    pixelIndexX = -1;
+    pixelIndexY = -1;
     qDebug() << "mc construction: " << constructioncounter;
 }
 
 TMirrorCoordinate::TMirrorCoordinate(QPointF c){
     AngleCoordinate = c;
+    pixelIndexX = -1;
+    pixelIndexY = -1;
     constructioncounter++;
     qDebug() << "mc construction: " << constructioncounter;
 }
 
 TMirrorCoordinate::TMirrorCoordinate(TMirrorCoordinate * other){
     AngleCoordinate = other->getAngleCoordinate();
+    pixelIndexX = other->pixelIndexX;
+    pixelIndexY = other->pixelIndexY;
+    pixelIndex = other->pixelIndex;
     constructioncounter++;
     qDebug() << "mc construction: " << constructioncounter;
 }

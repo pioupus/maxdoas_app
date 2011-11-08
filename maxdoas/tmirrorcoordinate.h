@@ -4,6 +4,8 @@
 #include <QPoint>
 #include <QPointF>
 
+
+
 class TMirrorCoordinate:public QObject
 {
     Q_OBJECT
@@ -21,6 +23,10 @@ public:
     void setAngleCoordinate(QPointF ac);
     void setMotorCoordinate(QPoint mc);
     void setMotorCoordinate(int X, int Y);
+
+    int pixelIndexX;
+    int pixelIndexY;
+    int pixelIndex;
 private:
     QPointF AngleCoordinate;
 };

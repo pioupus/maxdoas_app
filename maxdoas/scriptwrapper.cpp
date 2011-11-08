@@ -68,6 +68,7 @@ void TScanner::on_MotMoved(){
 }
 
 void TScanner::on_MotTimeOut(THWTransferState TransferState, uint ErrorParameter){
+    (void)ErrorParameter;
     if(TransferState == tsTimeOut)
         MotMoved = true;
 }
@@ -102,8 +103,9 @@ QScriptValue TSpectrumConstructor(QScriptContext *context, QScriptEngine *engine
 
 QScriptValue TSpectralImageConstructor(QScriptContext *context, QScriptEngine *engine)
 {
-    QObject *parent = context->argument(0).toQObject();
-    QObject *object = new TSpectralImage(parent);
+    QObject *obj = context->argument(0).toQObject();
+    TScanPath *sp = dynamic_cast<TScanPath*>(obj);
+    QObject *object = new TSpectralImage(sp);
     return engine->newQObject(object, QScriptEngine::ScriptOwnership);
 }
 
@@ -163,8 +165,14 @@ QScriptValue FreeObject(QScriptContext *context, QScriptEngine *engine)
         delete Spektrum;
     }else{
         TSpectralImage *spimg = dynamic_cast<TSpectralImage*>(obj);
-        if (spimg != NULL)
+        if (spimg != NULL){
             delete spimg;
+        }else{
+           TRetrievalImage *rtimg = dynamic_cast<TRetrievalImage*>(obj);
+           if(rtimg != NULL){
+               delete rtimg;
+           }
+        }
     }
     return 0;
 }
@@ -189,7 +197,6 @@ QScriptValue MeasureSpektrum(QScriptContext *context, QScriptEngine *engine)
         if (!context->argument(2).isBoolean()){
             shutter = true;
         }
-        bool plot = context->argument(3).toBool();
 
         if (shutter){
             shuttercmd = scOpen;
@@ -317,7 +324,7 @@ QScriptValue GetTimeStr(QScriptContext *context, QScriptEngine *engine)
     return result;
 }
 
-bool TimePassed_raw(uint hour,uint minute)
+bool TimePassed_raw(int hour,int minute)
 {
     bool result = false;
     QDateTime now = QDateTime::currentDateTime();
@@ -447,6 +454,9 @@ TScriptWrapper::TScriptWrapper(THWDriver* hwdriver)
 
     QScriptValue SetShutterFun = ScriptEngine->newFunction(SetShutter);
     ScriptEngine->globalObject().setProperty("SetShutterOpen", SetShutterFun);
+
+    QScriptValue GetMinimumIntegrationTimeFun = ScriptEngine->newFunction(GetMinimumIntegrationTime);
+    ScriptEngine->globalObject().setProperty("GetMinimumIntegrationTime", GetMinimumIntegrationTimeFun);
 
     QScriptValue TimePassedFun = ScriptEngine->newFunction(TimePassed);
     ScriptEngine->globalObject().setProperty("TimePassed", TimePassedFun);

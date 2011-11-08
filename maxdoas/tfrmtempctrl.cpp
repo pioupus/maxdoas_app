@@ -19,7 +19,7 @@ TfrmTempctrl::TfrmTempctrl(THWDriver *hwdriver, QWidget *parent) :
     QwtLegend *legend = new QwtLegend;
     bubblewidget = new TBubbleWidget;
     ui->tiltlayout->addWidget(bubblewidget);
-    hwdriver->hwdSetTiltInterval(500);
+    hwdriver->hwdSetTiltInterval(1000);
     legend->setItemMode(QwtLegend::CheckableItem);
     plot->insertLegend(legend, QwtPlot::RightLegend);
   //  plot->aut

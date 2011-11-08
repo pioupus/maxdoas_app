@@ -8,6 +8,38 @@
 #include <QScriptContext>
 #include <QScriptValue>
 #include <QScriptable>
+#include <QTextStream>
+
+enum TPatternStyle {psNone,psRect,psEllipse,psLine};
+
+class TPatternType{
+public:
+    TPatternType(TPatternType *other);
+    TPatternType();
+
+    void save(QTextStream &meta);
+    bool load(QTextStream &meta);
+
+    void setLine(QPointF p1,QPointF p2, uint Divisions);
+    void setRectangle(QPointF p1,QPointF p2, QPointF p3, QPointF p4, QPoint Divisions);
+    void setEllipse(QPointF center,float MinorAxis, float MajorAxis, float angle, uint Divisions);
+
+
+    TPatternStyle Patternstyle;
+    QPointF edge1;
+    QPointF edge2;
+    QPointF edge3;
+    QPointF edge4;
+
+    int divx;
+    int divy;
+
+    QPointF center;
+    float MinorAxis;
+    float MajorAxis;
+    float angle;
+
+};
 
 class TParamLine
 {
@@ -17,6 +49,7 @@ public:
     float getCollisionParam(TParamLine *line);
     QPointF getPointbyParam(float p);
     float getLength();
+    float containsPoint(QPointF P, bool &contains);
     QPointF getOffset();
     QPointF getDiffVec();
 
@@ -31,10 +64,12 @@ class TScanPath : public QObject,
      Q_OBJECT
 public:
     TScanPath(QObject *parent);
+    ~TScanPath();
     int AddRect(QPointF p1,QPointF p2, QPointF p3, QPointF p4, QPoint Divisions);
     int AddLine(QPointF p1,QPointF p2, uint Divisions);
     int AddEllipseOutline(QPointF center,float MinorAxis, float MajorAxis, float angle, uint Divisions);
     TMirrorCoordinate *getPoint_(int index);
+    QList<TPatternType*> getPatternSources();
 public slots:
    // QScriptValue  AddRect(QScriptContext *context, QScriptEngine *engine);
     int AddLine();
@@ -51,6 +86,7 @@ public slots:
 private:
     QList<TMirrorCoordinate*> pointlist;
     bool testColl(QPointF p1,QPointF p2,QPointF p3,QPointF p4);
+    QList<TPatternType*> Patternsources;
 };
 
 #endif // TSCANPATH_H

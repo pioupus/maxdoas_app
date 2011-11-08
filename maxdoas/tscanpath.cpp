@@ -4,6 +4,195 @@
 #include <QScriptContext>
 #include <QScriptValue>
 
+TPatternType::TPatternType(){
+    this->Patternstyle = psNone;
+    this->edge1 = QPointF(0,0);
+    this->edge2 = QPointF(0,0);
+    this->edge3 = QPointF(0,0);
+    this->edge4 = QPointF(0,0);
+
+    this->divx = 0;
+    this->divy = 0;
+
+    this->center = QPointF(0,0);
+    this->MinorAxis = 0;
+    this->MajorAxis = 0;
+    this->angle = 0;
+}
+
+TPatternType::TPatternType(TPatternType *other){
+    this->Patternstyle = other->Patternstyle;
+    this->edge1 = other->edge1;
+    this->edge2 = other->edge2;
+    this->edge3 = other->edge3;
+    this->edge4 = other->edge4;
+
+    this->divx = other->divx;
+    this->divy = other->divy;
+
+    this->center = other->center;
+    this->MinorAxis = other->MinorAxis;
+    this->MajorAxis = other->MajorAxis;
+    this->angle = other->angle;
+}
+
+void TPatternType::setLine(QPointF p1,QPointF p2, uint Divisions){
+    edge1 = p1;
+    edge2 = p2;
+    divx = Divisions;
+    divy = 1;
+    Patternstyle = psLine;
+}
+
+void TPatternType::setRectangle(QPointF p1,QPointF p2, QPointF p3, QPointF p4, QPoint Divisions){
+    edge1 = p1;
+    edge2 = p2;
+    edge3 = p3;
+    edge4 = p4;
+    divx = Divisions.x();
+    divy = Divisions.y();
+    Patternstyle = psRect;
+}
+
+void TPatternType::setEllipse(QPointF center,float MinorAxis, float MajorAxis, float angle, uint Divisions){
+    center = center;
+    MajorAxis = MajorAxis;
+    MinorAxis = MinorAxis;
+    angle = angle;
+    divx = Divisions;
+    divy = 1;
+    Patternstyle = psEllipse;
+}
+
+void TPatternType::save(QTextStream &meta){
+    switch(Patternstyle){
+        case psRect:
+           meta << "Rectangle\n";
+           meta << "edge1:\t"       << edge1.x()    << "\t" << edge1.y()    << "\n";
+           meta << "edge2:\t"       << edge2.x()    << "\t" << edge2.y()    << "\n";
+           meta << "edge3:\t"       << edge3.x()    << "\t" << edge3.y()    << "\n";
+           meta << "edge4:\t"       << edge4.x()    << "\t" << edge4.y()    << "\n";
+           meta << "div:\t"         << divx         << "\t" << divy         << "\n\n";
+           break;
+        case psEllipse:
+           meta << "Ellipse\n";
+           meta << "center:\t"      << center.x()    << "\t" << center.y()  << "\n";
+           meta << "MinorAxis:\t"   << MinorAxis                            << "\n";
+           meta << "MajorAxis:\t"   << MajorAxis                            << "\n";
+           meta << "angle:\t"       << angle                                << "\n";
+           meta << "div:\t"         << divx                                 << "\n\n";
+            break;
+        case psLine:
+            meta << "Line\n";
+            meta << "edge1:\t"       << edge1.x()    << "\t" << edge1.y()    << "\n";
+            meta << "edge2:\t"       << edge2.x()    << "\t" << edge2.y()    << "\n";
+            meta << "div:\t"         << divx                                 << "\n\n";
+            break;
+        case psNone:
+            break;
+    }
+}
+
+bool TPatternType::load(QTextStream &meta){
+    int fields = 0;
+    float f;
+    QString line_str = meta.readLine();
+    QTextStream line(&line_str);
+    QString type;
+    line >> type;
+    Patternstyle = psNone;
+    if (type.startsWith("Rectangle")){
+        Patternstyle = psRect;
+        while(!meta.atEnd() && (fields<5)){
+            QString line_str = meta.readLine();
+            QTextStream line(&line_str);
+            QString t;
+            line >> t;
+            if (t.startsWith("edge1")){
+                line >> f;  edge1.setX(f);
+                line >> f;  edge1.setY(f);
+                fields++;
+            }
+            if (t.startsWith("edge2")){
+                line >> f;  edge2.setX(f);
+                line >> f;  edge2.setY(f);
+                fields++;
+            }
+            if (t.startsWith("edge3")){
+                line >> f;  edge3.setX(f);
+                line >> f;  edge3.setY(f);
+                fields++;
+            }
+            if (t.startsWith("edge4")){
+                line >> f;  edge4.setX(f);
+                line >> f;  edge4.setY(f);
+                fields++;
+            }
+            if (t.startsWith("div")){
+                line >> divx;
+                line >> divy;
+                fields++;
+            }
+        }
+    }
+    if (type.startsWith("Ellipse")){
+        Patternstyle = psEllipse;
+        while(!meta.atEnd() && (fields<5)){
+            QString line_str = meta.readLine();
+            QTextStream line(&line_str);
+            QString t;
+            line >> t;
+            if (t.startsWith("center")){
+                line >> f;  edge1.setX(f);
+                line >> f;  edge1.setY(f);
+                fields++;
+            }
+            if (t.startsWith("MinorAxis")){
+                line >> MinorAxis;
+                fields++;
+            }
+            if (t.startsWith("MajorAxis")){
+                line >> MajorAxis;
+                fields++;
+            }
+            if (t.startsWith("angle")){
+                line >> angle;
+                fields++;
+            }
+            if (t.startsWith("div")){
+                line >> divx;
+                divy  = 1;
+                fields++;
+            }
+        }
+    }
+    if (type.startsWith("Line")){
+        Patternstyle = psLine;
+        while(!meta.atEnd() && (fields<3)){
+            QString line_str = meta.readLine();
+            QTextStream line(&line_str);
+            QString t;
+            line >> t;
+            if (t.startsWith("edge1")){
+                line >> f;  edge1.setX(f);
+                line >> f;  edge1.setY(f);
+                fields++;
+            }
+            if (t.startsWith("edge2")){
+                line >> f;  edge2.setX(f);
+                line >> f;  edge2.setY(f);
+                fields++;
+            }
+            if (t.startsWith("div")){
+                line >> divx;
+                line >> divy;
+                fields++;
+            }
+        }
+    }
+    return Patternstyle != psNone;
+}
+
 TParamLine::TParamLine(QPointF P1,QPointF P2){
     ini(P1,P2);
 }
@@ -21,6 +210,23 @@ float TParamLine::getCollisionParam(TParamLine *line){
         return NAN;
     float num = d2.y()*(Offset.x()-Offset2.x()) + d2.x()*(Offset2.y()-Offset.y());
     return num/denum;
+}
+
+float TParamLine::containsPoint(QPointF P, bool &contains){
+    float dPx = P.x()-Offset.x();
+    float dPy = P.y()-Offset.y();
+    float a,b;
+    a = dPx*d.y();
+    b = dPy*d.x();
+    contains = a == b;
+
+    a = d.x(); if (a < 0) a = -a;
+    b = d.y(); if (b < 0) b = -b;
+    if (a > b)
+        a = dPx / d.x();
+    else
+        a = dPy / d.y();
+    return a;
 }
 
 QPointF TParamLine::getPointbyParam(float p){
@@ -46,6 +252,21 @@ TScanPath::TScanPath(QObject *parent) :
 
 }
 
+TScanPath::~TScanPath(){
+    TMirrorCoordinate *mc;
+    for(int i = 0;i<pointlist.count();i++){
+        mc = pointlist.at(i);
+        delete mc;
+    }
+    pointlist.clear();
+    TPatternType *pt;
+    for(int i = 0;i<Patternsources.count();i++){
+        pt = Patternsources.at(i);
+        delete pt;
+    }
+    Patternsources.clear();
+}
+
 bool TScanPath::testColl(QPointF p1,QPointF p2,QPointF p3,QPointF p4){
     bool result;
     TParamLine* line1 = new TParamLine(p1,p3);
@@ -65,6 +286,7 @@ bool TScanPath::testColl(QPointF p1,QPointF p2,QPointF p3,QPointF p4){
 
 
 int TScanPath::AddRect(QPointF p1,QPointF p2, QPointF p3, QPointF p4, QPoint Divisions){
+
     QPointF p[4];
     bool ok = false;
     //lets test if all angles are < 180 if so, even the correct order is adjusted for getting the outline
@@ -97,15 +319,21 @@ int TScanPath::AddRect(QPointF p1,QPointF p2, QPointF p3, QPointF p4, QPoint Div
 //        |--line3--|
 //        |         |
 //        p[1]------p[3]
+        TPatternType *pt = new TPatternType();
+        pt->setRectangle(p[0],p[1],p[2],p[3],Divisions);
+        Patternsources.append(pt);
         TParamLine* line1 = new TParamLine(p[0],p[1]);
         TParamLine* line2 = new TParamLine(p[2],p[3]);
         TParamLine* line3 = new TParamLine(p[0],p[2]);
-        for(int n=0;n<Divisions.x();n++){
-            QPointF lp1 = line1->getPointbyParam((float)n/((float)Divisions.x()-1));
-            QPointF lp2 = line2->getPointbyParam((float)n/((float)Divisions.x()-1));
+        for(int n=0;n<Divisions.y();n++){
+            QPointF lp1 = line1->getPointbyParam((float)n/((float)Divisions.y()-1));
+            QPointF lp2 = line2->getPointbyParam((float)n/((float)Divisions.y()-1));
             line3->ini(lp1,lp2);
-            for(int m=0;m<Divisions.y();m++){
-                TMirrorCoordinate *coord = new TMirrorCoordinate(line3->getPointbyParam((float)m/((float)Divisions.y()-1)));
+            for(int m=0;m<Divisions.x();m++){
+                TMirrorCoordinate *coord = new TMirrorCoordinate(line3->getPointbyParam((float)m/((float)Divisions.x()-1)));
+                coord->pixelIndexX = m;
+                coord->pixelIndexY = n;
+                coord->pixelIndex = pointlist.count();
                 pointlist.append(coord);
             }
         }
@@ -132,9 +360,16 @@ int TScanPath::AddRect(){
 }
 
 int TScanPath::AddLine(QPointF p1,QPointF p2, uint Divisions){
+    TPatternType *pt = new TPatternType();
+    pt->setLine( p1, p2,  Divisions);
+    Patternsources.append(pt);
+
     TParamLine* line = new TParamLine(p1,p2);
     for(uint i=0;i<Divisions;i++){
-        TMirrorCoordinate *coord = new TMirrorCoordinate(line->getPointbyParam((float)i/(float)Divisions));
+        TMirrorCoordinate *coord = new TMirrorCoordinate(line->getPointbyParam((float)i/((float)Divisions-1)));
+        coord->pixelIndexX = i;
+        coord->pixelIndexY = 0;
+        coord->pixelIndex = pointlist.count();
         pointlist.append(coord);
     }
     delete line;
@@ -155,6 +390,10 @@ int TScanPath::AddLine(){
 }
 
 int TScanPath::AddEllipseOutline(QPointF center,float MinorAxis, float MajorAxis, float angle, uint Divisions){
+    TPatternType *pt = new TPatternType();
+    pt->setEllipse(center,MinorAxis, MajorAxis, angle, Divisions);
+    Patternsources.append(pt);
+
     float xaxis = MajorAxis;
     float yaxis = MinorAxis;
     float transform[4];
@@ -175,8 +414,11 @@ int TScanPath::AddEllipseOutline(QPointF center,float MinorAxis, float MajorAxis
         p.setY(p.x()*transform[2]+p.y()*transform[3]);
         p = p + center;
         TMirrorCoordinate *c = new TMirrorCoordinate(p);
+        c->pixelIndexX = i;
+        c->pixelIndexY = 0;
         pointlist.append(c);
     }
+    return pointlist.count();
 }
 
 int TScanPath::AddEllipseOutline(){
@@ -220,3 +462,6 @@ QScriptValue TScanPath::getPoint(int index)
     return engine()->newQObject(mc);
 }
 
+QList<TPatternType*> TScanPath::getPatternSources(){
+    return Patternsources;
+}
