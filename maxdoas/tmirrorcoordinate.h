@@ -19,7 +19,7 @@ public:
     ~TMirrorCoordinate();
     QPoint getMotorCoordinate();
     QPointF getAngleCoordinate();
-
+    QPointF getZenithCoordinate();
     void setAngleCoordinate(QPointF ac);
     void setMotorCoordinate(QPoint mc);
     void setMotorCoordinate(int X, int Y);

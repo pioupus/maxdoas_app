@@ -1,5 +1,6 @@
 #include "tmirrorcoordinate.h"
 #include <QDebug>
+#include <math.h>
 //<QDebug>
 int constructioncounter=0;
 //#define STATIONARY_OFFSET 142.875
@@ -50,9 +51,35 @@ QPoint TMirrorCoordinate::getMotorCoordinate(){
 }
 
 QPointF TMirrorCoordinate::getAngleCoordinate(){
+    //X -> Stationary   -> Longitude
+    //Y -> Mirror       -> Lattidude
     return AngleCoordinate;
 }
 
+QPointF TMirrorCoordinate::getZenithCoordinate(){
+    //X -> Zenith
+    //Y -> Azimuth
+    QPointF result;
+    double Zenith;
+    double Azimuth;
+    //Zenith = 90+(MirrorMotorAngle-90)*cos(StationaryMotorAngle)
+    //Azimuth = (90-MirrorMotorAngle)*sin(StationaryMotorAngle) for MirrorMotorAngle a => 0
+    //Azimuth = 180 - (90+MirrorMotorAngle)*sin(StationaryMotorAngle) for MirrorMotorAngle a < 0
+
+    Zenith = 90.0+(AngleCoordinate.y()-90.0);
+    Zenith *= cos(AngleCoordinate.x()*M_PI/180.0);
+
+    if (AngleCoordinate.y() >= 0){
+        Azimuth = 90-AngleCoordinate.y();
+    }else{
+        Azimuth = 180 - (90+AngleCoordinate.y());
+    }
+    Azimuth *= sin(AngleCoordinate.x()*M_PI/180.0);
+
+    result.setX(Zenith);
+    result.setY(Azimuth);
+    return result;
+}
 void TMirrorCoordinate::setAngleCoordinate(QPointF ac){
     AngleCoordinate = ac;
 }

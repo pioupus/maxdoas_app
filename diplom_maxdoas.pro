@@ -36,7 +36,6 @@ CONFIG += qtestlib
 QT += script
 QT += scripttools
 QT += svg
-
 DEFINES += LINUX
 
 # Input
@@ -59,7 +58,8 @@ HEADERS += maxdoas/mainwindow.h \
     jsedit/jsedit.h \
     maxdoas/tspectralimage.h \
     maxdoas/tscanpath.h \
-    maxdoas/tspectrumplotter.h
+    maxdoas/tspectrumplotter.h \
+    maxdoas/qdoaswrapper.h
 FORMS += maxdoas/mainwindow.ui \
     maxdoas/tfrmtempctrl.ui \
     maxdoas/tfrmspectrconfig.ui
@@ -83,4 +83,5 @@ SOURCES += maxdoas/main.cpp \
     jsedit/jsedit.cpp \
     maxdoas/tspectralimage.cpp \
     maxdoas/tscanpath.cpp \
-    maxdoas/tspectrumplotter.cpp
+    maxdoas/tspectrumplotter.cpp \
+    maxdoas/qdoaswrapper.cpp

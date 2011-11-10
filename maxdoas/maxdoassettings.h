@@ -54,6 +54,9 @@ public:
     QPoint getTiltOffset();
     void setTiltOffset(QPoint TiltOffset);
 
+    QString getQDoasPath();
+    void setQDoasPath(QString path);
+
     static TMaxdoasSettings* instance()
     {
         static QMutex mutex;

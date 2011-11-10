@@ -39,6 +39,13 @@ void TMaxdoasSettings::setTiltOffset(QPoint TiltOffset){
     settings->setValue("TiltSensor/TiltOffset",TiltOffset);
 }
 
+QString TMaxdoasSettings::getQDoasPath(){
+    return settings->value("QDOAS/Path","../qdoas").toString();
+}
+
+void TMaxdoasSettings::setQDoasPath(QString path){
+    settings->setValue("QDOAS/Path",path);
+}
 
 TSPectrWLCoefficients TMaxdoasSettings::getWaveLengthCoefficients(QString serial){
     TSPectrWLCoefficients ret;
