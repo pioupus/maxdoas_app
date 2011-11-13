@@ -9,6 +9,7 @@
 #include <tspectrumplotter.h>
 #include <math.h>
 
+
 TSpectralImage::TSpectralImage(TScanPath *parent) :
     QObject(parent)
 {
@@ -17,6 +18,7 @@ TSpectralImage::TSpectralImage(TScanPath *parent) :
     rmsSpectrum = NULL;
     stdDevSpectrum = NULL;
     maxRMSPos = NULL;
+    fn = "";
     if (parent != NULL){
         QList<TPatternType*> ps = parent->getPatternSources();
         TPatternType *pt;
@@ -96,6 +98,35 @@ bool TSpectralImage::getPositionLine(QPointF P1, QPointF P2, QList<TMirrorCoordi
     }
     return result;
 }
+QPointF makeRoundError(QPointF p,QList<TMirrorCoordinate*> PointList){
+    TMirrorCoordinate mc;
+    QPoint mocoord;
+    QPointF result;
+    float x_,y_;
+    mc.setAngleCoordinate(p);
+    mocoord = mc.getMotorCoordinate();
+    mc.setMotorCoordinate(mocoord);
+    x_ = mc.getAngleCoordinate().x();
+    y_ = mc.getAngleCoordinate().y();
+    for (int i = 0;i<PointList.count();i++){
+        double x = PointList[i]->getAngleCoordinate().x();
+        if ((x_-0.09 < x) && (x < x_+0.09)) {
+            x_ = x;
+            break;
+        }
+    }
+    for (int i = 0;i<PointList.count();i++){
+
+        double y = PointList[i]->getAngleCoordinate().y();
+        if ((y_-0.09 < y) && (y < y_+0.09)) {
+            y_ = y;
+            break;
+        }
+    }
+    result.setX(x_);
+    result.setY(y_);
+    return result;
+}
 
 bool TSpectralImage::getPositionArrayRect(TPatternType *pt, TRetrieval* **buffer, int cntX, int cntY){
     QList<TMirrorCoordinate*> PointList;
@@ -114,7 +145,22 @@ bool TSpectralImage::getPositionArrayRect(TPatternType *pt, TRetrieval* **buffer
     getPositionLine(pt->edge1, pt->edge2, PointList, pt->divy, LineRight,false);
     getPositionLine(pt->edge3, pt->edge4, PointList, pt->divy, LineLeft,false);
 
-
+    if (LineRight.count() != pt->divy){
+        //seems we have a bug that Points were in motorcoord and by hwdriver transfered into anglecoordinates again -> rounding errors
+        logger()->debug("realigning Rect Pattern edges in file "+fn);
+        pt->edge1 = makeRoundError(pt->edge1,PointList);
+        pt->edge2 = makeRoundError(pt->edge2,PointList);
+        pt->edge3 = makeRoundError(pt->edge3,PointList);
+        pt->edge4 = makeRoundError(pt->edge4,PointList);
+        getPositionLine(pt->edge1, pt->edge2, PointList, pt->divy, LineRight,false);
+        getPositionLine(pt->edge3, pt->edge4, PointList, pt->divy, LineLeft,false);
+        if (LineRight.count() != pt->divy){
+            logger()->error("Could not realign Rect Pattern edges in file "+fn);
+        }
+    }
+    if (LineLeft.count() != pt->divy){
+        logger()->error("Could not realign Rect Pattern edges in file "+fn);
+    }
     result = LineLeft.count()==LineRight.count();
     int i=0;
 
@@ -129,6 +175,9 @@ bool TSpectralImage::getPositionArrayRect(TPatternType *pt, TRetrieval* **buffer
         mc_r = i_r.value();
         LineHoriz.clear();
         getPositionLine(mc_l->getAngleCoordinate(), mc_r->getAngleCoordinate(), PointList, pt->divx, LineHoriz,true);
+        if (LineHoriz.count() != pt->divx){
+            logger()->error("Could not realign Rect Pattern edges in file "+fn);
+        }
         QMapIterator<float, TMirrorCoordinate*> i_h(LineHoriz);
         i_h.toBack();
         int n=0;
@@ -162,6 +211,17 @@ bool TSpectralImage::getPositionArrayLine(TPatternType *pt,  TRetrieval* **buffe
     }
 
     getPositionLine(pt->edge1, pt->edge2, PointList, pt->divx, Line,true);
+    if (Line.count() == 0 && pt->divx != 0){
+        //seems we have a bug that Points were in motorcoord and by hwdriver transfered into anglecoordinates again -> rounding errors
+        logger()->debug("realigning Line Pattern edges in file "+fn);
+        pt->edge1 = makeRoundError(pt->edge1,PointList);
+        pt->edge2 = makeRoundError(pt->edge2,PointList);
+
+        getPositionLine(pt->edge1, pt->edge2, PointList, pt->divx, Line,true);
+        if (Line.count() == 0 && pt->divx != 0){
+            logger()->error("Could not realign Line Pattern edges in file "+fn);
+        }
+    }
     QMapIterator<float, TMirrorCoordinate*> i_l(Line);
     int n = 0;
     if(cntY > 0){
@@ -274,6 +334,7 @@ void TSpectralImage::add(TMirrorCoordinate* coord, TSpectrum* spektrum){
 }
 
 void TSpectralImage::save(QString FileName){
+    fn = FileName;
     QFile data(FileName);
     QFile meta(fnToMetafn(FileName));
     if (data.open(QFile::WriteOnly | QFile::Truncate) && meta.open(QFile::WriteOnly | QFile::Truncate)) {
@@ -306,7 +367,7 @@ void TSpectralImage::save(QString FileName){
         metastream << "PixelIndexY\n";
         for (int n = 0; n < spectrumlist.count();n++){
             spektrum = spectrumlist[n];
-            spektrum->SaveSpectrum(datastream,metastream);
+            spektrum->SaveSpectrum(datastream,metastream,false);
         }
         //while (i.hasNext()) {
         //    QPair<TSpectrum*,double> val;
@@ -338,6 +399,7 @@ bool TSpectralImage::Load(QString Directory, QString BaseName,int seqnumber,uint
 }
 
 bool TSpectralImage::Load(QString fn){
+    this->fn=fn;
     bool result=false;
     if (fn == "")
         return false;

@@ -24,6 +24,8 @@ void TScanner::setHWDriver(THWDriver* hwdriver){
     connect(hwdriver,SIGNAL(hwdSigGotSpectrum()),this,SLOT(on_GotSpectrum()));
     connect(hwdriver,SIGNAL(hwdSigMotMoved()),this,SLOT(on_MotMoved()));
     connect(hwdriver,SIGNAL(hwdSigMotorIsHome()),this,SLOT(on_MotMoved()));
+    connect(hwdriver,SIGNAL(hwdSigMotFailed()),this,SLOT(on_MotFailed()));
+
     connect(hwdriver,SIGNAL(hwdSigTransferDone(THWTransferState,uint)),this,SLOT(on_MotTimeOut(THWTransferState,uint)));
 
 
@@ -61,6 +63,10 @@ void TScanner::WaitForMotMoved(){
 
 void TScanner::on_GotSpectrum(){
     GotSpectrum = true;
+}
+
+void TScanner::on_MotFailed(){
+    MotMoved = true;
 }
 
 void TScanner::on_MotMoved(){
@@ -207,14 +213,14 @@ QScriptValue MeasureSpektrum(QScriptContext *context, QScriptEngine *engine)
         //if( MirrorCoord != NULL){
             scanner->startWaiting();
             hwDriver->hwdMeasureSpectrum(avg,0,shuttercmd);
-    //        hwDriver->hwdMeasureScanPixel(MirrorCoord->getMotorCoordinate(),avg,0);
+    //        hwDriver->hwdMeasureScanPixel(MirrorCoord->getAngleCoordinate(),avg,0);
             scanner->WaitForSpectrum();
       //  }
         TSpectrum *spektrum = new TSpectrum();
         hwDriver->hwdGetSpectrum(spektrum);
-        if (MirrorCoord != NULL){
-            spektrum->setMirrorCoordinate(MirrorCoord);
-        }
+//        if (MirrorCoord != NULL){
+//            spektrum->setMirrorCoordinate(MirrorCoord);
+//        }
         return engine->newQObject(spektrum, QScriptEngine::QtOwnership);
     }else{
         return 0;
@@ -258,7 +264,7 @@ QScriptValue MotMove(QScriptContext *context, QScriptEngine *engine)
         }
         if( MirrorCoord != NULL){
             scanner->startWaiting();
-            hwDriver->hwdMotMove(MirrorCoord->getMotorCoordinate());
+            hwDriver->hwdMotMove(MirrorCoord->getAngleCoordinate());
             scanner->WaitForMotMoved();
              if (MirrorCoordQObj == NULL){
                  delete MirrorCoord;

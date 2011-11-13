@@ -16,9 +16,14 @@
 #include "tmirrorcoordinate.h"
 #include "tscanpath.h"
 
+#include "log4qt/consoleappender.h"
+#include "log4qt/logger.h"
+#include "log4qt/ttcclayout.h"
+
 class TSpectralImage : public QObject, protected QScriptable
 {
-Q_OBJECT
+    Q_OBJECT
+    LOG4QT_DECLARE_QCLASS_LOGGER
 public:
     explicit TSpectralImage(TScanPath *parent);
     ~TSpectralImage();
@@ -49,6 +54,7 @@ private:
     bool getPositionLine(QPointF P1, QPointF P2, QList<TMirrorCoordinate*> &Points, int div, QMap<float, TMirrorCoordinate*> &line,bool PermitRemovePoints);
     bool getPositionArrayRect(TPatternType *pt, TRetrieval* **buffer, int cntX, int cntY);
     bool getPositionArrayLine(TPatternType *pt, TRetrieval* **buffer, int cntX, int cntY);
+    QString fn;
 public slots:
     void plot(int plotIndex,int Pixelsize=10);
 

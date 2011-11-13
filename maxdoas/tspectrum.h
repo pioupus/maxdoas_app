@@ -21,7 +21,7 @@ public:
     TSpectrum(QObject* parent = 0);
     TSpectrum(TSpectrum * other);
     ~TSpectrum();
-    void SaveSpectrum(QTextStream &file, QTextStream &meta);
+    void SaveSpectrum(QTextStream &file, QTextStream &meta, bool DarkSpectrum);
 
     bool LoadSpectrum(QTextStream &file, QTextStream &meta);
 
@@ -60,8 +60,9 @@ public slots:
     void plot(int index);
 
     void SaveSpectrum(QString fn);
+    void SaveSpectrumDark(QString fn);
     void SaveSpectrumDefName(QString Directory, QString BaseName,int seqnumber);
-
+    void SaveSpectrumDefNameDark(QString Directory, QString BaseName,int seqnumber);
     bool LoadSpectrum(QString fn);
     bool LoadSpectrDefaultName(QString Directory, QString BaseName,int seqnumber,uint startindex, uint groupindex );
 
@@ -83,6 +84,7 @@ public slots:
     double max();
 
 private:
+    void SaveSpectrum_(QString fn,bool Dark);
     bool isSpectrumChanged();
     double rmsval;
     double maxval;

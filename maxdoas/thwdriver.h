@@ -100,9 +100,9 @@ public slots:
     bool SetShutter(THWShutterCMD ShutterCMD);
     void hwdtSloSetShutter(THWShutterCMD ShutterCMD);
 
-    void hwdtSloMeasureScanPixel(int PosX, int PosY ,uint avg, uint integrTime);
+    void hwdtSloMeasureScanPixel(float PosX, float PosY ,uint avg, uint integrTime);
 
-    bool hwdtSloMotGoto(int PosX, int PosY);
+    bool hwdtSloMotGoto(float PosX, float PosY);
 
     void hwdtSloMeasureSpectrum(uint avg, uint integrTime,THWShutterCMD shutterCMD);
 
@@ -236,8 +236,8 @@ public:
     void hwdSetShutter(THWShutterCMD ShutterCMD);
 
 
-    void hwdMeasureScanPixel(QPoint pos,uint avg, uint integrTime);
-    void hwdMotMove(QPoint pos);
+    void hwdMeasureScanPixel(QPointF AngleCoordinate,uint avg, uint integrTime);
+    void hwdMotMove(QPointF AngleCoordinate);
     void hwdMotIdleState(bool idle);
     void hwdMeasureSpectrum(uint avg, uint integrTime,THWShutterCMD shutterCMD);
 
@@ -313,11 +313,11 @@ signals: //thread -> outside
 
     void hwdtSigSetShutter(THWShutterCMD ShutterCMD);
 
-    bool hwdtMotGoto(int PosX, int PosY);
+    bool hwdtMotGoto(float PosX, float PosY);
 
     bool hwdtMotIdleState(bool idle);
 
-    void hwdtSigMeasureScanPixel(int PosX, int PosY ,uint avg, uint integrTime);
+    void hwdtSigMeasureScanPixel(float PosX, float PosY ,uint avg, uint integrTime);
 
     void hwdtSigMeasureSpectrum(uint avg, uint integrTime,THWShutterCMD shutterCMD);
     void hwdtSigDiscoverSpectrometers();

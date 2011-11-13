@@ -7,13 +7,17 @@
 
 QString DefaultFileNameFromSeqNumber(QString Directory, QString BaseName,int seqnumber,QDateTime datetime){
     QString seq = QString::number(seqnumber).rightJustified(5, '0');
-    return Directory+'/'+BaseName+'_'+datetime.toString("dd_MM_yyyy__hh_mm_ss")+"_seq"+seq;
+    return Directory+'/'+BaseName+'_'+datetime.toString("dd_MM_yyyy__hh_mm_ss")+"_seq"+seq+"s";
 }
 
 QString fnToMetafn(QString fn){
+
     QFileInfo fi(fn);
     QString fp = fi.absolutePath()+"/";
-    QString name = fi.baseName()+"_meta";
+    QString name = fi.baseName();
+    if (name.endsWith("s"))
+        name.remove(name.length()-1,1);
+    name = name+"_meta";
     name = fp+name+"."+fi.completeSuffix();
     return name;
 }
@@ -26,11 +30,11 @@ QString GetSequenceFileName(QString Directory, QString BaseName, uint Sequence, 
     dir.setSorting(QDir::Name);
     QStringList filters;
     QString seq = QString::number(firstindex).rightJustified(5, '0');
-    filters << BaseName+"_*_seq"+seq+".spe";
-    QStringList list = dir.entryList(filters);
+    filters << BaseName+"_*_seq"+seq+"s.spe";
+    QStringList list = dir.entryList(filters,QDir::Files,QDir::Name|QDir::Reversed);
     QDateTime dtprev,dtnext;
     QString strprev,strnext;
-    //darkoffset_05_10_2011__09_19_34_seq00001.spe
+    //darkoffset_05_10_2011__09_19_34_seq00001s.spe
     if((int)groupindex < list.count()){
         strprev = list[groupindex];
         strprev = strprev.mid(strprev.indexOf("_")+1,20);
@@ -46,8 +50,8 @@ QString GetSequenceFileName(QString Directory, QString BaseName, uint Sequence, 
 
     filters.clear();
     seq = QString::number(Sequence).rightJustified(5, '0');
-    filters << BaseName+"_*_seq"+seq+".spe";
-    list = dir.entryList(filters);
+    filters << BaseName+"_*_seq"+seq+"s.spe";
+    list = dir.entryList(filters,QDir::Files,QDir::Name|QDir::Reversed);
 
     for (int i = 0; i < list.size(); ++i) {
         QString t;
@@ -131,17 +135,21 @@ QDateTime TSpectrum::GetDateTime(){
 
 
 
-void TSpectrum::SaveSpectrum(QTextStream &file, QTextStream &meta){
+void TSpectrum::SaveSpectrum(QTextStream &file, QTextStream &meta, bool DarkSpectrum){
     file.setRealNumberPrecision(6);
-    if (MirrorCoordinate == NULL){
-        file << -1 << '\t';
-        file << -1 << '\t';
-    }else{
-        file << MirrorCoordinate->getAngleCoordinate().x() << '\t';
-        file << MirrorCoordinate->getAngleCoordinate().y() << '\t';
+    if (!DarkSpectrum){
+        if (MirrorCoordinate == NULL){
+            file << -1 << ' ';
+            file << -1 << ' ';
+        }else{
+            file << MirrorCoordinate->getZenithCoordinate().x() << ' '; //Azimuth
+            file << 90.0-MirrorCoordinate->getZenithCoordinate().y() << ' '; //Elevation
+        }
+        file << datetime.toString("dd/MM/yyyy")<< " ";
+        file << (double)datetime.time().hour()+(double)(datetime.time().minute()*60+datetime.time().second())/3600 << " ";
     }
     for(int i = 0;i<NumOfSpectrPixels;i++){
-        file << spectrum[i] << '\t';
+        file << spectrum[i] << ' ';
     }
     file << '\n';
 
@@ -189,8 +197,15 @@ void TSpectrum::SaveSpectrum(QTextStream &file, QTextStream &meta){
 }
 
 
-
 void TSpectrum::SaveSpectrum(QString fn){
+    SaveSpectrum_(fn,false);
+}
+
+void TSpectrum::SaveSpectrumDark(QString fn){
+    SaveSpectrum_(fn,true);
+}
+
+void TSpectrum::SaveSpectrum_(QString fn,bool Dark){
     QFile data(fn);
 
     QFile meta(fnToMetafn(fn));
@@ -220,7 +235,7 @@ void TSpectrum::SaveSpectrum(QString fn){
         metastream << "TiltY\t";
         metastream << "PixelIndexX\t";
         metastream << "PixelIndexY\n";
-        SaveSpectrum(datastream,metastream);
+        SaveSpectrum(datastream,metastream,Dark);
         data.close();
         meta.close();
     }
@@ -246,9 +261,13 @@ QString TSpectrum::getDefaultFileName(QString Directory, QString BaseName,int se
 }
 
 
-void TSpectrum::SaveSpectrumDefName(QString Directory, QString BaseName,int seqnumber){
 
-    SaveSpectrum(getDefaultFileName( Directory, BaseName, seqnumber)+".spe");
+void TSpectrum::SaveSpectrumDefNameDark(QString Directory, QString BaseName,int seqnumber){
+    SaveSpectrum_(getDefaultFileName( Directory, BaseName, seqnumber)+".spe",true);
+}
+
+void TSpectrum::SaveSpectrumDefName(QString Directory, QString BaseName,int seqnumber){
+    SaveSpectrum_(getDefaultFileName( Directory, BaseName, seqnumber)+".spe",false);
 }
 
 void TSpectrum::setMirrorCoordinate(TMirrorCoordinate* mc){
@@ -278,12 +297,29 @@ bool TSpectrum::LoadSpectrum(QTextStream &file, QTextStream &meta){
     int index=0;
     bool fileatend = false;
     bool result = true;
+    bool versionWithDateInLineWithoutSZA=false;
     QString nl;
     if (!file.atEnd()) {
+
         bool ok;
         QString w;
-        file >> x;
-        file >> y;
+        int oldPos = file.pos();
+        file >> w;
+        file >> w;
+        file >> w;
+        if (w.contains("/")){
+            versionWithDateInLineWithoutSZA = true;
+        }
+        file.seek(oldPos);
+        if (versionWithDateInLineWithoutSZA){
+            file >> w;//Azimuth viewing angle
+            file >> w;//Elevation viewing angle
+            file >> w;//day
+            file >> w;//decimaltime
+        }else{
+            file >> x;
+            file >> y;
+        }
         ok = true;
 
         while(!file.atEnd() && ok){
@@ -359,7 +395,11 @@ bool TSpectrum::LoadSpectrum(QTextStream &file, QTextStream &meta){
         tm1 = tm1+" "+tm2;
         datetime = QDateTime::fromString(tm1,"dd.MM.yyyy hh:mm:ss");
         line >> x;
+
+
         line >> y;
+        if (!versionWithDateInLineWithoutSZA) // There was a bug in TMirrorCoordinate.setMotorCoordinate(x,y) sign of Y was wrong
+            y = -y;                          //fixed 13.nov.2011 (the same date when date introduced in spectrumfile)
         ac.setX(x);
         ac.setY(y);
         mc.setAngleCoordinate(ac);

@@ -1,18 +1,18 @@
 	Sum = 0
 	pattern = new Scanpath();
-	pattern.AddRect(-10,-10,
-					10,10,
-					-10,10,
-					10,-10,
-					10,20)
+	pattern.AddRect(65,-5,
+					65,5,
+					80,5,
+					80,-5,
+					10,10)
 	//SetAutoIntegrationTime(50,10,50000);
 	SetFixedIntegrationTime(500*1000);
 	plot.plotAutoIntegrationtimeParameters(true);
 	SpecImg = new SpektralImage(pattern);
 
   	for (a=0;a<pattern.count();a++){
-
-		spectr1 = MeasureSpektrum(pattern.getPoint(a));
+		MotMove(pattern.getPoint(a));
+		spectr1 = MeasureSpektrum(0,1,true);
 	
 		plot.setTitle("Spectrum 1");
 		plot.setXAxisTitle("Wavelength")

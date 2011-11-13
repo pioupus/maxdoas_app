@@ -57,8 +57,8 @@ QPointF TMirrorCoordinate::getAngleCoordinate(){
 }
 
 QPointF TMirrorCoordinate::getZenithCoordinate(){
-    //X -> Zenith
-    //Y -> Azimuth
+    //X -> Azimuth
+    //Y -> Zenith
     QPointF result;
     double Zenith;
     double Azimuth;
@@ -76,8 +76,9 @@ QPointF TMirrorCoordinate::getZenithCoordinate(){
     }
     Azimuth *= sin(AngleCoordinate.x()*M_PI/180.0);
 
-    result.setX(Zenith);
-    result.setY(Azimuth);
+    result.setX(Azimuth);
+    result.setY(Zenith);
+
     return result;
 }
 void TMirrorCoordinate::setAngleCoordinate(QPointF ac){
@@ -90,7 +91,7 @@ void TMirrorCoordinate::setMotorCoordinate(int X, int Y){
     //result.setY((MIRROR_STEPS*MIRROR_OFFSET/1.8) - ((MIRROR_STEPS/2)*AngleCoordinate.y()/1.8));
     Y -= (MIRROR_STEPS*MIRROR_OFFSET/1.8);
     float y = (2*1.8*Y/MIRROR_STEPS);
-    AngleCoordinate.setY(y);
+    AngleCoordinate.setY(-y);
    // AngleCoordinate.setY(Y);
 }
 

@@ -58,6 +58,7 @@
 #define CMD_TRNSMIT_FAIL		0x55
 
 #define OMNI_ENABLED 0
+#define MOT_ENABLED 0
 const uint TimeOutData  =  3000; //ms
 const uint TimeOutMotion  =  5000; //ms
 
@@ -773,6 +774,7 @@ void THWDriverThread::hwdtSloAskLightSensor(){
 
 void THWDriverThread::hwdtSloGoMotorHome(void)
 {
+#if MOT_ENABLED
     const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
@@ -783,6 +785,7 @@ void THWDriverThread::hwdtSloGoMotorHome(void)
     txBuffer[0] = 0;
     txBuffer[1] = CMD_MOT_CALIBRATION;
     logger()->debug("Calibrate Motor");
+
     if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutMotion,false,true)){
         mc->setMotorCoordinate(0,0);
         emit hwdtSigMotorIsHome();
@@ -790,9 +793,14 @@ void THWDriverThread::hwdtSloGoMotorHome(void)
         logger()->error(QString("Moving Motor failed"));
         emit hwdtSigMotFailed();
     };
+#else
+    logger()->error(QString("Moving Motor failed"));
+    emit hwdtSigMotFailed();
+#endif
 }
 
 bool THWDriverThread::SetShutter(THWShutterCMD ShutterCMD){
+#if MOT_ENABLED
     const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
@@ -821,6 +829,9 @@ bool THWDriverThread::SetShutter(THWShutterCMD ShutterCMD){
             return false;
         }
     }
+#else
+    return false;
+#endif
 }
 
 void THWDriverThread::hwdtSloSetShutter(THWShutterCMD ShutterCMD)
@@ -999,12 +1010,20 @@ void THWDriverThread::TakeSpectrum(int avg, uint IntegrTime){
 #endif
 }
 
-bool THWDriverThread::hwdtSloMotGoto(int PosX, int PosY){
+//inAngle Coordinates!
+bool THWDriverThread::hwdtSloMotGoto(float PosX, float PosY){
+    TMirrorCoordinate mc_;
+    QPointF ac;
+    ac.setX(PosX);
+    ac.setY(PosY);
+    mc_.setAngleCoordinate(ac);
+
+#if MOT_ENABLED
     const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
-    int32_t PosStationary = PosX;
-    int32_t PosMirror = PosY;
+    int32_t PosStationary = mc_.getMotorCoordinate().x();
+    int32_t PosMirror = mc_.getMotorCoordinate().y();
     for (uint i = 0; i < Bufferlength;i++){
         txBuffer[i] =  0;
         rxBuffer[i] =  0;
@@ -1021,7 +1040,7 @@ bool THWDriverThread::hwdtSloMotGoto(int PosX, int PosY){
     txBuffer[P6] = (PosStationary >> 16) & 0xFF;
     logger()->debug(QString("Motors go to. Mirror: %1 Stationary: %2").arg(PosX).arg(PosY));
     if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutMotion,false,true)){
-        mc->setMotorCoordinate(PosStationary,PosMirror);
+        mc->setAngleCoordinate(ac);
         emit hwdtSigMotMoved();
         return true;
 
@@ -1030,6 +1049,12 @@ bool THWDriverThread::hwdtSloMotGoto(int PosX, int PosY){
         emit hwdtSigMotFailed();
         return false;
     }
+#else
+    logger()->error(QString("Moving Motor failed"));
+    mc->setAngleCoordinate(ac);
+    emit hwdtSigMotFailed();
+    return false;
+#endif
 }
 
 void THWDriverThread::hwdtSloMotIdleState(bool idle){
@@ -1058,7 +1083,7 @@ void THWDriverThread::hwdtSloMotIdleState(bool idle){
     }
 }
 
-void THWDriverThread::hwdtSloMeasureScanPixel(int PosX, int PosY ,uint avg, uint integrTime)
+void THWDriverThread::hwdtSloMeasureScanPixel(float PosX, float PosY ,uint avg, uint integrTime)
 {
 
     if (hwdtSloMotGoto(PosX,PosY)){
@@ -1362,11 +1387,11 @@ THWDriver::THWDriver()
         connect(this,SIGNAL(hwdtSigSetShutter(THWShutterCMD )),
                     HWDriverObject,SLOT (hwdtSloSetShutter(THWShutterCMD )),Qt::QueuedConnection);
 
-        connect(this,SIGNAL(hwdtSigMeasureScanPixel(int , int  ,uint , uint)),
-                    HWDriverObject,SLOT (hwdtSloMeasureScanPixel(int , int  ,uint , uint)),Qt::QueuedConnection);
+        connect(this,SIGNAL(hwdtSigMeasureScanPixel(float , float  ,uint , uint)),
+                    HWDriverObject,SLOT (hwdtSloMeasureScanPixel(float , float  ,uint , uint)),Qt::QueuedConnection);
 
-        connect(this,SIGNAL(hwdtMotGoto(int , int )),
-                    HWDriverObject,SLOT (hwdtSloMotGoto(int , int  )),Qt::QueuedConnection);
+        connect(this,SIGNAL(hwdtMotGoto(float , float )),
+                    HWDriverObject,SLOT (hwdtSloMotGoto(float , float  )),Qt::QueuedConnection);
 
         connect(this,SIGNAL(hwdtMotIdleState(bool )),
                     HWDriverObject,SLOT (hwdtSloMotIdleState(bool)),Qt::QueuedConnection);
@@ -1704,14 +1729,14 @@ void THWDriver::hwdSetShutter(THWShutterCMD ShutterCMD)
 }
 
 
-void THWDriver::hwdMeasureScanPixel(QPoint pos,uint avg, uint integrTime)
+void THWDriver::hwdMeasureScanPixel(QPointF AngleCoordinate,uint avg, uint integrTime)
 {
-    emit hwdtSigMeasureScanPixel(pos.x(),pos.y(),avg,integrTime);
+    emit hwdtSigMeasureScanPixel(AngleCoordinate.x(),AngleCoordinate.y(),avg,integrTime);
 }
 
-void THWDriver::hwdMotMove(QPoint pos)
+void THWDriver::hwdMotMove(QPointF AngleCoordinate)
 {
-    emit hwdtMotGoto(pos.x(),pos.y());
+    emit hwdtMotGoto(AngleCoordinate.x(),AngleCoordinate.y());
 }
 
 void THWDriver:: hwdMotIdleState(bool idle){
