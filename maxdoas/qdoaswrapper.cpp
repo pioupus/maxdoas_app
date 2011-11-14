@@ -1,7 +1,7 @@
 #include "qdoaswrapper.h"
 #include <QProcess>
 
-QDoasConfigFile::QDoasConfigFile(){
+QDoasConfigFile::QDoasConfigFile(QString fn){
     qdoasfile = new QXmlStreamReader();
 }
 
@@ -29,12 +29,16 @@ bool QDoasConfigFile::setReference(QString fn){
 bool QDoasConfigFile::setInputDirectory(QString fn){
 }
 
-
+QDoasWrapper* QDoasWrapper::m_Instance = 0;
 
 
 QDoasWrapper::QDoasWrapper()
 {
     ms = TMaxdoasSettings::instance();
+}
+
+QDoasWrapper::~QDoasWrapper(){
+
 }
 
 bool QDoasWrapper::retrieve(TSpectrum spectrum, QDoasConfigFile cf){
@@ -45,6 +49,10 @@ bool QDoasWrapper::retrieve(TSpectralImage specImage, QDoasConfigFile cf){
 
 }
 
-TRetrievalImage* QDoasWrapper::getRetrieval(QString symbol){
+TRetrievalImage* QDoasWrapper::getRetrievalImage(QString symbol){
+
+}
+
+double QDoasWrapper::getRetrieval(QString symbol){
 
 }

@@ -11,6 +11,7 @@
 #include "tspectralimage.h"
 #include "tscanpath.h"
 #include "tspectrumplotter.h"
+#include "qdoaswrapper.h"
 
 TScanner* TScanner::m_Instance = 0;
 
@@ -129,6 +130,14 @@ QScriptValue TMirrorCoordinateConstructor(QScriptContext *context, QScriptEngine
     return engine->newQObject(object, QScriptEngine::ScriptOwnership);
 }
 
+QScriptValue QDoasConfigFileConstructor(QScriptContext *context, QScriptEngine *engine)
+{
+    QObject *obj = context->argument(0).toQObject();
+    QString sp = context->argument(0).toString();
+    QObject *object = new QDoasConfigFile(sp);
+    return engine->newQObject(object, QScriptEngine::ScriptOwnership);
+}
+
 QScriptValue SetAutoIntegrationTime(QScriptContext *context, QScriptEngine *engine)
 {
     (void)engine;
@@ -177,6 +186,11 @@ QScriptValue FreeObject(QScriptContext *context, QScriptEngine *engine)
            TRetrievalImage *rtimg = dynamic_cast<TRetrievalImage*>(obj);
            if(rtimg != NULL){
                delete rtimg;
+           }else{
+               QDoasConfigFile *qdconf = dynamic_cast<QDoasConfigFile*>(obj);
+               if(qdconf != NULL){
+                   delete qdconf;
+               }
            }
         }
     }
@@ -498,9 +512,15 @@ TScriptWrapper::TScriptWrapper(THWDriver* hwdriver)
     QScriptValue metaObjectmc = ScriptEngine->newQMetaObject(&QObject::staticMetaObject, ctormc);
     ScriptEngine->globalObject().setProperty("Mirrorcoordinate", metaObjectmc);
 
+    QScriptValue qdconf = ScriptEngine->newFunction(QDoasConfigFileConstructor);
+    QScriptValue metaqdconf = ScriptEngine->newQMetaObject(&QObject::staticMetaObject, qdconf);
+    ScriptEngine->globalObject().setProperty("QDoasConfigFile", metaqdconf);
+
     QScriptValue plotobj = ScriptEngine->newQObject(TSpectrumPlotter::instance(0),QScriptEngine::ScriptOwnership);
     ScriptEngine->globalObject().setProperty("plot", plotobj);
 
+    QScriptValue qdoasobj = ScriptEngine->newQObject(QDoasWrapper::instance(),QScriptEngine::ScriptOwnership);
+    ScriptEngine->globalObject().setProperty("qdoas", qdoasobj);
 }
 
 
