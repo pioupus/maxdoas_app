@@ -10,7 +10,7 @@
 #include "tmirrorcoordinate.h"
 
 
-enum TSprectumType{stNone,stDarkOffset,stDarkNoise,stSunSpec,stMeasurement};
+enum TSprectumType{stNone,stDarkOrRef,stMeasurement};
 
 class TSpectrum: public QObject
 {
@@ -63,6 +63,7 @@ public slots:
     void SaveSpectrumDark(QString fn);
     void SaveSpectrumDefName(QString Directory, QString BaseName,int seqnumber);
     void SaveSpectrumDefNameDark(QString Directory, QString BaseName,int seqnumber);
+
     bool LoadSpectrum(QString fn);
     bool LoadSpectrDefaultName(QString Directory, QString BaseName,int seqnumber,uint startindex, uint groupindex );
 

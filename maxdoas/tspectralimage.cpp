@@ -364,7 +364,9 @@ void TSpectralImage::save(QString FileName){
         metastream << "TiltX\t";
         metastream << "TiltY\t";
         metastream << "PixelIndexX\t";
-        metastream << "PixelIndexY\n";
+        metastream << "PixelIndexY\t";
+        metastream << "dark\n";
+
         for (int n = 0; n < spectrumlist.count();n++){
             spektrum = spectrumlist[n];
             spektrum->SaveSpectrum(datastream,metastream,false);

@@ -31,7 +31,7 @@ QString GetSequenceFileName(QString Directory, QString BaseName, uint Sequence, 
     QStringList filters;
     QString seq = QString::number(firstindex).rightJustified(5, '0');
     filters << BaseName+"_*_seq"+seq+"s.spe";
-    QStringList list = dir.entryList(filters,QDir::Files,QDir::Name|QDir::Reversed);
+    QStringList list = dir.entryList(filters,QDir::Files,QDir::Name);
     QDateTime dtprev,dtnext;
     QString strprev,strnext;
     //darkoffset_05_10_2011__09_19_34_seq00001s.spe
@@ -51,7 +51,7 @@ QString GetSequenceFileName(QString Directory, QString BaseName, uint Sequence, 
     filters.clear();
     seq = QString::number(Sequence).rightJustified(5, '0');
     filters << BaseName+"_*_seq"+seq+"s.spe";
-    list = dir.entryList(filters,QDir::Files,QDir::Name|QDir::Reversed);
+    list = dir.entryList(filters,QDir::Files,QDir::Name);
 
     for (int i = 0; i < list.size(); ++i) {
         QString t;
@@ -136,6 +136,8 @@ QDateTime TSpectrum::GetDateTime(){
 
 
 void TSpectrum::SaveSpectrum(QTextStream &file, QTextStream &meta, bool DarkSpectrum){
+    if (DarkSpectrum)
+        type = stDarkOrRef;
     file.setRealNumberPrecision(6);
     if (!DarkSpectrum){
         if (MirrorCoordinate == NULL){
@@ -193,15 +195,21 @@ void TSpectrum::SaveSpectrum(QTextStream &file, QTextStream &meta, bool DarkSpec
         meta << MirrorCoordinate->pixelIndexX << '\t';
         meta << MirrorCoordinate->pixelIndexY << '\t';
     }
+    if (DarkSpectrum)
+        meta << "1";
+    else
+        meta << "0";
     meta << '\n';
 }
 
 
 void TSpectrum::SaveSpectrum(QString fn){
-    SaveSpectrum_(fn,false);
+    bool Dark = type==stDarkOrRef;
+    SaveSpectrum_(fn,Dark);
 }
 
 void TSpectrum::SaveSpectrumDark(QString fn){
+
     SaveSpectrum_(fn,true);
 }
 
@@ -234,7 +242,8 @@ void TSpectrum::SaveSpectrum_(QString fn,bool Dark){
         metastream << "TiltX\t";
         metastream << "TiltY\t";
         metastream << "PixelIndexX\t";
-        metastream << "PixelIndexY\n";
+        metastream << "PixelIndexY\t";
+        metastream << "dark\n";
         SaveSpectrum(datastream,metastream,Dark);
         data.close();
         meta.close();
@@ -267,7 +276,8 @@ void TSpectrum::SaveSpectrumDefNameDark(QString Directory, QString BaseName,int 
 }
 
 void TSpectrum::SaveSpectrumDefName(QString Directory, QString BaseName,int seqnumber){
-    SaveSpectrum_(getDefaultFileName( Directory, BaseName, seqnumber)+".spe",false);
+    bool Dark = type==stDarkOrRef;
+    SaveSpectrum_(getDefaultFileName( Directory, BaseName, seqnumber)+".spe",Dark);
 }
 
 void TSpectrum::setMirrorCoordinate(TMirrorCoordinate* mc){
@@ -298,27 +308,49 @@ bool TSpectrum::LoadSpectrum(QTextStream &file, QTextStream &meta){
     bool fileatend = false;
     bool result = true;
     bool versionWithDateInLineWithoutSZA=false;
+    bool DarkSpectrum = false;
     QString nl;
     if (!file.atEnd()) {
-
+        if (!meta.atEnd()&&!fileatend){
+            int pos = meta.pos();
+            QString line_str = meta.readLine();
+            QTextStream line(&line_str);
+            QString s;
+            for(int i = 0;i < 22;i++){
+                line >> s;
+            }
+            if (s==QString("1")){
+                DarkSpectrum = true;
+                type = stDarkOrRef;
+                versionWithDateInLineWithoutSZA = true;
+            }
+            if (s==QString("0")){
+                type = stMeasurement;
+                versionWithDateInLineWithoutSZA = true;
+            }
+            meta.seek(pos);
+        }
         bool ok;
         QString w;
-        int oldPos = file.pos();
-        file >> w;
-        file >> w;
-        file >> w;
-        if (w.contains("/")){
-            versionWithDateInLineWithoutSZA = true;
-        }
-        file.seek(oldPos);
-        if (versionWithDateInLineWithoutSZA){
-            file >> w;//Azimuth viewing angle
-            file >> w;//Elevation viewing angle
-            file >> w;//day
-            file >> w;//decimaltime
-        }else{
-            file >> x;
-            file >> y;
+        if (!DarkSpectrum){
+            int oldPos = file.pos();
+            file >> w;
+            file >> w;
+            file >> w;
+            if (w.contains("/")){
+                versionWithDateInLineWithoutSZA = true;
+            }
+            file.seek(oldPos);
+
+            if (versionWithDateInLineWithoutSZA){
+                file >> w;//Azimuth viewing angle
+                file >> w;//Elevation viewing angle
+                file >> w;//day
+                file >> w;//decimaltime
+            }else{
+                file >> x;
+                file >> y;
+            }
         }
         ok = true;
 
