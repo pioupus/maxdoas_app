@@ -15,6 +15,7 @@ class TRetrieval
 {
 public:
     TRetrieval();
+    TRetrieval(TRetrieval * other);
     ~TRetrieval();
     void setMirrorCoordinate(TMirrorCoordinate *mc);
 

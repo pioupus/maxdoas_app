@@ -137,6 +137,7 @@ bool TSpectralImage::getPositionArrayRect(TPatternType *pt, TRetrieval* **buffer
     bool result = true;
     for (int i = 0;i<spectrumlist.count();i++){
         PointList.append(spectrumlist[i]->getMirrorCoordinate());
+        //PointList[i]->pixelIndex = i;
     }
     //        p[1]------p[3]
     //        |         |
@@ -387,6 +388,16 @@ void TSpectralImage::save(QString FileName){
         data.close();
         meta.close();
     }
+}
+
+QString TSpectralImage::getFileName(){
+    return fn;
+}
+
+void TSpectralImage::saveTmp(QString FileName){
+    QString oldfn = fn;
+    save(FileName);
+    fn = oldfn;
 }
 
 void TSpectralImage::save(QString Directory,QString BaseName,int SequenceNumber){

@@ -40,6 +40,7 @@ public:
     bool getPositionArray(TRetrieval* **buffer, int cntX, int cntY);
     TRetrievalImage* getIntensityImage();
     int getPixelIndex(TMirrorCoordinate* mc);
+    QString getFileName();
 private:
     QHash<QPair<int,int>, QPair<TSpectrum*,double> > spectrumtable;
     QDateTime FirstDate;
@@ -61,7 +62,7 @@ public slots:
     void add(TMirrorCoordinate* coord, TSpectrum* spektrum);
     void save(QString Directory,QString BaseName,int SequenceNumber);
     void save(QString FileName);
-
+    void saveTmp(QString FileName);
     bool Load(QString Directory, QString BaseName,int seqnumber,uint startindex,uint groupindex);
     bool Load(QString fn);
 

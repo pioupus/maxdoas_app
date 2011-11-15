@@ -27,6 +27,9 @@ public:
 
     bool LoadSpectrEMT(QString fn);
 
+    void SaveSpectrumSTD(QString fn);
+    void SaveSpectrumRef(QString calib,QString fn);
+
     QString getDefaultFileName(QString Directory, QString BaseName,int seqnumber);
 
     QDateTime GetDateTime();
@@ -38,7 +41,7 @@ public:
 
     TWavelengthbuffer *Wavelength;//points to global buffer
     int NumOfSpectrPixels;
-
+    QString getFileName();
     TSprectumType type;
     uint IntegTime;
 
@@ -49,6 +52,7 @@ public:
     double MaxPossibleValue;
     int SequenceNumber;
     QString BaseName;
+    QString FileName;
     float Temperature;
     QPointF Tilt;
     QString SpectrometerSerialNumber;
@@ -60,6 +64,7 @@ public slots:
     void plot(int index);
 
     void SaveSpectrum(QString fn);
+    void SaveSpectrumTmp(QString fn);
     void SaveSpectrumDark(QString fn);
     void SaveSpectrumDefName(QString Directory, QString BaseName,int seqnumber);
     void SaveSpectrumDefNameDark(QString Directory, QString BaseName,int seqnumber);
@@ -85,7 +90,8 @@ public slots:
     double max();
 
 private:
-    void SaveSpectrum_(QString fn,bool Dark);
+    void SaveSpectrum_(QString fn,bool Dark,bool istmp);
+    bool LoadSpectrum_(QString fn,bool istmp);
     bool isSpectrumChanged();
     double rmsval;
     double maxval;

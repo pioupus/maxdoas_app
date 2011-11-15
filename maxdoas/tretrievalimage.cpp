@@ -4,13 +4,25 @@
 
 TRetrievalImage::TRetrievalImage(int width, int height)
 {
+    inibuffer(width,height,(TRetrievalImage*)NULL);
+}
+
+TRetrievalImage::TRetrievalImage(TRetrievalImage *other){
+    inibuffer(other->width,other->height,other);
+}
+
+void TRetrievalImage::inibuffer(int width, int height, TRetrievalImage *other){
     this->width = width;
     this->height = height;
     valueBuffer = new TRetrieval** [height];
     for (int i = 0; i < height; i++){
         valueBuffer[i] = new TRetrieval* [width];
         for(int n = 0; n<width;n++){
-            valueBuffer[i][n] = new TRetrieval();
+            if (other == NULL)
+                valueBuffer[i][n] = new TRetrieval();
+            else
+               valueBuffer[i][n] = new TRetrieval(other->valueBuffer[i][n]);
+
         }
         if (valueBuffer[i] == NULL){
             this->height = i;
@@ -18,8 +30,6 @@ TRetrievalImage::TRetrievalImage(int width, int height)
         }
     }
 }
-
-
 
 TRetrievalImage::~TRetrievalImage()
 {

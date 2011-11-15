@@ -6,6 +6,13 @@ TRetrieval::TRetrieval()
     mirrorCoordinate = NULL;
 }
 
+TRetrieval::TRetrieval(TRetrieval * other){
+    setMirrorCoordinate(other->mirrorCoordinate);
+    val = other->val;
+    symbName = other->symbName;
+    WindVector = other->WindVector;
+}
+
 TRetrieval::~TRetrieval(){
     delete mirrorCoordinate;
 }
@@ -13,6 +20,8 @@ TRetrieval::~TRetrieval(){
 void TRetrieval::setMirrorCoordinate(TMirrorCoordinate *mc){
     if (mirrorCoordinate != NULL){
         delete mirrorCoordinate;
+        mirrorCoordinate = NULL;
     }
-    mirrorCoordinate = new TMirrorCoordinate(mc);
+    if (mc != NULL)
+        mirrorCoordinate = new TMirrorCoordinate(mc);
 }

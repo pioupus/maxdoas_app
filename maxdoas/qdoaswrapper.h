@@ -4,7 +4,12 @@
 #include "tretrievalimage.h"
 #include "tspectralimage.h"
 #include "tspectrum.h"
+#include <QScriptEngine>
+#include <QScriptContext>
+#include <QScriptValue>
 #include <QXmlStreamReader>
+#include <QDomDocument>
+#include <QStringList>
 
 class QDoasConfigFile:public QObject
 {
@@ -12,31 +17,40 @@ class QDoasConfigFile:public QObject
 public:
     QDoasConfigFile(QString fn);
     ~QDoasConfigFile();
-
+    QString getName();
+public slots:
     bool load(QString fn);
     bool save(QString fn);
 
-    bool setOffset(QString fn);
-    bool setReference(QString fn);
+
     bool setInputDirectory(QString fn);
 
     bool setOffset(TSpectrum *Offset);
-    bool setReference(TSpectrum *Spectrum);
+    bool setXSRef(QString calibfn,TSpectrum *Spectrum);
+    bool setCalRef(QString calibfn,TSpectrum *Spectrum);
+    bool setUSAMPRef(QString calibfn,TSpectrum *Spectrum);
 
 private:
-    QXmlStreamReader *qdoasfile;
+    QDomDocument *qdoasfile;
 };
 
-class QDoasWrapper:public QObject
+class QDoasWrapper:public QObject, protected QScriptable
 {
     Q_OBJECT
-public:
-    bool retrieve(TSpectrum spectrum, QDoasConfigFile cf);
-    bool retrieve(TSpectralImage specImage, QDoasConfigFile cf);
+public slots:
 
-    TRetrievalImage* getRetrievalImage(QString symbol);
+    bool retrieve(TSpectrum *spectrum, QDoasConfigFile *cf);
+    bool retrieve(TSpectralImage *specImage, QDoasConfigFile *cf);
+
+    QScriptValue getRetrievalImage(QString symbol);
     double getRetrieval(QString symbol);
 
+    void setOutPath(QString path);
+public:
+
+    TRetrievalImage* getRetrievalImage_(QString symbol);
+    void appendTempFileNameToDeleteLater(QString s);
+    QString retrieve(QString in,QString defname, QDoasConfigFile *cf);
     static QDoasWrapper* instance()
     {
         static QMutex mutex;
@@ -71,6 +85,11 @@ private:
 
     static QDoasWrapper* m_Instance;
     TMaxdoasSettings* ms;
+    QStringList tempFiles;
+    QString outPath;
+    QString lastoutfile;
+    TRetrievalImage *lastposImage;
+
 };
 
 #endif // QDOASWRAPPER_H

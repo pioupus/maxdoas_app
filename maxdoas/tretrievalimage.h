@@ -13,6 +13,7 @@ class TRetrievalImage:public QObject
     Q_OBJECT
 public:
     TRetrievalImage(int width, int height);
+    TRetrievalImage(TRetrievalImage *other);
     ~TRetrievalImage();
 
     TRetrieval* **valueBuffer;
@@ -21,7 +22,7 @@ public:
 public slots:
     void save(QString fn);
 private:
-
+    void inibuffer(int width, int height, TRetrievalImage *other);
     int width;
     int height;
 };

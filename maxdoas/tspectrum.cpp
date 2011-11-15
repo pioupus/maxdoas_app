@@ -133,7 +133,9 @@ QDateTime TSpectrum::GetDateTime(){
     return datetime;
 }
 
-
+QString TSpectrum::getFileName(){
+    return FileName;
+}
 
 void TSpectrum::SaveSpectrum(QTextStream &file, QTextStream &meta, bool DarkSpectrum){
     if (DarkSpectrum)
@@ -202,18 +204,69 @@ void TSpectrum::SaveSpectrum(QTextStream &file, QTextStream &meta, bool DarkSpec
     meta << '\n';
 }
 
+void TSpectrum::SaveSpectrumSTD(QString fn){
+    QFile data(fn);
+
+    if (data.open(QFile::WriteOnly | QFile::Truncate)) {
+        QTextStream datastream(&data);
+
+        double wl1;
+        datastream << "GDBGMNUP\n";
+        datastream << "1\n";
+        datastream << NumOfSpectrPixels<<"\n";
+        for (int i=0;i<NumOfSpectrPixels;i++){
+           datastream << spectrum[i] << '\n';
+        }
+        datastream << SpectrometerSerialNumber << "\n";
+        datastream << SpectrometerSerialNumber << "\n";
+        datastream << datetime.toString("dd.MM.YYYY") << "\n";
+        datastream << datetime.toString("hh.mm.ss") << "\n";
+        datastream << datetime.toString("hh.mm.ss") << "\n";
+        wl1 = WLCoefficients.Offset+
+              WLCoefficients.Coeff1*NumOfSpectrPixels+
+              pow(NumOfSpectrPixels,2)*WLCoefficients.Coeff2+
+              pow(NumOfSpectrPixels,3)*WLCoefficients.Coeff3;
+        datastream << wl1 << "\n";
+        datastream << 0 << "\n";
+        datastream << "INT_TIME "<< IntegTime << "\n";
+        datastream << "SCANS "<< AvgCount << "\n";
+    }
+    data.close();
+}
+
+void TSpectrum::SaveSpectrumRef(QString calib,QString fn){
+    QFile data(fn);
+    QFile cal(calib);
+    if (data.open(QFile::WriteOnly | QFile::Truncate)&&(cal.open(QFile::ReadOnly))) {
+        QTextStream datastream(&data);
+        QTextStream calibstream(&cal);
+        for (int i=0;i<NumOfSpectrPixels;i++){
+           QString wl=calibstream.readLine();
+           datastream << wl << '\t' << spectrum[i] << '\n';
+        }
+
+    }
+    data.close();
+}
 
 void TSpectrum::SaveSpectrum(QString fn){
     bool Dark = type==stDarkOrRef;
-    SaveSpectrum_(fn,Dark);
+    SaveSpectrum_(fn,Dark,false);
+}
+
+void TSpectrum::SaveSpectrumTmp(QString fn){
+    bool Dark = type==stDarkOrRef;
+    SaveSpectrum_(fn,Dark,true);
 }
 
 void TSpectrum::SaveSpectrumDark(QString fn){
 
-    SaveSpectrum_(fn,true);
+    SaveSpectrum_(fn,true,false);
 }
 
-void TSpectrum::SaveSpectrum_(QString fn,bool Dark){
+void TSpectrum::SaveSpectrum_(QString fn,bool Dark,bool istmp){
+    if (!istmp)
+        FileName = fn;
     QFile data(fn);
 
     QFile meta(fnToMetafn(fn));
@@ -272,12 +325,12 @@ QString TSpectrum::getDefaultFileName(QString Directory, QString BaseName,int se
 
 
 void TSpectrum::SaveSpectrumDefNameDark(QString Directory, QString BaseName,int seqnumber){
-    SaveSpectrum_(getDefaultFileName( Directory, BaseName, seqnumber)+".spe",true);
+    SaveSpectrum_(getDefaultFileName( Directory, BaseName, seqnumber)+".spe",true,false);
 }
 
 void TSpectrum::SaveSpectrumDefName(QString Directory, QString BaseName,int seqnumber){
     bool Dark = type==stDarkOrRef;
-    SaveSpectrum_(getDefaultFileName( Directory, BaseName, seqnumber)+".spe",Dark);
+    SaveSpectrum_(getDefaultFileName( Directory, BaseName, seqnumber)+".spe",Dark,false);
 }
 
 void TSpectrum::setMirrorCoordinate(TMirrorCoordinate* mc){
@@ -480,10 +533,12 @@ bool TSpectrum::LoadSpectrum(QTextStream &file, QTextStream &meta){
     return result;
 }
 
-bool TSpectrum::LoadSpectrum(QString fn){
+bool TSpectrum::LoadSpectrum_(QString fn,bool istmp){
     bool result=false;
     if (fn == "")
         return false;
+    if (!istmp)
+        FileName = fn;
     QFile dataf(fn);
     QFile metaf(fnToMetafn(fn));
     if ((dataf.open(QIODevice::ReadOnly | QIODevice::Text))&&(metaf.open(QIODevice::ReadOnly | QIODevice::Text))){
@@ -497,6 +552,10 @@ bool TSpectrum::LoadSpectrum(QString fn){
     }
 
     return result;
+}
+
+bool TSpectrum::LoadSpectrum(QString fn){
+    return LoadSpectrum_(fn,false);
 }
 
 bool TSpectrum::LoadSpectrDefaultName(QString Directory, QString BaseName,int seqnumber,uint startindex, uint groupindex ){

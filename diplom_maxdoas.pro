@@ -36,6 +36,7 @@ CONFIG += qtestlib
 QT += script
 QT += scripttools
 QT += svg
+QT += xml
 DEFINES += LINUX
 
 # Input
