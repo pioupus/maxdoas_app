@@ -7,7 +7,7 @@
 
 QString DefaultFileNameFromSeqNumber(QString Directory, QString BaseName,int seqnumber,QDateTime datetime){
     QString seq = QString::number(seqnumber).rightJustified(5, '0');
-    return Directory+'/'+BaseName+'_'+datetime.toString("dd_MM_yyyy__hh_mm_ss")+"_seq"+seq+"s";
+    return Directory+'/'+BaseName+'_'+datetime.toString("yyyy_MM_dd__hh_mm_ss")+"_seq"+seq+"s";
 }
 
 QString fnToMetafn(QString fn){
@@ -38,14 +38,14 @@ QString GetSequenceFileName(QString Directory, QString BaseName, uint Sequence, 
     if((int)groupindex < list.count()){
         strprev = list[groupindex];
         strprev = strprev.mid(strprev.indexOf("_")+1,20);
-        dtprev = QDateTime::fromString(strprev,"dd_MM_yyyy__hh_mm_ss");
+        dtprev = QDateTime::fromString(strprev,"yyyy_MM_dd__hh_mm_ss");
     }else{
         return "";
     }
     if ((int)groupindex+1 < list.count()){
         strnext = list[groupindex+1];
         strnext = strnext.mid(strnext.indexOf("_")+1,20);
-        dtnext = QDateTime::fromString(strnext,"dd_MM_yyyy__hh_mm_ss");
+        dtnext = QDateTime::fromString(strnext,"yyyy_MM_dd__hh_mm_ss");
     }
 
     filters.clear();
@@ -58,7 +58,7 @@ QString GetSequenceFileName(QString Directory, QString BaseName, uint Sequence, 
         QDateTime dt;
         t = list[i];
         t = t.mid(t.indexOf("_")+1,20);
-        dt = QDateTime::fromString(t,"dd_MM_yyyy__hh_mm_ss");
+        dt = QDateTime::fromString(t,"yyyy_MM_dd__hh_mm_ss");
         if ((((dt >= dtprev)&&(dt < dtnext))||((dt >= dtprev) && (!dtnext.isValid())))){
             result = Directory+"/"+list[i];
             break;
@@ -204,9 +204,14 @@ void TSpectrum::SaveSpectrum(QTextStream &file, QTextStream &meta, bool DarkSpec
     meta << '\n';
 }
 
+QString extractFileName(QString fn){
+    QFileInfo fi(fn);
+    return fi.baseName()+"."+fi.completeSuffix();
+}
+
 void TSpectrum::SaveSpectrumSTD(QString fn){
     QFile data(fn);
-
+    QString fnn;
     if (data.open(QFile::WriteOnly | QFile::Truncate)) {
         QTextStream datastream(&data);
 
@@ -217,9 +222,11 @@ void TSpectrum::SaveSpectrumSTD(QString fn){
         for (int i=0;i<NumOfSpectrPixels;i++){
            datastream << spectrum[i] << '\n';
         }
+        fnn = extractFileName(fn);
+        datastream << fnn << "\n";
         datastream << SpectrometerSerialNumber << "\n";
         datastream << SpectrometerSerialNumber << "\n";
-        datastream << datetime.toString("dd.MM.YYYY") << "\n";
+        datastream << datetime.toString("dd.MM.yyyy") << "\n";
         datastream << datetime.toString("hh.mm.ss") << "\n";
         datastream << datetime.toString("hh.mm.ss") << "\n";
         wl1 = WLCoefficients.Offset+
@@ -351,6 +358,18 @@ void TSpectrum::setPixelIndex(int index){
     ScanPixelIndex = index;
     if(MirrorCoordinate != NULL){
         MirrorCoordinate->pixelIndex = index;
+    }
+}
+
+void TSpectrum::setXPixelIndex(int index){
+    if(MirrorCoordinate != NULL){
+        MirrorCoordinate->pixelIndexX = index;
+    }
+}
+
+void TSpectrum::setYPixelIndex(int index){
+    if(MirrorCoordinate != NULL){
+        MirrorCoordinate->pixelIndexY = index;
     }
 }
 
@@ -573,6 +592,17 @@ bool TSpectrum::LoadSpectrEMT(QString fn){
 void TSpectrum::plot(int index){
     TSpectrumPlotter* SpectrumPlotter = TSpectrumPlotter::instance(0);
     SpectrumPlotter->plotSpectrum(this,index);
+}
+
+QString TSpectrum::getSpectSerialNo(){
+    return SpectrometerSerialNumber;
+}
+
+void TSpectrum::interpolatePixel(int Pixelindex){
+    if ((Pixelindex > 0) && (Pixelindex < NumOfSpectrPixels-1)){
+        spectrum[Pixelindex] = (spectrum[Pixelindex+1]+spectrum[Pixelindex-1])/2;
+    }
+    hash = -1;
 }
 
 void TSpectrum::add(QObject *spect){

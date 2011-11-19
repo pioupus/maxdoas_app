@@ -59,7 +59,7 @@ public:
     void setParentLayout(QBoxLayout *parent);
 
     void plotSpectrum(TSpectrum *spectrum,int plotIndex);
-    void plotRetrievalImage(TRetrievalImage *img,int plotIndex);
+    void plotRetrievalImage(TRetrievalImage *img,int plotIndex, int Pixelsize=10);
     void plotSpectralImage(TSpectralImage *img,int plotIndex, int Pixelsize=10);
 
     static TSpectrumPlotter* instance(QObject *parent)

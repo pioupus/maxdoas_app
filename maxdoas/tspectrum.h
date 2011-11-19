@@ -37,6 +37,8 @@ public:
     double getHash();
     void setMirrorCoordinate(TMirrorCoordinate * mc);
     void setPixelIndex(int index);
+    void setXPixelIndex(int index);
+    void setYPixelIndex(int index);
     TMirrorCoordinate * getMirrorCoordinate();
 
     TWavelengthbuffer *Wavelength;//points to global buffer
@@ -72,6 +74,8 @@ public slots:
     bool LoadSpectrum(QString fn);
     bool LoadSpectrDefaultName(QString Directory, QString BaseName,int seqnumber,uint startindex, uint groupindex );
 
+    QString getSpectSerialNo();
+    void interpolatePixel(int Pixelindex);
     void add(QObject *spect);
     void add(double val);
 

@@ -1,6 +1,7 @@
 #include "tretrievalimage.h"
 #include <QFile>
 #include <QTextStream>
+#include <tspectrumplotter.h>
 
 TRetrievalImage::TRetrievalImage(int width, int height)
 {
@@ -63,4 +64,9 @@ void TRetrievalImage::save(QString fn){
             datastream << '\n';
         }
     }
+}
+
+void TRetrievalImage::plot(int plotIndex,int Pixelsize){
+    TSpectrumPlotter* SpectrumPlotter = TSpectrumPlotter::instance(0);
+    SpectrumPlotter->plotRetrievalImage(this,plotIndex,Pixelsize);
 }

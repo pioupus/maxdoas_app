@@ -16,8 +16,20 @@ class QDoasConfigFile:public QObject
     Q_OBJECT
 public:
     QDoasConfigFile(QString fn);
+    QDoasConfigFile(QDoasConfigFile * other);
     ~QDoasConfigFile();
     QString getName();
+    QString getOffset();
+    QString getXSRef();
+    QString getCalRef();
+    QString getUSAMPRef();
+    bool enableSpecNo();
+
+    bool setOffset(QString SpecFn);
+    bool setXSRef(QString SpecFn);
+    bool setCalRef(QString SpecFn);
+    bool setUSAMPRef(QString SpecFn);
+
 public slots:
     bool load(QString fn);
     bool save(QString fn);
@@ -29,6 +41,8 @@ public slots:
     bool setXSRef(QString calibfn,TSpectrum *Spectrum);
     bool setCalRef(QString calibfn,TSpectrum *Spectrum);
     bool setUSAMPRef(QString calibfn,TSpectrum *Spectrum);
+
+    bool saveWorkingCopy(QString Directory,QString Filename, QString inDirectory);
 
 private:
     QDomDocument *qdoasfile;

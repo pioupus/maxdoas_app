@@ -6,6 +6,7 @@
 #include <QScriptEngine>
 #include <QScriptContext>
 #include <QScriptValue>
+#include <QDebug>
 
 QString getTempPath(){
     QDir dir = QDir::temp();
@@ -18,13 +19,21 @@ QString getTempPath(){
 QString MakeTempfileName(QString prefix,QString suffix, qint64 time,int random){
 
     QByteArray num;
+    char c;
+    qint64 t;
     for(int i = 0; i != sizeof(time); ++i){
-        num.append((char)(time&(0xFF << i) >>i));
+        t = time & (0xFF << i*8);
+        c = t >> i*8;
+        if (i > 3)//we dont use al 64 bits..
+            break;
+        num.append(c);
     }
     for(int i = 0; i != sizeof(random); ++i){
-        num.append((char)(random&(0xFF << i) >>i));
+        t = random & (0xFF << i*8);
+        c = t >> i*8;
+        num.append(c);
     }
-    return prefix+num.toBase64()+"."+suffix;
+    return prefix+num.toHex()+"."+suffix;
 }
 
 QString getTempfileName(QString prefix,QString suffix){
@@ -49,6 +58,11 @@ QDoasConfigFile::QDoasConfigFile(QString fn){
     qdoasfile = new QDomDocument("QDoasConfig");
 
     load(fn);
+}
+
+QDoasConfigFile::QDoasConfigFile(QDoasConfigFile * other){
+    qdoasfile = new QDomDocument("QDoasConfig");
+    qdoasfile->setContent(other->qdoasfile->toString());
 }
 
 QDoasConfigFile::~QDoasConfigFile(){
@@ -82,12 +96,51 @@ bool QDoasConfigFile::save(QString fn){
     return result;
 }
 
+QString getFileName(QString fn){
+    QFileInfo fi(fn);
+    return fi.baseName()+"."+fi.completeSuffix();
+}
+
+QString joinDirectoryFN(QString Directory, QString fn){
+    if (!Directory.endsWith("/"))
+        Directory = Directory+"/";
+    return Directory+fn;
+}
+
+bool QDoasConfigFile::saveWorkingCopy(QString Directory,QString Filename, QString inDirectory){
+    QDir dir;
+    dir.mkpath(Directory);
+    dir.cd(Directory);
+    QDoasConfigFile *other = new QDoasConfigFile(this);
+    QString OffsFN = getOffset();
+    QString OffsFNn = joinDirectoryFN(Directory,getFileName(OffsFN));
+    QString XSRefFN = getXSRef();
+    QString XSRefFNn = joinDirectoryFN(Directory,getFileName(XSRefFN));
+    QString CalRefFN = getCalRef();
+    QString CalRefFNn = joinDirectoryFN(Directory,getFileName(CalRefFN));
+    QString USAMPRefFN = getUSAMPRef();
+    QString USAMPRefFNn = joinDirectoryFN(Directory,getFileName(USAMPRefFN));
+    QFile::copy(OffsFN,OffsFNn);
+    QFile::copy(XSRefFN,XSRefFNn);
+    QFile::copy(CalRefFN,CalRefFNn);
+    QFile::copy(USAMPRefFN,USAMPRefFNn);
+    other->setOffset(OffsFNn);
+    other->setXSRef(XSRefFNn);
+    other->setCalRef(CalRefFNn);
+    other->setUSAMPRef(USAMPRefFNn);
+    if (!inDirectory.isEmpty())
+        other->setInputDirectory(inDirectory);
+    other->save(joinDirectoryFN(Directory,getFileName(Filename)));
+    delete other;
+    return true;
+}
 
 bool QDoasConfigFile::setInputDirectory(QString fn){
     QDomElement raw_spectraElement;
     QDomElement directoryElement;
-
-    raw_spectraElement = qdoasfile->firstChildElement("raw_spectra");
+    QDomElement qdoas = qdoasfile->firstChildElement("qdoas");
+    QDomElement proj = qdoas.firstChildElement("project");
+    raw_spectraElement = proj.firstChildElement("raw_spectra");
     directoryElement = raw_spectraElement.firstChildElement("directory");
     directoryElement.setAttribute("name",fn);
 
@@ -97,62 +150,163 @@ bool QDoasConfigFile::setInputDirectory(QString fn){
       <directory name="/home/arne/.../2011.02.20" filters="" recursive="false" />
     </raw_spectra>*/
 
-    return true;
+    return !directoryElement.tagName().isEmpty();
 }
 
-bool QDoasConfigFile::setOffset(TSpectrum *Offset){
-    QDomElement instrumentalElement;
-    QDomElement mfcstdElement;
-    QString SpecFn = getTempfileName("offset","std");
-    Offset->SaveSpectrumSTD(SpecFn);
-    instrumentalElement = qdoasfile->firstChildElement("instrumental");
-    mfcstdElement = instrumentalElement.firstChildElement("mfcstd");
+QString QDoasConfigFile::getOffset(){
+    QDomElement qdoas = qdoasfile->firstChildElement("qdoas");
+    QDomElement proj = qdoas.firstChildElement("project");
+    QDomElement instrumentalElement = proj.firstChildElement("instrumental");
+    QDomElement mfcstdElement = instrumentalElement.firstChildElement("mfcstd");
+
+    /*<instrumental format="mfcstd" site="CCA_UNAM">
+      <mfcstd size="2048" revert="false" straylight="false" date="DD.MM.YYYY" lambda_min="0" lambda_max="0" calib="/home/arne/.../ADUD6545/ADUD6545(c).clb" instr="" dark="" offset="/home/arne/.../offsetd01042011h074025.std" />
+      */
+    return mfcstdElement.attributeNode("offset").value();
+}
+
+bool QDoasConfigFile::setOffset(QString SpecFn){
+    QDomElement qdoas = qdoasfile->firstChildElement("qdoas");
+    QDomElement proj = qdoas.firstChildElement("project");
+    QDomElement instrumentalElement = proj.firstChildElement("instrumental");
+    QDomElement mfcstdElement = instrumentalElement.firstChildElement("mfcstd");
     mfcstdElement.setAttribute("offset",SpecFn);
 
     /*<instrumental format="mfcstd" site="CCA_UNAM">
       <mfcstd size="2048" revert="false" straylight="false" date="DD.MM.YYYY" lambda_min="0" lambda_max="0" calib="/home/arne/.../ADUD6545/ADUD6545(c).clb" instr="" dark="" offset="/home/arne/.../offsetd01042011h074025.std" />
       */
-    return true;
+    return !mfcstdElement.tagName().isEmpty();
+}
+
+bool QDoasConfigFile::setOffset(TSpectrum *Offset){
+    QString SpecFn = getTempfileName("offset","std");
+    Offset->SaveSpectrumSTD(SpecFn);
+    return setOffset(SpecFn);
+}
+
+QString QDoasConfigFile::getXSRef(){
+    QDomElement qdoas = qdoasfile->firstChildElement("qdoas");
+    QDomElement proj = qdoas.firstChildElement("project");
+    QDomNodeList nodeList = proj.elementsByTagName("analysis_window");
+    QString result;
+    for(int i=0; i < nodeList.count();i++){
+        QDomElement filesElement;
+        filesElement = nodeList.item(i).firstChildElement("files");
+        result = filesElement.attributeNode("refone").value();
+    }
+    return result;
+}
+
+bool QDoasConfigFile::setXSRef(QString SpecFn){
+    QDomElement qdoas = qdoasfile->firstChildElement("qdoas");
+    QDomElement proj = qdoas.firstChildElement("project");
+    QDomNodeList nodeList = proj.elementsByTagName("analysis_window");
+    bool result = true;
+    for(int i=0; i < nodeList.count();i++){
+        QDomElement filesElement;
+        filesElement = nodeList.item(i).firstChildElement("files");
+        filesElement.setAttribute("refone",SpecFn);
+        result = !filesElement.tagName().isNull();
+    }
+    return result;
 }
 
 bool QDoasConfigFile::setXSRef(QString calibfn, TSpectrum *Spectrum){
     QString SpecFn = getTempfileName("xsref","ref");
     Spectrum->SaveSpectrumRef(calibfn,SpecFn);
-    QDomNodeList nodeList = qdoasfile->elementsByTagName("analysis_window");
-    for(int i=0; i < nodeList.count();i++){
-        QDomElement filesElement;
-        filesElement = nodeList.item(i).firstChildElement("files");
-        filesElement.setAttribute("refone",SpecFn);
-    }
-    return true;
+    return setXSRef(SpecFn);
+}
+
+QString QDoasConfigFile::getCalRef(){
+
+    QDomElement qdoas = qdoasfile->firstChildElement("qdoas");
+    QDomElement proj = qdoas.firstChildElement("project");
+    QDomElement node = proj.firstChildElement("calibration");
+
+    /*    <calibration ref="/home/arne/.../ADUD6545/WD_XS/original_XS/SOLARFL.ktz" method="ODF">*/
+
+    return node.attributeNode("ref").value();
+}
+
+bool QDoasConfigFile::setCalRef(QString SpecFn){
+    QDomElement qdoas = qdoasfile->firstChildElement("qdoas");
+    QDomElement proj = qdoas.firstChildElement("project");
+    QDomElement node = proj.firstChildElement("calibration");
+    node.setAttribute("ref",SpecFn);
+
+    /*    <calibration ref="/home/arne/.../ADUD6545/WD_XS/original_XS/SOLARFL.ktz" method="ODF">*/
+
+    return !node.tagName().isNull();;
 }
 
 bool QDoasConfigFile::setCalRef(QString calibfn, TSpectrum *Spectrum){
     QString SpecFn = getTempfileName("calref","ref");
     Spectrum->SaveSpectrumRef(calibfn,SpecFn);
-    QDomElement node = qdoasfile->firstChildElement("calibration");
-    node.setAttribute("ref",SpecFn);
-
-    /*    <calibration ref="/home/arne/.../ADUD6545/WD_XS/original_XS/SOLARFL.ktz" method="ODF">*/
-
-    return true;
+    return setCalRef(SpecFn);
 }
+
+QString QDoasConfigFile::getUSAMPRef(){
+
+    QDomElement qdoas = qdoasfile->firstChildElement("qdoas");
+    QDomElement proj = qdoas.firstChildElement("project");
+    QDomElement node = proj.firstChildElement("undersampling");
+    /*<undersampling ref="/home/arne/../ADUD6545/WD_XS/original_XS/SOLARFL.ktz" method="file" shift="0.000000" />*/
+    return node.attributeNode("ref").value();
+}
+
+
+bool QDoasConfigFile::setUSAMPRef(QString SpecFn){
+    QDomElement qdoas = qdoasfile->firstChildElement("qdoas");
+    QDomElement proj = qdoas.firstChildElement("project");
+    QDomElement node = proj.firstChildElement("undersampling");
+    node.setAttribute("ref",SpecFn);
+    /*<undersampling ref="/home/arne/../ADUD6545/WD_XS/original_XS/SOLARFL.ktz" method="file" shift="0.000000" />*/
+    return !node.tagName().isNull();
+}
+
 
 bool QDoasConfigFile::setUSAMPRef(QString calibfn, TSpectrum *Spectrum){
     QString SpecFn = getTempfileName("usampref","ref");
     Spectrum->SaveSpectrumRef(calibfn,SpecFn);
-    QDomElement node = qdoasfile->firstChildElement("undersampling");
-    node.setAttribute("ref",SpecFn);
-    /*<undersampling ref="/home/arne/../ADUD6545/WD_XS/original_XS/SOLARFL.ktz" method="file" shift="0.000000" />*/
-    return true;
+    return setUSAMPRef(SpecFn);
 }
 
 QString QDoasConfigFile::getName(){
-    QDomElement node = qdoasfile->firstChildElement("project");
+    QDomElement qdoas = qdoasfile->firstChildElement("qdoas");
+    QDomElement node = qdoas.firstChildElement("project");
     QString result = node.attributeNode("name").value();
     /*<project name="CCA" disable="false">*/
     return result;
 }
+
+bool QDoasConfigFile::enableSpecNo(){
+    QDomElement qdoas = qdoasfile->firstChildElement("qdoas");
+    QDomElement node = qdoas.firstChildElement("project");
+    QDomElement display = node.firstChildElement("display");
+    QDomNodeList nodeList = display.elementsByTagName("field");
+    bool found = false;
+    for(int i=0; i < nodeList.count();i++){
+        QDomNamedNodeMap dm = nodeList.item(i).attributes();
+        QDomNode dn  = dm.namedItem("name");
+        QString val = dn.nodeValue();
+        if(val == QString("specno")){
+            found = true;
+            break;
+        }
+    }
+    if(!found){
+        QDomElement specno = qdoasfile->createElement("field");
+        specno.setAttribute("name","specno");
+        display.appendChild(specno);
+    }
+//    QString result = display.;
+    /*<project name="CCA" disable="false">
+        <display fits="true" spectra="true" data="true">
+           <field name="specno"/>*/
+    return true;
+}
+
+
 
 
 
@@ -162,7 +316,8 @@ QDoasWrapper* QDoasWrapper::m_Instance = 0;
 QDoasWrapper::QDoasWrapper()
 {
     ms = TMaxdoasSettings::instance();
-    outPath = getTempPath();
+    outPath = getTempPath()+"/";
+    lastposImage = NULL;
 }
 
 QDoasWrapper::~QDoasWrapper(){
@@ -173,6 +328,8 @@ QDoasWrapper::~QDoasWrapper(){
 }
 
 void QDoasWrapper::setOutPath(QString path){
+    if (!path.endsWith("/"))
+        path += "/";
     outPath = path;
 }
 
@@ -182,18 +339,23 @@ QString QDoasWrapper::retrieve(QString in,QString defname, QDoasConfigFile *cf){
     QProcessEnvironment env = QProcessEnvironment::systemEnvironment();;
     QString xmlfile = getTempfileName("qdoasproj","xml");
     QString result;
+    QDir dir(in);
     bool ok;
+    cf->setInputDirectory(dir.currentPath());
+    cf->enableSpecNo();
     cf->save(xmlfile);
     //-v -c claudia/Evaluation.xml -a "CCA" -o claudia/out/
-    args.append("-a "+cf->getName());
-    args.append("-c "+xmlfile);
-    args.append("-o "+outPath);
-    args.append("-f "+in);
-    args.append("-v");
-    env.insert("LANG","en_US.utf8");
+    args << "-c" << xmlfile;
+    args << "-a" << cf->getName();
+    args << "-o" << outPath;
+    args << "-f" << in;
+    //args.append("-v");
+    env.insert("LANG","en_US.UTF8");
     proc.setProcessEnvironment(env);
     proc.setStandardOutputFile("QDOAS.out");
     proc.setStandardErrorFile("QDOAS.err");
+    qDebug() << ms->getQDoasPath()+" -c "+xmlfile+" -a "+cf->getName()+" -o "+outPath+" -f "+in;
+    //proc.start(ms->getQDoasPath()+" -c "+xmlfile+" -a "+cf->getName()+" -o "+outPath+" -f "+in,args);
     proc.start(ms->getQDoasPath(),args);
     ok = proc.waitForFinished();
     if (!ok)
@@ -208,16 +370,17 @@ QString QDoasWrapper::retrieve(QString in,QString defname, QDoasConfigFile *cf){
                 ok = false;
             else{
                 defname += ".asc";
-                if (QFile::rename(dl[0],defname)){
+                if (QFile::rename(outPath+dl[0],defname)){
                     result = defname;
                 }else{
-                    result = dl[0];
+                    result = outPath+dl[0];
                 }
             }
         }
     }
 
     QFile::remove(xmlfile);
+    lastoutfile = result;
     return result;
 }
 
@@ -236,7 +399,7 @@ bool QDoasWrapper::retrieve(TSpectralImage *specImage, QDoasConfigFile *cf){
     QString infile = getTempfileName("qdoasspec","spe");
     specImage->saveTmp(infile);
     QString result = retrieve(infile,specImage->getFileName(),cf);
-    if (lastposImage == NULL)
+    if (lastposImage != NULL)
         delete lastposImage;
     lastposImage = new TRetrievalImage(specImage->getxCount(),specImage->getyCount());
     specImage->getPositionArray(lastposImage->valueBuffer,lastposImage->getWidth(),lastposImage->getHeight());
@@ -251,30 +414,52 @@ QScriptValue QDoasWrapper::getRetrievalImage(QString symbol){
 
 TRetrievalImage* QDoasWrapper::getRetrievalImage_(QString symbol){
     QFile asc(lastoutfile);
-
+    bool ok = true;
     if (asc.open(QIODevice::ReadOnly)){
         QTextStream in(&asc);
-        QStringList symbols = in.readLine().split('\t');
-        QList<double> values;
+        bool end;
+        QString l;
+        QString ll;
+        int lastpos=0;
+        while (!end){
+            ll = l;
+            lastpos = in.pos();
+            l = in.readLine();
+            if (!l.startsWith("#"))
+                end = true;
+        }
+        in.seek(lastpos);
+        QStringList symbols = ll.split('\t');
+        QMap<int, double> values;
         int index = symbols.indexOf(symbol);
+        int specnoindex = symbols.indexOf("Spec No");
         do{
            QStringList fields = in.readLine().split('\t');
            double val = fields[index].toDouble();
-           values.append(val);
+           int specno = fields[specnoindex].toDouble();
+           values.insert(specno,val);
         }while(!in.atEnd());
         if (lastposImage != NULL){
             for(int y = 0;y<lastposImage->getHeight();y++ ){
                 for(int x = 0;x<lastposImage->getWidth();x++ ){
                     TRetrieval *tr = lastposImage->valueBuffer[y][x];
                     int index = tr->mirrorCoordinate->pixelIndex;
-                    double val = values[index];
-                    lastposImage->valueBuffer[y][x]->val = val;
+                    if (index > values.count())
+                        ok = false;
+                    else{
+                        double val = values[index];
+                        lastposImage->valueBuffer[y][x]->val = val;
+                    }
                 }
             }
         }
         asc.close();
     }
-    return new TRetrievalImage(lastposImage);
+    if (ok){
+        return new TRetrievalImage(lastposImage);
+    }else{
+        return NULL;
+    }
 
 }
 

@@ -40,6 +40,10 @@ TScanner::~TScanner(){
 
 }
 
+QString TScanner::getSpectSerialNo(){
+    return hwdriver->getSpectrSerial();
+}
+
 void TScanner::startWaiting(){
     GotSpectrum = false;
     MotMoved = false;
@@ -132,7 +136,6 @@ QScriptValue TMirrorCoordinateConstructor(QScriptContext *context, QScriptEngine
 
 QScriptValue QDoasConfigFileConstructor(QScriptContext *context, QScriptEngine *engine)
 {
-    QObject *obj = context->argument(0).toQObject();
     QString sp = context->argument(0).toString();
     QObject *object = new QDoasConfigFile(sp);
     return engine->newQObject(object, QScriptEngine::ScriptOwnership);
@@ -208,13 +211,11 @@ QScriptValue MeasureSpektrum(QScriptContext *context, QScriptEngine *engine)
         //avg: int
         //shutter: bool
 
-        QObject *MirrorCoordQObj = context->argument(0).toQObject();
-        TMirrorCoordinate *MirrorCoord = dynamic_cast<TMirrorCoordinate*>(MirrorCoordQObj);
-        uint avg = context->argument(1).toInteger();
+        uint avg = context->argument(0).toInteger();
         if (avg < 1)
             avg = 1;
-        bool shutter = context->argument(2).toBool();
-        if (!context->argument(2).isBoolean()){
+        bool shutter = context->argument(1).toBool();
+        if (!context->argument(1).isBoolean()){
             shutter = true;
         }
 
@@ -435,6 +436,12 @@ QScriptValue MotIdle(QScriptContext *context, QScriptEngine *engine)
     }
 }
 
+QScriptValue getSpectSerialNo(QScriptContext *context, QScriptEngine *engine){
+    (void)context;
+    (void)engine;
+    TScanner* scanner = TScanner::instance(NULL);
+    return scanner->getSpectSerialNo();
+}
 
 TScriptWrapper::TScriptWrapper(THWDriver* hwdriver)
 {
@@ -495,6 +502,9 @@ TScriptWrapper::TScriptWrapper(THWDriver* hwdriver)
 
     QScriptValue GetTimeStrFun = ScriptEngine->newFunction(GetTimeStr);
     ScriptEngine->globalObject().setProperty("GetTimeStr", GetTimeStrFun);
+
+    QScriptValue getSpectSerialNoFun = ScriptEngine->newFunction(getSpectSerialNo);
+    ScriptEngine->globalObject().setProperty("GetSpectSerialNo", getSpectSerialNoFun);
 
     QScriptValue ctorSpec = ScriptEngine->newFunction(TSpectrumConstructor);
     QScriptValue metaObjectSpec = ScriptEngine->newQMetaObject(&QObject::staticMetaObject, ctorSpec);

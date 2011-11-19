@@ -7,6 +7,7 @@ TRetrieval::TRetrieval()
 }
 
 TRetrieval::TRetrieval(TRetrieval * other){
+    mirrorCoordinate = NULL;
     setMirrorCoordinate(other->mirrorCoordinate);
     val = other->val;
     symbName = other->symbName;

@@ -58,6 +58,7 @@ private:
     QString fn;
 public slots:
     void plot(int plotIndex,int Pixelsize=10);
+    QString getSpectSerialNo();
 
     void add(TMirrorCoordinate* coord, TSpectrum* spektrum);
     void save(QString Directory,QString BaseName,int SequenceNumber);
@@ -65,6 +66,8 @@ public slots:
     void saveTmp(QString FileName);
     bool Load(QString Directory, QString BaseName,int seqnumber,uint startindex,uint groupindex);
     bool Load(QString fn);
+
+    void interpolatePixel(int Pixelindex);
 
     int count();
     QScriptValue getMean();

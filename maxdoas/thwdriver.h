@@ -75,6 +75,7 @@ public:
     QList<QString> hwdtGetSpectrometerList();
     uint hwdtGetMinimumIntegrationTime();
     QPoint hwdtGetLastRawTilt();
+    QString getSpectrSerial();
 public slots:
 
     void hwdtSloSetComPort(QString name);
@@ -173,7 +174,7 @@ private:
     QReadWriteLock MutexSpectrBuffer;
     QReadWriteLock MutexMinIntegrationTime;
     QReadWriteLock MutexRawTiltPoint;
-
+    QReadWriteLock MutexSpectrSerial;
     double LastSpectr[MAXWAVELEGNTH_BUFFER_ELEMTENTS];
 
     uint SpectrAvgCount;
@@ -254,7 +255,7 @@ public:
     double TempBufferSpectr[TEMPERATURE_BUFFER_COUNT];
     double TempBufferHeatSink[TEMPERATURE_BUFFER_COUNT];
     int TempBufferPointer;
-
+    QString getSpectrSerial();
 private slots:  //coming from thread
     void hwdSloGotTemperature(THWTempSensorID sensorID, float TemperaturePeltier, float TemperatureSpectr,float TemperatureHeatsink,bool byTimer);
     void hwdSloGotTilt(float TiltX, float TiltY, int Gain, int Resolution);

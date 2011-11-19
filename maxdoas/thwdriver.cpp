@@ -112,7 +112,10 @@ void THWDriverThread::init(){
     SpectrometerList = new QList<QString>;
     IntegTimeConf.autoenabled = false;
     IntegTimeConf.fixedIntegtime = 10000;
-    SpectrometerSerial = "closed";
+    MutexSpectrSerial.lockForWrite();
+    {
+        SpectrometerSerial = "closed";
+    }MutexSpectrSerial.unlock();
     #if !OMNI_ENABLED
         qsrand(time(NULL));
     #endif
@@ -876,7 +879,11 @@ void THWDriverThread::hwdtGetLastSpectrumBuffer(double *Spectrum,
             memcpy(Spectrum,LastSpectr,sizeof(double)*i);
             *MaxPossibleValue = SpectrMaxIntensity;
             *Integrationtime = LastSpectrIntegTime;
-            *SpectrSerial = SpectrometerSerial;
+            MutexSpectrSerial.lockForRead();
+            {
+                *SpectrSerial = SpectrometerSerial;
+            }
+            MutexSpectrSerial.unlock();
         #endif
     }
     MutexSpectrBuffer.unlock();
@@ -1166,6 +1173,13 @@ uint THWDriverThread::hwdtGetMinimumIntegrationTime(){
     MutexMinIntegrationTime.unlock();
     return minintegtime;
 }
+QString THWDriverThread::getSpectrSerial(){
+    QString result;
+    MutexSpectrSerial.lockForRead();{
+        result = SpectrometerSerial;
+    }
+    return result;
+}
 
 void THWDriverThread::hwdtSloOpenSpectrometer(QString Serialnumber)
 {
@@ -1186,7 +1200,10 @@ void THWDriverThread::hwdtSloOpenSpectrometer(QString Serialnumber)
         hwdtSloDiscoverSpectrometers();
     SpectrometerIndex = SpectrometerList->indexOf(Serialnumber);
     if (SpectrometerIndex > -1){
-        SpectrometerSerial = Serialnumber;
+        MutexSpectrSerial.lockForWrite();
+        {
+            SpectrometerSerial = Serialnumber;
+        }MutexSpectrSerial.unlock();
         Coefficients Coef;
         LastSpectrIntegTime = -1;
         MutexSpectrBuffer.lockForWrite();
@@ -1220,7 +1237,10 @@ void THWDriverThread::hwdtSloOpenSpectrometer(QString Serialnumber)
 
 void THWDriverThread::hwdtSloCloseSpectrometer()
 {
+    MutexSpectrSerial.lockForWrite();
+    {
     SpectrometerSerial = "closed";
+    }MutexSpectrSerial.unlock();
     MutexSpectrBuffer.lockForWrite();
     {
         LastSpectrIntegTime = -1;
@@ -1813,6 +1833,10 @@ void THWDriver::setIntegrationConfiguration(TAutoIntegConf *autoIntConf){
 void THWDriver::hwdDiscoverSpectrometers()
 {
     emit hwdtSigDiscoverSpectrometers();
+}
+
+QString THWDriver::getSpectrSerial(){
+    return HWDriverObject->getSpectrSerial();
 }
 
 QList<QString> THWDriver::hwdGetListSpectrometer()

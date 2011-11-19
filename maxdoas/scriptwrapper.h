@@ -14,7 +14,7 @@ public:
     void WaitForSpectrum();
     void WaitForMotMoved();
     void startWaiting();
-
+    QString getSpectSerialNo();
     THWDriver *getHWDriver();
     uint    IntegrationTime;
     static TScanner* instance(THWDriver* hwdriver)

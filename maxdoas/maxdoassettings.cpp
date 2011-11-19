@@ -40,7 +40,7 @@ void TMaxdoasSettings::setTiltOffset(QPoint TiltOffset){
 }
 
 QString TMaxdoasSettings::getQDoasPath(){
-    return settings->value("QDOAS/Path","../qdoas").toString();
+    return settings->value("QDOAS/Path","/home/arne/diplom/software/application/qdoas/Qdoas/qdoas/release/doas_cl").toString();
 }
 
 void TMaxdoasSettings::setQDoasPath(QString path){

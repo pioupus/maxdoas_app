@@ -336,7 +336,7 @@ void TSpectrumPlotter::plotSpectrum(TSpectrum *spectrum, int plotIndex){
 
 }
 
-void TSpectrumPlotter::plotRetrievalImage(TRetrievalImage *img,int plotIndex){
+void TSpectrumPlotter::plotRetrievalImage(TRetrievalImage *img,int plotIndex, int Pixelsize){
     TPlot *plot = getPlot(plotIndex);
     QwtPlotSpectroCurve * s = plot->getImgPlot();
     QVector< QwtPoint3D > * vec = new  QVector< QwtPoint3D >(img->getHeight()*img->getWidth());
@@ -360,7 +360,7 @@ void TSpectrumPlotter::plotRetrievalImage(TRetrievalImage *img,int plotIndex){
             vec->replace(y*img->getWidth()+x,p3d);
         }
     }
-    s->setPenWidth(10);
+    s->setPenWidth(Pixelsize);
     //s->setInterval( Qt::ZAxis, QwtInterval(0, 1) );
     s->setSamples(*vec);
 }

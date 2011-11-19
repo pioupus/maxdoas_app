@@ -322,6 +322,8 @@ void TSpectralImage::add(TMirrorCoordinate* coord, TSpectrum* spektrum){
         }
     }
     spektrum->setPixelIndex(spectrumlist.count());
+    spektrum->setXPixelIndex(coord->pixelIndexX);
+    spektrum->setYPixelIndex(coord->pixelIndexY);
     spectrumlist.append(spektrum);
 
     delete meanSpectrum;
@@ -488,6 +490,19 @@ bool TSpectralImage::isChanged(){
         }
     }
     return result;
+}
+
+void TSpectralImage::interpolatePixel(int Pixelindex){
+    for(int i = 0; i < spectrumlist.count();i++){
+        spectrumlist[i]->interpolatePixel(Pixelindex);
+    }
+}
+
+QString TSpectralImage::getSpectSerialNo(){
+    if (spectrumlist.count()>0){
+        return spectrumlist[0]->getSpectSerialNo();
+    }
+    return "";
 }
 
 TSpectrum* TSpectralImage::getMean_(){

@@ -21,6 +21,7 @@ public:
     int getHeight();
 public slots:
     void save(QString fn);
+    void plot(int plotIndex,int Pixelsize);
 private:
     void inibuffer(int width, int height, TRetrievalImage *other);
     int width;
