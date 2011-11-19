@@ -72,7 +72,7 @@ public slots:
     void SaveSpectrumDefNameDark(QString Directory, QString BaseName,int seqnumber);
 
     bool LoadSpectrum(QString fn);
-    bool LoadSpectrDefaultName(QString Directory, QString BaseName,int seqnumber,uint startindex, uint groupindex );
+    bool LoadSpectrDefaultName(QString Directory, QString SearchBaseName,QString FileBaseName,int seqnumber,uint startindex, uint groupindex );
 
     QString getSpectSerialNo();
     void interpolatePixel(int Pixelindex);

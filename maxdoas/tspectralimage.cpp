@@ -408,8 +408,9 @@ void TSpectralImage::save(QString Directory,QString BaseName,int SequenceNumber)
     save(fn);
 }
 
-bool TSpectralImage::Load(QString Directory, QString BaseName,int seqnumber,uint startindex,uint groupindex){
-    QString filename = GetSequenceFileName(Directory,BaseName,seqnumber,startindex,groupindex);
+bool TSpectralImage::Load(QString Directory, QString SearchBaseName,QString FileBaseName,int seqnumber,uint startindex,uint groupindex){
+    QString filename = GetSequenceFileName(Directory,SearchBaseName,seqnumber,startindex,groupindex);
+    filename.replace(SearchBaseName,FileBaseName);
     return Load(filename);
 }
 

@@ -577,10 +577,12 @@ bool TSpectrum::LoadSpectrum(QString fn){
     return LoadSpectrum_(fn,false);
 }
 
-bool TSpectrum::LoadSpectrDefaultName(QString Directory, QString BaseName,int seqnumber,uint startindex, uint groupindex ){
+bool TSpectrum::LoadSpectrDefaultName(QString Directory, QString SearchBaseName,QString FileBaseName,int seqnumber,uint startindex, uint groupindex ){
     SequenceNumber = seqnumber;
-    this->BaseName = BaseName;
-    return LoadSpectrum(GetSequenceFileName(Directory,BaseName,seqnumber,startindex,groupindex));
+    this->BaseName = FileBaseName;
+    QString fn = GetSequenceFileName(Directory,SearchBaseName,seqnumber,startindex,groupindex);
+    fn.replace(SearchBaseName,FileBaseName);
+    return LoadSpectrum(fn);
 }
 
 
