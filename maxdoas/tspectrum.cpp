@@ -30,23 +30,34 @@ QString GetSequenceFileName(QString Directory, QString BaseName, uint Sequence, 
     dir.setSorting(QDir::Name);
     QStringList filters;
     QString seq = QString::number(firstindex).rightJustified(5, '0');
-    filters << BaseName+"_*_seq"+seq+"s.spe";
+    filters << "*_seq"+seq+"s.spe";
     QStringList list = dir.entryList(filters,QDir::Files,QDir::Name);
     QDateTime dtprev,dtnext;
     QString strprev,strnext;
-    //darkoffset_05_10_2011__09_19_34_seq00001s.spe
-    if((int)groupindex < list.count()){
-        strprev = list[groupindex];
-        strprev = strprev.mid(strprev.indexOf("_")+1,20);
-        dtprev = QDateTime::fromString(strprev,"yyyy_MM_dd__hh_mm_ss");
-    }else{
+    //darkoffset_2011_10_05__09_19_34_seq00001s.spe
+    if (list.count() == 0)
         return "";
+    QString firstBasname=list[0];
+    int currgroupindex = 0;
+    firstBasname = firstBasname.left(firstBasname.indexOf("_"));
+    strnext = "";
+    for (int i = 0;i < list.count();i++){
+        QString s = list[i];
+        s = s.left(s.indexOf("_"));
+        if (s == firstBasname){
+            currgroupindex++;
+            if (currgroupindex == groupindex){
+                strprev = strprev.mid(strprev.indexOf("_")+1,20);
+                dtprev = QDateTime::fromString(strprev,"yyyy_MM_dd__hh_mm_ss");
+            }
+            if (currgroupindex == groupindex+1){
+                strnext = strnext.mid(strnext.indexOf("_")+1,20);
+                dtnext = QDateTime::fromString(strnext,"yyyy_MM_dd__hh_mm_ss");
+            }
+        }
     }
-    if ((int)groupindex+1 < list.count()){
-        strnext = list[groupindex+1];
-        strnext = strnext.mid(strnext.indexOf("_")+1,20);
-        dtnext = QDateTime::fromString(strnext,"yyyy_MM_dd__hh_mm_ss");
-    }
+    if (!dtprev.isValid())
+        return "";
 
     filters.clear();
     seq = QString::number(Sequence).rightJustified(5, '0');
@@ -573,18 +584,19 @@ bool TSpectrum::LoadSpectrum_(QString fn,bool istmp){
     return result;
 }
 
-bool TSpectrum::LoadSpectrum(QString fn){
+bool TSpectrum::Load(QString fn){
     return LoadSpectrum_(fn,false);
 }
 
-bool TSpectrum::LoadSpectrDefaultName(QString Directory, QString SearchBaseName,QString FileBaseName,int seqnumber,uint startindex, uint groupindex ){
+#if 0
+bool TSpectrum::LoadSpectrDefaultName(QString Directory, QString SearchBaseName,QString FileBaseName,int seqnumber,uint startindex, uint groupindex){
     SequenceNumber = seqnumber;
     this->BaseName = FileBaseName;
     QString fn = GetSequenceFileName(Directory,SearchBaseName,seqnumber,startindex,groupindex);
     fn.replace(SearchBaseName,FileBaseName);
     return LoadSpectrum(fn);
 }
-
+#endif
 
 bool TSpectrum::LoadSpectrEMT(QString fn){
     (void) fn;

@@ -407,13 +407,13 @@ void TSpectralImage::save(QString Directory,QString BaseName,int SequenceNumber)
     fn = DefaultFileNameFromSeqNumber(Directory,BaseName,SequenceNumber,FirstDate)+".spe";
     save(fn);
 }
-
+#if 0
 bool TSpectralImage::Load(QString Directory, QString SearchBaseName,QString FileBaseName,int seqnumber,uint startindex,uint groupindex){
     QString filename = GetSequenceFileName(Directory,SearchBaseName,seqnumber,startindex,groupindex);
     filename.replace(SearchBaseName,FileBaseName);
     return Load(filename);
 }
-
+#endif
 bool TSpectralImage::Load(QString fn){
     this->fn=fn;
     bool result=false;

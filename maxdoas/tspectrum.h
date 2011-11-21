@@ -29,6 +29,7 @@ public:
 
     void SaveSpectrumSTD(QString fn);
     void SaveSpectrumRef(QString calib,QString fn);
+    void SaveSpectrumTmp(QString fn);
 
     QString getDefaultFileName(QString Directory, QString BaseName,int seqnumber);
 
@@ -66,13 +67,13 @@ public slots:
     void plot(int index);
 
     void SaveSpectrum(QString fn);
-    void SaveSpectrumTmp(QString fn);
+
     void SaveSpectrumDark(QString fn);
     void SaveSpectrumDefName(QString Directory, QString BaseName,int seqnumber);
     void SaveSpectrumDefNameDark(QString Directory, QString BaseName,int seqnumber);
 
-    bool LoadSpectrum(QString fn);
-    bool LoadSpectrDefaultName(QString Directory, QString SearchBaseName,QString FileBaseName,int seqnumber,uint startindex, uint groupindex );
+    bool Load(QString fn);
+   // bool LoadSpectrDefaultName(QString Directory, QString SearchBaseName,QString FileBaseName,int seqnumber,uint startindex, uint groupindex );
 
     QString getSpectSerialNo();
     void interpolatePixel(int Pixelindex);

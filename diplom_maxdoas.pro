@@ -60,7 +60,8 @@ HEADERS += maxdoas/mainwindow.h \
     maxdoas/tspectralimage.h \
     maxdoas/tscanpath.h \
     maxdoas/tspectrumplotter.h \
-    maxdoas/qdoaswrapper.h
+    maxdoas/qdoaswrapper.h \
+    maxdoas/tdirlist.h
 FORMS += maxdoas/mainwindow.ui \
     maxdoas/tfrmtempctrl.ui \
     maxdoas/tfrmspectrconfig.ui
@@ -85,4 +86,5 @@ SOURCES += maxdoas/main.cpp \
     maxdoas/tspectralimage.cpp \
     maxdoas/tscanpath.cpp \
     maxdoas/tspectrumplotter.cpp \
-    maxdoas/qdoaswrapper.cpp
+    maxdoas/qdoaswrapper.cpp \
+    maxdoas/tdirlist.cpp

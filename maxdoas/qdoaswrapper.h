@@ -23,7 +23,9 @@ public:
     QString getXSRef();
     QString getCalRef();
     QString getUSAMPRef();
+
     bool enableSpecNo();
+    bool enable4ASCIIFields();
 
     bool setOffset(QString SpecFn);
     bool setXSRef(QString SpecFn);
@@ -35,7 +37,7 @@ public slots:
     bool save(QString fn);
 
 
-    bool setInputDirectory(QString fn);
+    bool setInputDirectory(QString fn,QString filter);
 
     bool setOffset(TSpectrum *Offset);
     bool setXSRef(QString calibfn,TSpectrum *Spectrum);

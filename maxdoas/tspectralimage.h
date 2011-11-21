@@ -64,7 +64,7 @@ public slots:
     void save(QString Directory,QString BaseName,int SequenceNumber);
     void save(QString FileName);
     void saveTmp(QString FileName);
-    bool Load(QString Directory, QString SearchBaseName,QString FileBaseName,int seqnumber,uint startindex,uint groupindex);
+    //bool Load(QString Directory, QString SearchBaseName,QString FileBaseName,int seqnumber,uint startindex,uint groupindex);
     bool Load(QString fn);
 
     void interpolatePixel(int Pixelindex);

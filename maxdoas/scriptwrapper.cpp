@@ -12,6 +12,7 @@
 #include "tscanpath.h"
 #include "tspectrumplotter.h"
 #include "qdoaswrapper.h"
+#include "tdirlist.h"
 
 TScanner* TScanner::m_Instance = 0;
 
@@ -138,6 +139,14 @@ QScriptValue QDoasConfigFileConstructor(QScriptContext *context, QScriptEngine *
 {
     QString sp = context->argument(0).toString();
     QObject *object = new QDoasConfigFile(sp);
+    return engine->newQObject(object, QScriptEngine::ScriptOwnership);
+}
+
+QScriptValue TDirListConstructor(QScriptContext *context, QScriptEngine *engine)
+{
+    QString sp = context->argument(0).toString();
+    int startindex = context->argument(1).toInteger();
+    QObject *object = new tdirlist(sp,startindex);
     return engine->newQObject(object, QScriptEngine::ScriptOwnership);
 }
 
@@ -506,25 +515,30 @@ TScriptWrapper::TScriptWrapper(THWDriver* hwdriver)
     QScriptValue getSpectSerialNoFun = ScriptEngine->newFunction(getSpectSerialNo);
     ScriptEngine->globalObject().setProperty("GetSpectSerialNo", getSpectSerialNoFun);
 
+
+    QScriptValue ctordl = ScriptEngine->newFunction(TDirListConstructor);
+    QScriptValue metactordl = ScriptEngine->newQMetaObject(&QObject::staticMetaObject, ctordl);
+    ScriptEngine->globalObject().setProperty("TDirlist", metactordl);
+
     QScriptValue ctorSpec = ScriptEngine->newFunction(TSpectrumConstructor);
     QScriptValue metaObjectSpec = ScriptEngine->newQMetaObject(&QObject::staticMetaObject, ctorSpec);
-    ScriptEngine->globalObject().setProperty("Spektrum", metaObjectSpec);
+    ScriptEngine->globalObject().setProperty("TSpektrum", metaObjectSpec);
 
     QScriptValue ctorSpImg = ScriptEngine->newFunction(TSpectralImageConstructor);
     QScriptValue metaObjectSpImg = ScriptEngine->newQMetaObject(&QObject::staticMetaObject, ctorSpImg);
-    ScriptEngine->globalObject().setProperty("SpektralImage", metaObjectSpImg);
+    ScriptEngine->globalObject().setProperty("TSpektralImage", metaObjectSpImg);
 
     QScriptValue ctorscpt = ScriptEngine->newFunction(TScanPathConstructor);
     QScriptValue metaObjectscpt = ScriptEngine->newQMetaObject(&QObject::staticMetaObject, ctorscpt);
-    ScriptEngine->globalObject().setProperty("Scanpath", metaObjectscpt);
+    ScriptEngine->globalObject().setProperty("TScanpath", metaObjectscpt);
 
     QScriptValue ctormc = ScriptEngine->newFunction(TMirrorCoordinateConstructor);
     QScriptValue metaObjectmc = ScriptEngine->newQMetaObject(&QObject::staticMetaObject, ctormc);
-    ScriptEngine->globalObject().setProperty("Mirrorcoordinate", metaObjectmc);
+    ScriptEngine->globalObject().setProperty("TMirrorcoordinate", metaObjectmc);
 
     QScriptValue qdconf = ScriptEngine->newFunction(QDoasConfigFileConstructor);
     QScriptValue metaqdconf = ScriptEngine->newQMetaObject(&QObject::staticMetaObject, qdconf);
-    ScriptEngine->globalObject().setProperty("QDoasConfigFile", metaqdconf);
+    ScriptEngine->globalObject().setProperty("TQDoasConfigFile", metaqdconf);
 
     QScriptValue plotobj = ScriptEngine->newQObject(TSpectrumPlotter::instance(0),QScriptEngine::ScriptOwnership);
     ScriptEngine->globalObject().setProperty("plot", plotobj);

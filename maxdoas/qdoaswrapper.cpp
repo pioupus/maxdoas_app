@@ -129,13 +129,15 @@ bool QDoasConfigFile::saveWorkingCopy(QString Directory,QString Filename, QStrin
     other->setCalRef(CalRefFNn);
     other->setUSAMPRef(USAMPRefFNn);
     if (!inDirectory.isEmpty())
-        other->setInputDirectory(inDirectory);
+        other->setInputDirectory(inDirectory,"*s.spe");
     other->save(joinDirectoryFN(Directory,getFileName(Filename)));
     delete other;
     return true;
 }
 
-bool QDoasConfigFile::setInputDirectory(QString fn){
+bool QDoasConfigFile::setInputDirectory(QString fn,QString filter){
+    QDir Dir(fn);
+    fn = Dir.absolutePath()+"/";
     QDomElement raw_spectraElement;
     QDomElement directoryElement;
     QDomElement qdoas = qdoasfile->firstChildElement("qdoas");
@@ -143,7 +145,7 @@ bool QDoasConfigFile::setInputDirectory(QString fn){
     raw_spectraElement = proj.firstChildElement("raw_spectra");
     directoryElement = raw_spectraElement.firstChildElement("directory");
     directoryElement.setAttribute("name",fn);
-
+    directoryElement.setAttribute("filters",filter);
     /*<raw_spectra>
       <!-- Disable file, folder and directory items with the disable set equal to "true". -->
       <!--  The default is enabled.                                                       -->
@@ -166,6 +168,8 @@ QString QDoasConfigFile::getOffset(){
 }
 
 bool QDoasConfigFile::setOffset(QString SpecFn){
+    QDir Dir(SpecFn);
+    SpecFn = Dir.absolutePath();
     QDomElement qdoas = qdoasfile->firstChildElement("qdoas");
     QDomElement proj = qdoas.firstChildElement("project");
     QDomElement instrumentalElement = proj.firstChildElement("instrumental");
@@ -198,6 +202,8 @@ QString QDoasConfigFile::getXSRef(){
 }
 
 bool QDoasConfigFile::setXSRef(QString SpecFn){
+    QDir Dir(SpecFn);
+    SpecFn = Dir.absolutePath();
     QDomElement qdoas = qdoasfile->firstChildElement("qdoas");
     QDomElement proj = qdoas.firstChildElement("project");
     QDomNodeList nodeList = proj.elementsByTagName("analysis_window");
@@ -229,6 +235,8 @@ QString QDoasConfigFile::getCalRef(){
 }
 
 bool QDoasConfigFile::setCalRef(QString SpecFn){
+    QDir Dir(SpecFn);
+    SpecFn = Dir.absolutePath();
     QDomElement qdoas = qdoasfile->firstChildElement("qdoas");
     QDomElement proj = qdoas.firstChildElement("project");
     QDomElement node = proj.firstChildElement("calibration");
@@ -256,6 +264,8 @@ QString QDoasConfigFile::getUSAMPRef(){
 
 
 bool QDoasConfigFile::setUSAMPRef(QString SpecFn){
+    QDir Dir(SpecFn);
+    SpecFn = Dir.absolutePath();
     QDomElement qdoas = qdoasfile->firstChildElement("qdoas");
     QDomElement proj = qdoas.firstChildElement("project");
     QDomElement node = proj.firstChildElement("undersampling");
@@ -306,6 +316,23 @@ bool QDoasConfigFile::enableSpecNo(){
     return true;
 }
 
+bool QDoasConfigFile::enable4ASCIIFields(){
+    QDomElement qdoas = qdoasfile->firstChildElement("qdoas");
+    QDomElement node = qdoas.firstChildElement("project");
+    QDomElement instrumental = node.firstChildElement("instrumental");
+    QDomElement ascii = instrumental.firstChildElement("ascii");
+    ascii.setAttribute("lambda","false");
+    ascii.setAttribute("zen","false");
+    ascii.setAttribute("azi","true");
+    ascii.setAttribute("time","true");
+    ascii.setAttribute("date","true");
+    ascii.setAttribute("ele","true");
+    /*<instrumental format="ascii" site="CCA_UNAM">
+    <ascii calib="/home/arne/diplom/software/application/qdoas/projects/scanner/USB2G10713/USB2G10713.clb" size="2048"
+    format="line" instr="" ele="true" lambda="false" zen="false" azi="true" time="true" date="true"/>*/
+    return true;
+}
+
 
 
 
@@ -341,8 +368,9 @@ QString QDoasWrapper::retrieve(QString in,QString defname, QDoasConfigFile *cf){
     QString result;
     QDir dir(in);
     bool ok;
-    cf->setInputDirectory(dir.currentPath());
+    cf->setInputDirectory(dir.currentPath(),"*s.spe");
     cf->enableSpecNo();
+    cf->enable4ASCIIFields();
     cf->save(xmlfile);
     //-v -c claudia/Evaluation.xml -a "CCA" -o claudia/out/
     args << "-c" << xmlfile;
