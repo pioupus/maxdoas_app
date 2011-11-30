@@ -224,7 +224,7 @@ SparseMatrix<double,RowMajor> matrixToDiag(const MatrixXd& M){
 
     result.reserve(M.cols()*M.rows());
     int rowcol=0;
-    for (int col = 0;M.cols();col++){
+    for (int col = 0;col<M.cols();col++){
         for (int row = 0;row<M.rows();row++){
             result.startVec(rowcol);
             result.insertBack(rowcol,rowcol) = M(row,col);
@@ -245,7 +245,7 @@ SparseMatrix<double,RowMajor> getK(const MatrixXd& values, TRetrievalImage& RetI
     double dist;
 
     double meanPixelSizeY =(RetImage.valueBuffer[0][0]->mirrorCoordinate->getAngleCoordinate().y()+RetImage.valueBuffer[RetImage.getHeight()-1][0]->mirrorCoordinate->getAngleCoordinate().y())/RetImage.getHeight();
-    double meanPixelSizeX =(RetImage.valueBuffer[0][0]->mirrorCoordinate->getAngleCoordinate().x()+RetImage.valueBuffer[0][RetImage.getWidth()]->mirrorCoordinate->getAngleCoordinate().x())/RetImage.getWidth();
+    double meanPixelSizeX =(RetImage.valueBuffer[0][0]->mirrorCoordinate->getAngleCoordinate().x()+RetImage.valueBuffer[0][RetImage.getWidth()-1]->mirrorCoordinate->getAngleCoordinate().x())/RetImage.getWidth();
     meanPixelSizeY = meanPixelSizeY*M_PI/180;               meanPixelSizeX = meanPixelSizeX*M_PI/180;
     meanPixelSizeY = PlumeDistance*sin(meanPixelSizeY);     meanPixelSizeX = PlumeDistance*sin(meanPixelSizeX);
 
@@ -371,13 +371,14 @@ QMap<int, QPoint> getSrcPoints(int rows,int cols,TRetrievalImage &RetImage){
                 addSrcPoint(result, rows, cols, row, col);
             }else if(col == 0){
                 addSrcPoint(result, rows, cols, row, col);
-            }else if(row = rows-1){
+            }else if(row == rows-1){
                 addSrcPoint(result, rows, cols, row, col);
-            }else if(col = cols-1){
+            }else if(col == cols-1){
                 addSrcPoint(result, rows, cols, row, col);
             }
         }
     }
+    return result;
 }
 
 SparseMatrix<double,RowMajor> getSEinv(MatrixXd &CorrelationMatrix){
@@ -441,7 +442,7 @@ SparseMatrix<double,RowMajor> getSAInv(double constraintVec,double constraintSrc
     QMap<int, double> RowsToManipulate;
     for (int row=0; row<result.rows(); row++){
         result.startVec(row);
-        if(row < getKSrcStart(KRows)){
+        if(row < getKSrcStart(KRows)){//lets copy the rv operator in Vec Part
             for (SparseMatrix<double,RowMajor>::InnerIterator it(Rv,row); it; ++it){
                 double val = it.value()*constraintVec;
                 if (row==it.col())
@@ -450,7 +451,7 @@ SparseMatrix<double,RowMajor> getSAInv(double constraintVec,double constraintSrc
                     result.insertBack(row,it.col()) = val;
             }
         }else{
-            if (SrcPoints.contains(row)){ //since in this row is a src we want to hide, lets set this row to 0 except the diagonal element
+            if (SrcPoints.contains(row-getKSrcStart(KRows))){ //since in this row is a src we want to hide, lets set this row to 0 except the diagonal element
                 result.insertBack(row,row) = constraintSrcOET;
             }else{
                 QMapIterator<int, QPoint> i(SrcPoints);

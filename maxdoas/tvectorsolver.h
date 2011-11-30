@@ -21,7 +21,7 @@ public slots:
     void setMeanDistance(float Distance);//in meter
 
 
-    void solve(TRetrievalImage &imgOldCd,TRetrievalImage &imgOldCorr,TRetrievalImage &imgNewCd,TRetrievalImage &imgNewCorr);
+    void solve(TRetrievalImage* imgOldCd,TRetrievalImage* imgOldCorr,TRetrievalImage* imgNewCd,TRetrievalImage* imgNewCorr);
 
     void loadWeightedColoumDensitiesToRetrieval(void);
     TRetrievalImage* getRetrieval(void);

@@ -78,9 +78,9 @@ void TVectorSolver::setMeanDistance(float Distance){//in meter
 }
 
 
-void TVectorSolver::solve(TRetrievalImage &imgOldCd,TRetrievalImage &imgOldCorr,TRetrievalImage &imgNewCd,TRetrievalImage &imgNewCorr){
-    int Rows = imgOldCd.getHeight();
-    int Cols = imgOldCd.getWidth();
+void TVectorSolver::solve(TRetrievalImage* imgOldCd,TRetrievalImage* imgOldCorr,TRetrievalImage* imgNewCd,TRetrievalImage* imgNewCorr){
+    int Rows = imgOldCd->getHeight();
+    int Cols = imgOldCd->getWidth();
 
     MatrixXd                        CorrelationMatrix;
     MatrixXd                        CdsForGrad;
@@ -97,27 +97,27 @@ void TVectorSolver::solve(TRetrievalImage &imgOldCd,TRetrievalImage &imgOldCorr,
 
     VectorXd                        xVec;
 
-    float dt = imgNewCd.datetime.toTime_t()-imgOldCd.datetime.toTime_t(); // in seconds..
+    float dt = imgNewCd->datetime.toTime_t()-imgOldCd->datetime.toTime_t(); // in seconds..
 
     QMap<int, QPoint>               SrcPoints;
 
-    OldCds            = fromRetrImage(imgOldCd);
-    NewCds            = fromRetrImage(imgNewCd);
+    OldCds            = fromRetrImage(*imgOldCd);
+    NewCds            = fromRetrImage(*imgNewCd);
     CdsForGrad        = 0.5*(OldCds+NewCds);
 
-    SrcPoints   = getSrcPoints(Rows,Cols,imgOldCd);
+    SrcPoints   = getSrcPoints(Rows,Cols,*imgOldCd);
 
     Rv          = xy_tikhonov(Rows, Cols);
     SAinv       = getSAInv( ConstraintVec, ConstraintSrcOET, ConstraintSrcTikhonov, SaDiag, Rows,Cols, Rv ,SrcPoints);
 
-    K           = getK(CdsForGrad, imgOldCd, dt, MeanDistance);
+    K           = getK(CdsForGrad, *imgOldCd, dt, MeanDistance);
 
     AprioriSRC  = getAprioriSRC(Rows,Cols,SrcPosition.y(), SrcPosition.x(), SrcVal,smoothSrc);
     AprioriX    = getAprioriX(Rows, Cols,APrioriVec, AprioriSRC);
     DiffVector  = getDiffVector(OldCds,NewCds,1); // Diff = 1 second since grad and divergence already got multiplicated by dt -> bigger numbers, better precision
     deltay      = getDeltaY(DiffVector,AprioriX, K);
 
-    CorrelationMatrix = fromRetrImage(imgNewCorr);
+    CorrelationMatrix = fromRetrImage(*imgNewCorr);
     scaleCorrmatrix(CorrelationMatrix,CorrThreshold);
     SEinv             = getSEinv(CorrelationMatrix);
 
