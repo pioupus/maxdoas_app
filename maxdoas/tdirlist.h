@@ -10,7 +10,7 @@ class TFileentry
 {
 public:
     TFileentry();
-    void loadFileName(QString fn);
+    bool loadFileName(QString fn,QString format);
     QString FileName;
     QString Basename;
     int SequenceNr;

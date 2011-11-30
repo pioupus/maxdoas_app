@@ -5,6 +5,7 @@
 #include <QObject>
 #include <QScriptable>
 #include <QPair>
+#include <Eigen/Dense>
 
 #include <qwt_plot_curve.h>
 #include <qwt_plot_marker.h>
@@ -13,6 +14,9 @@
 #include "tspectrum.h"
 #include "tretrievalimage.h"
 #include "tspectralimage.h"
+#include "qwtmarkerarrow.h"
+
+using namespace Eigen;
 
 class TPlot
 {
@@ -36,6 +40,8 @@ public:
     void clearCurves();
     void setLastSpecDate(QDateTime lastSpecDate);
     QDateTime  getLastSpecDate();
+    QList<QwtMarkerArrow*>ArrowList;
+    void clearVectorField();
 private:
     QBoxLayout *parent;
     QwtPlot *plot;
@@ -59,8 +65,10 @@ public:
     void setParentLayout(QBoxLayout *parent);
 
     void plotSpectrum(TSpectrum *spectrum,int plotIndex);
+    void plotVectorField(TRetrievalImage *img,int plotIndex);
     void plotRetrievalImage(TRetrievalImage *img,int plotIndex, int Pixelsize=10);
     void plotSpectralImage(TSpectralImage *img,int plotIndex, int Pixelsize=10);
+    void plotDenseMatrix(const MatrixXd& values,int plotIndex, int Pixelsize=10);
 
     static TSpectrumPlotter* instance(QObject *parent)
     {

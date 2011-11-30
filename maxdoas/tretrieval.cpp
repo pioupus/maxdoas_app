@@ -18,6 +18,14 @@ TRetrieval::~TRetrieval(){
     delete mirrorCoordinate;
 }
 
+QPointF TRetrieval::getWindVector(){
+    return WindVector;
+}
+
+void TRetrieval::setWindVector(QPointF v){
+    WindVector = v;
+}
+
 void TRetrieval::setMirrorCoordinate(TMirrorCoordinate *mc){
     if (mirrorCoordinate != NULL){
         delete mirrorCoordinate;

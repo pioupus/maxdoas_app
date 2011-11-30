@@ -21,6 +21,8 @@ public:
 
     double val;
     TMirrorCoordinate *mirrorCoordinate;
+    QPointF getWindVector();
+    void setWindVector(QPointF v);
 private:
 
     QString symbName;

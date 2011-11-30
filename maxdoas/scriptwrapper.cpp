@@ -13,6 +13,7 @@
 #include "tspectrumplotter.h"
 #include "qdoaswrapper.h"
 #include "tdirlist.h"
+#include "tvectorsolver.h"
 
 TScanner* TScanner::m_Instance = 0;
 
@@ -146,9 +147,24 @@ QScriptValue TDirListConstructor(QScriptContext *context, QScriptEngine *engine)
 {
     QString sp = context->argument(0).toString();
     int startindex = context->argument(1).toInteger();
-    QObject *object = new tdirlist(sp,startindex);
+    QObject *object = new tdirlist(sp,startindex,"CCA");
     return engine->newQObject(object, QScriptEngine::ScriptOwnership);
 }
+
+QScriptValue TDirListConstructorSIGIS(QScriptContext *context, QScriptEngine *engine)
+{
+    QString sp = context->argument(0).toString();
+    QObject *object = new tdirlist(sp,1,"SIGIS");
+    return engine->newQObject(object, QScriptEngine::ScriptOwnership);
+}
+
+QScriptValue TRetrievalImageConstructorSIGIS(QScriptContext *context, QScriptEngine *engine)
+{
+    QString FileName = context->argument(0).toString();
+    QObject *object = new TRetrievalImage(FileName,"SIGIS");
+    return engine->newQObject(object, QScriptEngine::ScriptOwnership);
+}
+
 
 QScriptValue SetAutoIntegrationTime(QScriptContext *context, QScriptEngine *engine)
 {
@@ -202,6 +218,11 @@ QScriptValue FreeObject(QScriptContext *context, QScriptEngine *engine)
                QDoasConfigFile *qdconf = dynamic_cast<QDoasConfigFile*>(obj);
                if(qdconf != NULL){
                    delete qdconf;
+               }else{
+                   tdirlist *dl = dynamic_cast<tdirlist*>(obj);
+                   if(dl != NULL){
+                       delete dl;
+                   }
                }
            }
         }
@@ -520,6 +541,15 @@ TScriptWrapper::TScriptWrapper(THWDriver* hwdriver)
     QScriptValue metactordl = ScriptEngine->newQMetaObject(&QObject::staticMetaObject, ctordl);
     ScriptEngine->globalObject().setProperty("TDirlist", metactordl);
 
+    QScriptValue ctordlsi = ScriptEngine->newFunction(TDirListConstructorSIGIS);
+    QScriptValue metactordlsi = ScriptEngine->newQMetaObject(&QObject::staticMetaObject, ctordlsi);
+    ScriptEngine->globalObject().setProperty("TDirlistSIGIS", metactordlsi);
+
+    QScriptValue ctordretimg = ScriptEngine->newFunction(TRetrievalImageConstructorSIGIS);
+    QScriptValue metactordretimg = ScriptEngine->newQMetaObject(&QObject::staticMetaObject, ctordretimg);
+    ScriptEngine->globalObject().setProperty("TRetrievalImageSIGIS", metactordretimg);
+
+
     QScriptValue ctorSpec = ScriptEngine->newFunction(TSpectrumConstructor);
     QScriptValue metaObjectSpec = ScriptEngine->newQMetaObject(&QObject::staticMetaObject, ctorSpec);
     ScriptEngine->globalObject().setProperty("TSpektrum", metaObjectSpec);
@@ -542,6 +572,10 @@ TScriptWrapper::TScriptWrapper(THWDriver* hwdriver)
 
     QScriptValue plotobj = ScriptEngine->newQObject(TSpectrumPlotter::instance(0),QScriptEngine::ScriptOwnership);
     ScriptEngine->globalObject().setProperty("plot", plotobj);
+
+    QScriptValue plotvectorsolver = ScriptEngine->newQObject(TVectorSolver::instance(),QScriptEngine::ScriptOwnership);
+    ScriptEngine->globalObject().setProperty("VectorSolver", plotvectorsolver);
+
 
     QScriptValue qdoasobj = ScriptEngine->newQObject(QDoasWrapper::instance(),QScriptEngine::ScriptOwnership);
     ScriptEngine->globalObject().setProperty("qdoas", qdoasobj);

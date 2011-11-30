@@ -431,6 +431,7 @@ bool QDoasWrapper::retrieve(TSpectralImage *specImage, QDoasConfigFile *cf){
         delete lastposImage;
     lastposImage = new TRetrievalImage(specImage->getxCount(),specImage->getyCount());
     specImage->getPositionArray(lastposImage->valueBuffer,lastposImage->getWidth(),lastposImage->getHeight());
+    lastposImage->datetime = specImage->getDateTime();
     QFile::remove(infile);
     return !result.isEmpty();
 }
@@ -483,6 +484,7 @@ TRetrievalImage* QDoasWrapper::getRetrievalImage_(QString symbol){
         }
         asc.close();
     }
+
     if (ok){
         return new TRetrievalImage(lastposImage);
     }else{

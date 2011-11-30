@@ -13,46 +13,87 @@ TFileentry::TFileentry(){
     groupindex = -1;
 }
 
-void TFileentry::loadFileName(QString fn){
+bool TFileentry::loadFileName(QString fn,QString format){
     FileName = fn;
-    Basename = fn.left(fn.indexOf("_"));
-    QString s = fn.mid(fn.indexOf("_")+1,20);
-    DateTime =  QDateTime::fromString(s,"yyyy_MM_dd__hh_mm_ss");
-    s = fn.mid(fn.indexOf("_seq")+4,fn.length());
-    s = s.left(s.indexOf("s"));
-    SequenceNr = s.toInt();
+    bool result=false;
+    if (format == "CCA"){
+        Basename = fn.left(fn.indexOf("_"));
+        QString s = fn.mid(fn.indexOf("_")+1,20);
+        DateTime =  QDateTime::fromString(s,"yyyy_MM_dd__hh_mm_ss");
+        s = fn.mid(fn.indexOf("_seq")+4);
+        s = s.left(s.indexOf("s"));
+        SequenceNr = s.toInt();
+        result = true;
+    }
+    if (format == "SIGIS"){
+                                                                        //Haz_(2006_03_17_12_16_16_968)_step10_image003.bmp_ppm.txt
+        fn = fn.section("(",1,1);                               //2006_03_17_12_16_16_968)_step10_image003.bmp_ppm.txt
+        QString s = fn.left(fn.indexOf(")"));                             //2006_03_17_12_16_16_968
+
+        DateTime =  QDateTime::fromString(s,"yyyy_MM_dd_hh_mm_ss_zzz");
+        s = fn.mid(fn.indexOf("image")+5);                  //003.bmp_ppm.txt
+        Basename = s;
+        s = s.left(s.indexOf("."));                                     //003
+        SequenceNr = s.toInt();
+        Basename = Basename.mid(Basename.indexOf("_")+1);
+        Basename = Basename.left(Basename.indexOf("."));
+        result = true;
+    }
+    return result;
 }
 
 QString TFileentry::getHashString(){
     return getHash(groupindex,SequenceNr);
 }
 
+QString getDateString(QString s,QString format){
+    if (format == "CCA"){
+        return s.mid(s.indexOf("_")+1,20);
+    }
+    if (format == "SIGIS"){
+        s = s.section("(",1,1);
+        return s.left(s.indexOf(")"));
+    }
+    return "";
+}
 
 tdirlist::tdirlist(QString dir,int startindex,QString format)
 {
     this->StartSequenceNr = startindex;
+    QString datfmt = "yyyy_MM_dd__hh_mm_ss";
+    QString filtermask = "*s.spe";
+
     gotoStart();
     QDir dr(dir);
     Directory = dr.absolutePath();
     if (format == "CCA"){
-        QStringList filter;
-        filter.append("*s.spe");
-        QStringList dl = dr.entryList(filter);
-        QMap<QDateTime,QString> filelist;
-        for (int i=0;i<dl.count();i++){
-            QString s = dl[i];
-            s = s.mid(s.indexOf("_")+1,20);
-            QDateTime dt =  QDateTime::fromString(s,"yyyy_MM_dd__hh_mm_ss");
-            filelist.insert(dt,dl[i]);
-        }
-        QMapIterator<QDateTime,QString> mi(filelist);
-        int groupindex = 0;
-        int oldseq = startindex;
-        QStringList BaseNames;
-        while (mi.hasNext()) {
+        datfmt = "yyyy_MM_dd__hh_mm_ss";
+        filtermask = "*s.spe";
+    }
+    if (format == "SIGIS"){
+        datfmt = "yyyy_MM_dd_hh_mm_ss_zzz";
+        filtermask = "*.txt";
+    }
+    QStringList filter;
+    filter.append(filtermask);
+    QStringList dl = dr.entryList(filter);
+    QMap<QDateTime,QString> filelist;
+    for (int i=0;i<dl.count();i++){
+        QString s = dl[i];
+        s = getDateString(s,format);
+        QDateTime dt =  QDateTime::fromString(s,datfmt);
+        filelist.insertMulti(dt,dl[i]);
+    }
+    QMapIterator<QDateTime,QString> mi(filelist);
+    int groupindex = 0;
+    int oldseq = startindex;
+    QStringList BaseNames;
+    while (mi.hasNext()) {
+        mi.next();
+        QList<QString> fl = filelist.values(mi.key());
+        for (int i=0;i<fl.count();i++){
             TFileentry* fe = new TFileentry();
-            mi.next();
-            fe->loadFileName(mi.value());
+            fe->loadFileName(fl[i],format);
             bool samegroup = (oldseq == fe->SequenceNr) && (BaseNames.indexOf(fe->Basename) == -1);
             if (oldseq+1 == fe->SequenceNr){
                 BaseNames.clear();
@@ -68,6 +109,7 @@ tdirlist::tdirlist(QString dir,int startindex,QString format)
             FileTable.insertMulti(fe->getHashString(),fe);
         }
     }
+
 }
 
 tdirlist::~tdirlist(){

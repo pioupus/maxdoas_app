@@ -3,6 +3,7 @@
 #include <QTextStream>
 #include <tspectrumplotter.h>
 
+
 TRetrievalImage::TRetrievalImage(int width, int height)
 {
     inibuffer(width,height,(TRetrievalImage*)NULL);
@@ -10,6 +11,7 @@ TRetrievalImage::TRetrievalImage(int width, int height)
 
 TRetrievalImage::TRetrievalImage(TRetrievalImage *other){
     inibuffer(other->width,other->height,other);
+    datetime = other->datetime;
 }
 
 void TRetrievalImage::inibuffer(int width, int height, TRetrievalImage *other){
@@ -29,6 +31,63 @@ void TRetrievalImage::inibuffer(int width, int height, TRetrievalImage *other){
             this->height = i;
             break;
         }
+    }
+}
+
+TRetrievalImage::TRetrievalImage(QString fn,QString fmt){
+    bool result = true;
+    QFile data(fn);
+    QString s = fn.left(fn.indexOf(")"));
+    int StartCol=0;
+    if (fmt == "SIGIS")
+        StartCol = 1;
+    s = s.section("(",1,1);
+    datetime = QDateTime::fromString(s,"yyyy_MM_dd_hh_mm_ss_zzz");
+    if (data.open(QFile::ReadOnly)) {
+        QTextStream datastream(&data);
+        int rows = 0;
+        int cols = 0;
+        int oldcols = 0;
+        while(!datastream.atEnd()){
+            QString line = datastream.readLine();
+            QStringList colstrings = line.split(QRegExp("\\s+"),QString::SkipEmptyParts);//match with spaces and tabs
+            rows++;
+            cols = colstrings.count();
+            if ((oldcols !=  cols)&&(rows != 1)){
+                result = false;
+                logger()->warn(QString("SIGIS Image %1 has different colsizes").arg(fn));
+                break;
+            }
+            oldcols = cols;
+        }
+        inibuffer(cols-StartCol,rows,(TRetrievalImage*)NULL);
+        datastream.seek(0);
+        for (int row=0; row < rows; row++){
+            if(!result)
+                break;
+            QString line = datastream.readLine();
+            QStringList colstrings = line.split(QRegExp("\\s+"),QString::SkipEmptyParts);//match with spaces and tabs
+            for(int col = StartCol; col< cols; col++){
+                QPointF ac(col,rows-row);
+                TMirrorCoordinate *mc = new TMirrorCoordinate(ac);
+                QString word = colstrings[col];
+                double val;
+                bool ok;
+                val = word.toDouble(&ok);
+                if (!ok){
+                    logger()->warn(QString("SIGIS Image %1 cant convert string to double(%2)").arg(fn).arg(word));
+                    result = false;
+                    break;
+                }
+                valueBuffer[rows-row-1][col-StartCol]->val = val;
+                valueBuffer[rows-row-1][col-StartCol]->setMirrorCoordinate(mc);
+                delete mc;
+            }
+        }
+        data.close();
+    }else{
+        logger()->warn(QString("SIGIS Image %1 doesnt exist").arg(fn));
+        result = false;
     }
 }
 
@@ -66,7 +125,10 @@ void TRetrievalImage::save(QString fn){
     }
 }
 
+
+
 void TRetrievalImage::plot(int plotIndex,int Pixelsize){
     TSpectrumPlotter* SpectrumPlotter = TSpectrumPlotter::instance(0);
     SpectrumPlotter->plotRetrievalImage(this,plotIndex,Pixelsize);
 }
+

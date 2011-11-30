@@ -41,6 +41,7 @@ public:
     TRetrievalImage* getIntensityImage();
     int getPixelIndex(TMirrorCoordinate* mc);
     QString getFileName();
+    QDateTime getDateTime();
 private:
     QHash<QPair<int,int>, QPair<TSpectrum*,double> > spectrumtable;
     QDateTime FirstDate;

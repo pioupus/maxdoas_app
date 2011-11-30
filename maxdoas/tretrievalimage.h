@@ -7,21 +7,29 @@
 #include <QScriptContext>
 #include <QScriptValue>
 #include <QScriptable>
+#include <QDateTime>
+
+#include "log4qt/consoleappender.h"
+#include "log4qt/logger.h"
+#include "log4qt/ttcclayout.h"
 
 class TRetrievalImage:public QObject
 {
     Q_OBJECT
+    LOG4QT_DECLARE_QCLASS_LOGGER
 public:
     TRetrievalImage(int width, int height);
     TRetrievalImage(TRetrievalImage *other);
+    TRetrievalImage(QString fn,QString fmt);
     ~TRetrievalImage();
 
     TRetrieval* **valueBuffer;
     int getWidth();
     int getHeight();
+    QDateTime datetime;
 public slots:
     void save(QString fn);
-    void plot(int plotIndex,int Pixelsize);
+    void plot(int plotIndex,int Pixelsize=10);
 private:
     void inibuffer(int width, int height, TRetrievalImage *other);
     int width;

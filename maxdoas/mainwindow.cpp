@@ -8,6 +8,7 @@
 #include <qimagewriter.h>
 #include <QSettings>
 #include <QCloseEvent>
+#include <QDebug>
 #include <QFileDialog>
 #include <QToolBar>
 
@@ -17,8 +18,10 @@
 #include "tspectrum.h"
 #include "tfrmspectrconfig.h"
 #include "tscanpath.h"
-
-
+#define TESTMATRIX 1
+#if TESTMATRIX
+#include "vectorsolverservicetester.h"
+#endif
 class RasterData: public QwtMatrixRasterData
 {
 public:
@@ -147,7 +150,9 @@ MainWindow::MainWindow(QWidget *parent) :
 
   //  editor->setPlainText(contents);
     ui->ScriptLayout->addWidget(ScriptEditor);
-
+    #if TESTMATRIX
+        runVecSolverTest();
+    #endif
 //     ui->hl->addWidget(mDebugger->widget(QScriptEngineDebugger::ScriptsWidget));
 
 

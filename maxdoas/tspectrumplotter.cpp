@@ -189,6 +189,15 @@ QwtLegend *TPlot::getLegend(int pos){
     return legend;
 }
 
+void TPlot::clearVectorField(){
+    for (int i=0;i< ArrowList.count();i++){
+        QwtMarkerArrow *ma;
+        ma = ArrowList[i];
+        delete ma;
+    }
+    ArrowList.clear();
+}
+
 void TPlot::clearMarkers(){
     QwtPlotMarker * marker;
     for(int i = 0; i< MarkerList.count();i++){
@@ -336,6 +345,57 @@ void TSpectrumPlotter::plotSpectrum(TSpectrum *spectrum, int plotIndex){
 
 }
 
+void TSpectrumPlotter::plotDenseMatrix(const MatrixXd& values,int plotIndex, int Pixelsize){
+    TPlot *plot = getPlot(plotIndex);
+    QwtPlotSpectroCurve * s = plot->getImgPlot();
+    QVector< QwtPoint3D > * vec = new  QVector< QwtPoint3D >(values.rows()*values.cols());
+    double minval=0,maxval=0,val;
+    for(int x =0; x<values.cols();x++){
+        for(int y =0; y<values.rows();y++){
+            QwtPoint3D  p3d;// = new QwtPoint3D();
+            p3d.setX(x);
+            p3d.setY(y);
+            val = values(y,x);
+            p3d.setZ(val);
+            if ((minval > val)||((y+x)==0)){
+                minval = val;
+            }
+            if ((maxval < val)||((y+x)==0)){
+                maxval = val;
+            }
+            vec->replace(y*values.cols()+x,p3d);
+        }
+    }
+    s->setPenWidth(Pixelsize);
+    QwtInterval interval(minval,maxval);
+    s->setColorRange(interval);
+    s->setSamples(*vec);
+    plot->getPlot()->replot();
+}
+
+void TSpectrumPlotter::plotVectorField(TRetrievalImage *img,int plotIndex){
+    TPlot *plot = getPlot(plotIndex);
+
+    plot->clearVectorField();
+    QwtMarkerArrow *marker;
+    for (int col=0;col<img->getWidth();col++){
+        for (int row=0;row<img->getHeight();row++){
+
+            marker = new QwtMarkerArrow();
+
+            marker->setSymbol( new QwtSymbolArrow(QwtSymbolArrow::  UserStyle,
+                                  QColor(Qt::white), QPen(Qt::white,1), QSize(20,20)));
+            float x = img->valueBuffer[row][col]->getWindVector().x();
+            float y = img->valueBuffer[row][col]->getWindVector().y();
+            marker->setValue(col,row,x,y);
+            marker->attach(plot->getPlot());
+            plot->ArrowList.append(marker);
+        }
+    }
+
+    plot->getPlot()->replot();
+}
+
 void TSpectrumPlotter::plotRetrievalImage(TRetrievalImage *img,int plotIndex, int Pixelsize){
     TPlot *plot = getPlot(plotIndex);
     QwtPlotSpectroCurve * s = plot->getImgPlot();
@@ -361,8 +421,10 @@ void TSpectrumPlotter::plotRetrievalImage(TRetrievalImage *img,int plotIndex, in
         }
     }
     s->setPenWidth(Pixelsize);
-    //s->setInterval( Qt::ZAxis, QwtInterval(0, 1) );
+    QwtInterval interval(minval,maxval);
+    s->setColorRange(interval);
     s->setSamples(*vec);
+    plot->getPlot()->replot();
 }
 
 void TSpectrumPlotter::plotSpectralImage(TSpectralImage *img,int plotIndex, int Pixelsize){

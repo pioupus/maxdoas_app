@@ -8,15 +8,18 @@ INCLUDEPATH += . \
     ../diplom_maxdoas/maxdoas \
     ../diplom_maxdoas/libs/qserialdevice/src/qserialdevice \
     ../diplom_maxdoas/libs/qserialdevice/src/qserialdeviceenumerator \
+    ../diplom_maxdoas/libs/eigen-eigen-3c7638949b8c \
     /home/arne/opt/OmniDriverSPAM-1.66/include \
     /usr/lib/jvm/default-java/include \
+    /usr/include/superlu \
     /usr/lib/jvm/default-java/include/linux \
     /home/arne/opt/OmniDriverSPAM-1.66/include
 LIBS += -L/home/arne/opt/OmniDriverSPAM-1.66/_jvm/lib/i386/client \
     -ljvm
 LIBS += -L/home/arne/opt/OmniDriverSPAM-1.66/OOI_HOME \
     -lOmniDriver \
-    -lcommon
+    -lcommon \
+    -lsuperlu
 
 # LIBS += -L/home/arne/opt/OmniDriverSPAM-1.66/OOI_HOME -lOmniDriver -lcommon
 LIBS += -L../diplom_maxdoas/libs/qwt-6.0/lib \
@@ -37,7 +40,10 @@ QT += script
 QT += scripttools
 QT += svg
 QT += xml
-DEFINES += LINUX
+DEFINES += LINUX \
+    EIGEN_YES_I_KNOW_SPARSE_MODULE_IS_NOT_STABLE_YET
+
+QMAKE_CXXFLAGS += -msse2 -fopenmp
 
 # Input
 HEADERS += maxdoas/mainwindow.h \
@@ -61,7 +67,10 @@ HEADERS += maxdoas/mainwindow.h \
     maxdoas/tscanpath.h \
     maxdoas/tspectrumplotter.h \
     maxdoas/qdoaswrapper.h \
-    maxdoas/tdirlist.h
+    maxdoas/tdirlist.h \
+    maxdoas/tvectorsolver.h \
+    maxdoas/vectorsolverservice.h \
+    maxdoas/matrixoutputs.h
 FORMS += maxdoas/mainwindow.ui \
     maxdoas/tfrmtempctrl.ui \
     maxdoas/tfrmspectrconfig.ui
@@ -87,4 +96,7 @@ SOURCES += maxdoas/main.cpp \
     maxdoas/tscanpath.cpp \
     maxdoas/tspectrumplotter.cpp \
     maxdoas/qdoaswrapper.cpp \
-    maxdoas/tdirlist.cpp
+    maxdoas/tdirlist.cpp \
+    maxdoas/tvectorsolver.cpp \
+    maxdoas/vectorsolverservice.cpp \
+    maxdoas/vectorsolverservicetester.cpp

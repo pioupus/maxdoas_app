@@ -72,6 +72,10 @@ int TSpectralImage::getyCount(){
     }
 }
 
+QDateTime TSpectralImage::getDateTime(){
+    return FirstDate;
+}
+
 bool TSpectralImage::getPositionLine(QPointF P1, QPointF P2, QList<TMirrorCoordinate*> &Points, int div, QMap<float, TMirrorCoordinate*> &line, bool PermitRemovePoints){
     int i;
     bool result = false;
