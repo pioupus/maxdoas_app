@@ -1,9 +1,15 @@
 #ifndef TVECTORSOLVER_H
 #define TVECTORSOLVER_H
 #include <QPointF>
+#include <QScriptEngine>
+#include <QScriptContext>
+#include <QScriptValue>
+#include <QScriptable>
+#include "vectorsolverservice.h"
 #include "tretrievalimage.h"
 
-class TVectorSolver:public QObject
+
+class TVectorSolver: public QObject, protected QScriptable
 {
     Q_OBJECT
 
@@ -23,8 +29,8 @@ public slots:
 
     void solve(TRetrievalImage* imgOldCd,TRetrievalImage* imgOldCorr,TRetrievalImage* imgNewCd,TRetrievalImage* imgNewCorr);
 
-    void loadWeightedColoumDensitiesToRetrieval(void);
-    TRetrievalImage* getRetrieval(void);
+    void loadWeightedColoumDensitiesToRetrieval(TRetrievalImage* RetImg);
+    QScriptValue getRetrieval(void);
     QPointF getMeanVec(void);
     float getMeanVelocity();
 
@@ -55,6 +61,7 @@ public:
         m_Instance = 0;
         mutex.unlock();
     }
+    void retrievalImageDestructed(TRetrievalImage* img);
 private:
     TVectorSolver();
     ~TVectorSolver();
@@ -82,6 +89,7 @@ private:
 
     TRetrievalImage* LastRetrieval;
     QPointF MeanVector;
+    MatrixXd CorrelationMatrix;
 
 };
 

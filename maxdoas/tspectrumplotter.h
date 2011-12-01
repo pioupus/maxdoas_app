@@ -65,7 +65,7 @@ public:
     void setParentLayout(QBoxLayout *parent);
 
     void plotSpectrum(TSpectrum *spectrum,int plotIndex);
-    void plotVectorField(TRetrievalImage *img,int plotIndex);
+    void plotVectorField(TRetrievalImage *img,int plotIndex,int average,bool normalize,bool excludeZero);
     void plotRetrievalImage(TRetrievalImage *img,int plotIndex, int Pixelsize=10);
     void plotSpectralImage(TSpectralImage *img,int plotIndex, int Pixelsize=10);
     void plotDenseMatrix(const MatrixXd& values,int plotIndex, int Pixelsize=10);

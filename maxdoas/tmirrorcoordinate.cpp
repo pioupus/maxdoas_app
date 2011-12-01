@@ -2,6 +2,7 @@
 #include <QDebug>
 #include <math.h>
 //<QDebug>
+#define PRINTCONSTR_DESTR 0
 int constructioncounter=0;
 //#define STATIONARY_OFFSET 142.875
 #define STATIONARY_OFFSET 71.4375
@@ -12,18 +13,22 @@ int constructioncounter=0;
 
 TMirrorCoordinate::TMirrorCoordinate(QObject *parent)
 {
-    constructioncounter++;
     pixelIndexX = -1;
     pixelIndexY = -1;
-    qDebug() << "mc construction: " << constructioncounter;
+    #if PRINTCONSTR_DESTR
+        constructioncounter++;
+        qDebug() << "mc construction: " << constructioncounter;
+    #endif
 }
 
 TMirrorCoordinate::TMirrorCoordinate(QPointF c){
     AngleCoordinate = c;
     pixelIndexX = -1;
     pixelIndexY = -1;
-    constructioncounter++;
-    qDebug() << "mc construction: " << constructioncounter;
+    #if PRINTCONSTR_DESTR
+        constructioncounter++;
+        qDebug() << "mc construction: " << constructioncounter;
+    #endif
 }
 
 TMirrorCoordinate::TMirrorCoordinate(TMirrorCoordinate * other){
@@ -31,13 +36,17 @@ TMirrorCoordinate::TMirrorCoordinate(TMirrorCoordinate * other){
     pixelIndexX = other->pixelIndexX;
     pixelIndexY = other->pixelIndexY;
     pixelIndex = other->pixelIndex;
-    constructioncounter++;
-    qDebug() << "mc construction: " << constructioncounter;
+    #if PRINTCONSTR_DESTR
+        constructioncounter++;
+        qDebug() << "mc construction: " << constructioncounter;
+    #endif
 }
 
 TMirrorCoordinate::~TMirrorCoordinate(){
-    constructioncounter--;
-    qDebug() << "mc destruction: " << constructioncounter;
+    #if PRINTCONSTR_DESTR
+        constructioncounter--;
+         qDebug() << "mc destruction: " << constructioncounter;
+    #endif
 }
 
 QPoint TMirrorCoordinate::getMotorCoordinate(){

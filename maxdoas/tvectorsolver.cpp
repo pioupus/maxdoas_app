@@ -82,7 +82,7 @@ void TVectorSolver::solve(TRetrievalImage* imgOldCd,TRetrievalImage* imgOldCorr,
     int Rows = imgOldCd->getHeight();
     int Cols = imgOldCd->getWidth();
 
-    MatrixXd                        CorrelationMatrix;
+
     MatrixXd                        CdsForGrad;
     MatrixXd                        OldCds;
     MatrixXd                        NewCds;
@@ -94,10 +94,15 @@ void TVectorSolver::solve(TRetrievalImage* imgOldCd,TRetrievalImage* imgOldCorr,
     SparseMatrix<double,RowMajor>   SEinv;
     SparseMatrix<double,RowMajor>   K;
     SparseMatrix<double,RowMajor>   Rv;
+    QTime timer;
+    timer.start();
+
 
     VectorXd                        xVec;
 
-    float dt = imgNewCd->datetime.toTime_t()-imgOldCd->datetime.toTime_t(); // in seconds..
+    int tnew = imgNewCd->datetime.toTime_t();
+    int told = imgOldCd->datetime.toTime_t();
+    float dt = tnew-told; // in seconds..
 
     QMap<int, QPoint>               SrcPoints;
 
@@ -127,17 +132,21 @@ void TVectorSolver::solve(TRetrievalImage* imgOldCd,TRetrievalImage* imgOldCorr,
 
     delete LastRetrieval;
 
-    LastRetrieval = mapDirectionVector(xVec,Rows,Cols);
+    LastRetrieval = mapDirectionVector(xVec,Rows,Cols,imgOldCd);
     mapMatrixValues(CdsForGrad,LastRetrieval);
-
+    qDebug("Time elapsed: %d ms", timer.elapsed());
 }
 
-void TVectorSolver::loadWeightedColoumDensitiesToRetrieval(void){
-
+void TVectorSolver::loadWeightedColoumDensitiesToRetrieval(TRetrievalImage* RetImg){
+    for(int row = 0;row < CorrelationMatrix.rows();row++){
+        for (int col = 0; col < CorrelationMatrix.cols();col++){
+            RetImg->valueBuffer[row][col]->val = RetImg->valueBuffer[row][col]->val*CorrelationMatrix(row,col);
+        }
+    }
 }
 
-TRetrievalImage* TVectorSolver::getRetrieval(void){
-    return LastRetrieval;
+QScriptValue TVectorSolver::getRetrieval(void){
+    return engine()->newQObject(LastRetrieval);
 }
 
 QPointF TVectorSolver::getMeanVec(void){
@@ -156,4 +165,9 @@ QPointF TVectorSolver::getMeanVec(void){
 float TVectorSolver::getMeanVelocity(){
     QPointF vec = getMeanVec();
     return sqrt(vec.x()*vec.x()+vec.y()*vec.y());
+}
+
+void TVectorSolver::retrievalImageDestructed(TRetrievalImage* img){
+    if (LastRetrieval == img)
+        LastRetrieval = NULL;
 }

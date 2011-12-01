@@ -373,7 +373,7 @@ void TSpectrumPlotter::plotDenseMatrix(const MatrixXd& values,int plotIndex, int
     plot->getPlot()->replot();
 }
 
-void TSpectrumPlotter::plotVectorField(TRetrievalImage *img,int plotIndex){
+void TSpectrumPlotter::plotVectorField(TRetrievalImage *img,int plotIndex,int average,bool normalize,bool excludeZero){
     TPlot *plot = getPlot(plotIndex);
 
     plot->clearVectorField();
@@ -381,15 +381,46 @@ void TSpectrumPlotter::plotVectorField(TRetrievalImage *img,int plotIndex){
     for (int col=0;col<img->getWidth();col++){
         for (int row=0;row<img->getHeight();row++){
 
-            marker = new QwtMarkerArrow();
+            if ((col % average == 0) && (row % average == 0)){
+                QPointF WindAvg = QPointF(0,0);
+                float PosX=0;
+                float PosY=0;
+                float valavg=0;
+                int sum=0;
+                for (int acol=col;acol < col+average;acol++){
+                    for (int arow=row;arow < row+average;arow++){
+                        if ((acol < img->getWidth())&&(arow < img->getHeight())){
+                            WindAvg += img->valueBuffer[arow][acol]->getWindVector();
+                            PosX+=img->valueBuffer[arow][acol]->mirrorCoordinate->getAngleCoordinate().x();
+                            PosY+=img->valueBuffer[arow][acol]->mirrorCoordinate->getAngleCoordinate().y();
+                            sum++;
+                            valavg += img->valueBuffer[arow][acol]->val;
+                        }
+                    }
+                }
+                WindAvg/=(float)sum;
+                PosX /= (float)sum;
+                PosY /= (float)sum;
+                valavg /= (float)sum;
+                if (((excludeZero && (valavg != 0)) || !excludeZero) &&  (WindAvg != QPointF(0,0))){
+                    marker = new QwtMarkerArrow();
 
-            marker->setSymbol( new QwtSymbolArrow(QwtSymbolArrow::  UserStyle,
-                                  QColor(Qt::white), QPen(Qt::white,1), QSize(20,20)));
-            float x = img->valueBuffer[row][col]->getWindVector().x();
-            float y = img->valueBuffer[row][col]->getWindVector().y();
-            marker->setValue(col,row,x,y);
-            marker->attach(plot->getPlot());
-            plot->ArrowList.append(marker);
+                    marker->setSymbol( new QwtSymbolArrow(QwtSymbolArrow::  UserStyle,
+                                          QColor(Qt::white), QPen(Qt::white,1), QSize(20,20)));
+                    float x = WindAvg.x();
+                    float y = WindAvg.y();
+                    if (normalize){
+                        float norm = sqrt(x*x+y*y);
+                        x /= norm;
+                        y /= norm;
+                        x *= average;
+                        y *= average;
+                    }
+                    marker->setValue(PosX,PosY,x,y);
+                    marker->attach(plot->getPlot());
+                    plot->ArrowList.append(marker);
+                }
+            }
         }
     }
 

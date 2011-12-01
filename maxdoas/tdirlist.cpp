@@ -90,26 +90,22 @@ tdirlist::tdirlist(QString dir,int startindex,QString format)
     QStringList BaseNames;
     while (mi.hasNext()) {
         mi.next();
-        QList<QString> fl = filelist.values(mi.key());
-        for (int i=0;i<fl.count();i++){
-            TFileentry* fe = new TFileentry();
-            fe->loadFileName(fl[i],format);
-            bool samegroup = (oldseq == fe->SequenceNr) && (BaseNames.indexOf(fe->Basename) == -1);
-            if (oldseq+1 == fe->SequenceNr){
-                BaseNames.clear();
-                samegroup = true;
-            }
-            if (!samegroup){
-                groupindex++;
-                BaseNames.clear();
-            }
-            BaseNames.append(fe->Basename);
-            oldseq = fe->SequenceNr;
-            fe->groupindex = groupindex;
-            FileTable.insertMulti(fe->getHashString(),fe);
+        TFileentry* fe = new TFileentry();
+        fe->loadFileName(mi.value(),format);
+        bool samegroup = (oldseq == fe->SequenceNr) && (BaseNames.indexOf(fe->Basename) == -1);
+        if (oldseq+1 == fe->SequenceNr){
+            BaseNames.clear();
+            samegroup = true;
         }
+        if (!samegroup){
+            groupindex++;
+            BaseNames.clear();
+        }
+        BaseNames.append(fe->Basename);
+        oldseq = fe->SequenceNr;
+        fe->groupindex = groupindex;
+        FileTable.insertMulti(fe->getHashString(),fe);
     }
-
 }
 
 tdirlist::~tdirlist(){

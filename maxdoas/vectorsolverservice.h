@@ -43,7 +43,7 @@ SparseMatrix<double,RowMajor>   xy_tikhonov(int Rows,int Cols);
 
 VectorXd                        nextstepOET(const VectorXd& xapriori,const SparseMatrix<double,RowMajor> SAinv,const  VectorXd& deltay,const SparseMatrix<double,RowMajor>SEinv, const SparseMatrix<double,RowMajor>K);
 
-TRetrievalImage*                mapDirectionVector(const  VectorXd& XVec, int Rows, int Cols);
+TRetrievalImage*                mapDirectionVector(const  VectorXd& XVec, int Rows, int Cols,TRetrievalImage *pixelpositions);
 void                            mapMatrixValues(const  MatrixXd& Values, TRetrievalImage* RetImage);
 
 #endif // VECTORSOLVERSERVICE_H

@@ -34,7 +34,7 @@ void TRetrievalImage::inibuffer(int width, int height, TRetrievalImage *other){
     }
 }
 
-TRetrievalImage::TRetrievalImage(QString fn,QString fmt){
+TRetrievalImage::TRetrievalImage(QString fn,QString fmt,float PixelWidthAngle,float PixelHeightAngle){
     bool result = true;
     QFile data(fn);
     QString s = fn.left(fn.indexOf(")"));
@@ -62,14 +62,18 @@ TRetrievalImage::TRetrievalImage(QString fn,QString fmt){
         }
         inibuffer(cols-StartCol,rows,(TRetrievalImage*)NULL);
         datastream.seek(0);
+        float yPos=0;
         for (int row=0; row < rows; row++){
+            float xPos=0;
             if(!result)
                 break;
             QString line = datastream.readLine();
             QStringList colstrings = line.split(QRegExp("\\s+"),QString::SkipEmptyParts);//match with spaces and tabs
             for(int col = StartCol; col< cols; col++){
-                QPointF ac(col,rows-row);
+
+                QPointF ac(xPos,((float)rows*PixelHeightAngle)- yPos);
                 TMirrorCoordinate *mc = new TMirrorCoordinate(ac);
+                xPos += PixelWidthAngle;
                 QString word = colstrings[col];
                 double val;
                 bool ok;
@@ -83,6 +87,7 @@ TRetrievalImage::TRetrievalImage(QString fn,QString fmt){
                 valueBuffer[rows-row-1][col-StartCol]->setMirrorCoordinate(mc);
                 delete mc;
             }
+            yPos += PixelHeightAngle;
         }
         data.close();
     }else{
@@ -127,8 +132,12 @@ void TRetrievalImage::save(QString fn){
 
 
 
-void TRetrievalImage::plot(int plotIndex,int Pixelsize){
+void TRetrievalImage::plot(int plotIndex, int Pixelsize){
     TSpectrumPlotter* SpectrumPlotter = TSpectrumPlotter::instance(0);
     SpectrumPlotter->plotRetrievalImage(this,plotIndex,Pixelsize);
 }
 
+void TRetrievalImage::oplotWindField(int plotIndex, int Average, bool normalize,bool excludezero){
+    TSpectrumPlotter* SpectrumPlotter = TSpectrumPlotter::instance(0);
+    SpectrumPlotter->plotVectorField(this,plotIndex,Average,normalize,excludezero);
+}

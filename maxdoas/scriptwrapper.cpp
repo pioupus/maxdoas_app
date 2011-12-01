@@ -161,7 +161,9 @@ QScriptValue TDirListConstructorSIGIS(QScriptContext *context, QScriptEngine *en
 QScriptValue TRetrievalImageConstructorSIGIS(QScriptContext *context, QScriptEngine *engine)
 {
     QString FileName = context->argument(0).toString();
-    QObject *object = new TRetrievalImage(FileName,"SIGIS");
+    float PixSizeWidth = context->argument(1).toNumber();
+    float PixSizeHeigtht = context->argument(2).toNumber();
+    QObject *object = new TRetrievalImage(FileName,"SIGIS",PixSizeWidth,PixSizeHeigtht);
     return engine->newQObject(object, QScriptEngine::ScriptOwnership);
 }
 
@@ -213,6 +215,8 @@ QScriptValue FreeObject(QScriptContext *context, QScriptEngine *engine)
         }else{
            TRetrievalImage *rtimg = dynamic_cast<TRetrievalImage*>(obj);
            if(rtimg != NULL){
+               TVectorSolver* vs = TVectorSolver::instance();
+               vs->retrievalImageDestructed(rtimg);
                delete rtimg;
            }else{
                QDoasConfigFile *qdconf = dynamic_cast<QDoasConfigFile*>(obj);

@@ -20,7 +20,7 @@ class TRetrievalImage:public QObject
 public:
     TRetrievalImage(int width, int height);
     TRetrievalImage(TRetrievalImage *other);
-    TRetrievalImage(QString fn,QString fmt);
+    TRetrievalImage(QString fn,QString fmt,float PixelWidthAngle,float PixelHeightAngle);
     ~TRetrievalImage();
 
     TRetrieval* **valueBuffer;
@@ -29,7 +29,8 @@ public:
     QDateTime datetime;
 public slots:
     void save(QString fn);
-    void plot(int plotIndex,int Pixelsize=10);
+    void plot(int plotIndex, int Pixelsize=10);
+    void oplotWindField(int plotIndex, int Average=1, bool normalize=true,bool excludezero=true);
 private:
     void inibuffer(int width, int height, TRetrievalImage *other);
     int width;
