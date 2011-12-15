@@ -7,6 +7,7 @@
 #include <QScriptable>
 #include "vectorsolverservice.h"
 #include "tretrievalimage.h"
+#include "temissionrate.h"
 
 
 class TVectorSolver: public QObject, protected QScriptable
@@ -23,9 +24,16 @@ public slots:
     void setSrcPosition(QPoint SrcPosition);
     void setSADiagonalvalue(float SaDiag);
     void setCorrThreshold(float CorrThreshold);
-    void setAPrioriVec(QPointF APrioriVec);
+    void setAPrioriVec(float APrioriVecX,float APrioriVecY);
     void setMeanDistance(float Distance);//in meter
+    void setUseDirectPixelsize(bool    UseDirectPixelsize);
 
+    void plotSrcMatrix(int plotindex, int pixelsize=10);
+    void plotdcoldt_observed(int plotindex, int pixelsize=10);
+    void plotdcoldt_retrieved(int plotindex, int pixelsize=10);
+    void plotresiduum(int plotindex, int pixelsize=10);
+
+    TEmissionrate* emissionrate(float TimeStep, float ScanPixelsize, bool plotit);
 
     void solve(TRetrievalImage* imgOldCd,TRetrievalImage* imgOldCorr,TRetrievalImage* imgNewCd,TRetrievalImage* imgNewCorr);
 
@@ -33,7 +41,8 @@ public slots:
     QScriptValue getRetrieval(void);
     QPointF getMeanVec(void);
     float getMeanVelocity();
-
+    QPointF getMaxVec(void);
+    float getMaxVelocity();
 
 public:
 
@@ -72,7 +81,7 @@ private:
 
     static TVectorSolver* m_Instance;
 
-
+    float selectAndIntegrateCorridor(TParamLine &corridor, float CorridorWidth);
 
 
     double  ConstraintSrcOET;
@@ -84,13 +93,29 @@ private:
     float   SrcVal;
     float   SaDiag;
     float   MeanDistance;
+    bool    UseDirectPixelsize;
     float   CorrThreshold;
     QPointF APrioriVec;
 
     TRetrievalImage* LastRetrieval;
     QPointF MeanVector;
-    MatrixXd CorrelationMatrix;
 
+
+    MatrixXd                        CorrelationMatrix;
+
+    MatrixXd                        CdsForGrad;
+    VectorXd                        AprioriX;
+    MatrixXd                        AprioriSRC;
+    SparseMatrix<double,RowMajor>   SAinv;
+    VectorXd                        DiffVector;
+    VectorXd                        deltay;
+    SparseMatrix<double,RowMajor>   SEinv;
+    SparseMatrix<double,RowMajor>   K;
+    SparseMatrix<double,RowMajor>   Rv;
+    VectorXd                        xVec;
+
+    int Rows;
+    int Cols;
 };
 
 #endif // TVECTORSOLVER_H

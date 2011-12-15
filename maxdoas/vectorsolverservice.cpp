@@ -6,7 +6,7 @@
 #include <Eigen/SparseCholesky>
 #include <Eigen/IterativeLinearSolvers>
 #include <Eigen/SuperLUSupport>
-
+#include "tspectrumplotter.h"
 
 
 #include "log4qt/consoleappender.h"
@@ -16,6 +16,8 @@
 
 //LOG4QT_DECLARE_QCLASS_LOGGER
 
+#define PLOTGRADIENT 0
+#define USEDIV 1
 
 bool odd (int a){
   if ((a%2)!=0)
@@ -121,6 +123,9 @@ MatrixXd conv2d( MatrixXd& I,  MatrixXd &kernel )
         //return Derived::Zero(1,1);
     }
 
+    if ((kernel.rows() == 1)||(kernel.cols() == 1)){
+        return I;
+    }
     int kernelRow = kernel.rows()/2;
     int kernelCol = kernel.cols()/2;
     int limitRow = I.rows()-kernelRow;
@@ -179,7 +184,32 @@ TRetrievalImage* mapDirectionVector(const  VectorXd& XVec, int Rows, int Cols,TR
     return result;
 }
 
- void mapMatrixValues(const  MatrixXd& Values, TRetrievalImage* RetImage){
+TRetrievalImage* mapSrcMatrix(const  VectorXd& XVec, int Rows, int Cols,TRetrievalImage *pixelpositions){
+    //rows/cols from image
+    TRetrievalImage* result = new TRetrievalImage(pixelpositions);
+    for(int row=0;row<Rows;row++){
+        for (int col = 0; col<Cols;col++){
+            int i = indexMatrixToVec(Rows, Cols,  row,col);
+            result->valueBuffer[row][col]->val = XVec(2*Rows*Cols+i);
+        }
+    }
+    return result;
+}
+
+TRetrievalImage* mapDiffVector(const  VectorXd& Diff, int Rows, int Cols, TRetrievalImage *pixelpositions){
+    //rows/cols from image
+    TRetrievalImage* result = new TRetrievalImage(pixelpositions);
+    for(int row=0;row<Rows;row++){
+        for (int col = 0; col<Cols;col++){
+            int i = indexMatrixToVec(Rows, Cols, row, col);
+            result->valueBuffer[row][col]->val = Diff(i);
+        }
+    }
+    return result;
+}
+
+
+void mapMatrixValues(const  MatrixXd& Values, TRetrievalImage* RetImage){
 
      //rows/cols from image
     for(int row=0;row<Values.rows();row++){
@@ -206,6 +236,17 @@ VectorXd getDiffVector(const MatrixXd& ImgFirst, const MatrixXd ImgSecond, float
     MatrixXd imgdiff = (ImgSecond - ImgFirst)/DiffSeconds;
 
     return MatrixToVec(imgdiff);
+}
+
+VectorXd getDeltaY(VectorXd &DiffVector,VectorXd &AprioriX, SparseMatrix<double,RowMajor> &K){
+    VectorXd result;
+//    std::cout << "AprioriX rows,cols " << AprioriX.rows() << ","<< AprioriX.cols() << std::endl;
+//    std::cout << "K rows,cols " << K.rows() << ","<< K.cols() << std::endl;
+    VectorXd yFit = K*AprioriX;
+//    std::cout << "yFit rows,cols " << yFit.rows() << ","<< yFit.cols() << std::endl;
+//    std::cout << "DiffVector rows,cols " << DiffVector.rows() << ","<< DiffVector.cols() << std::endl;
+    result = DiffVector - yFit;
+    return result;
 }
 
 VectorXd MatrixToVec(const MatrixXd& M){
@@ -235,10 +276,14 @@ SparseMatrix<double,RowMajor> matrixToDiag(const MatrixXd& M){
     return result;
 }
 
-SparseMatrix<double,RowMajor> getK(const MatrixXd& values, TRetrievalImage& RetImage,double dt,float PlumeDistance ){
-        //nicht getestet
+SparseMatrix<double,RowMajor> getK(const MatrixXd& values, TRetrievalImage& RetImage,double dt,float PlumeDistance,bool UseDirectPixelsize, MatrixXd CorrelationMatrix){
+    //nicht getestet
     //Coloum densities are taken von values, while its coordinates are taken from RetImage
+
     SparseMatrix<double,RowMajor> result(RetImage.getWidth()*RetImage.getHeight(),RetImage.getWidth()*RetImage.getHeight()*3);
+    #if PLOTGRADIENT
+        TRetrievalImage* grad = new TRetrievalImage(&RetImage);
+    #endif
     int col = 0;
     int row = 0;
     double val;
@@ -250,27 +295,32 @@ SparseMatrix<double,RowMajor> getK(const MatrixXd& values, TRetrievalImage& RetI
     if (dt < 0){
         std::cout << "ERROR: dt < 0 in getK" << std::endl;
     }
-    double meanPixelSizeY =(RetImage.valueBuffer[0][0]->mirrorCoordinate->getAngleCoordinate().y()+RetImage.valueBuffer[RetImage.getHeight()-1][0]->mirrorCoordinate->getAngleCoordinate().y())/(RetImage.getHeight()-1);
-    double meanPixelSizeX =(RetImage.valueBuffer[0][0]->mirrorCoordinate->getAngleCoordinate().x()+RetImage.valueBuffer[0][RetImage.getWidth()-1]->mirrorCoordinate->getAngleCoordinate().x())/(RetImage.getWidth()-1);
-    meanPixelSizeY = meanPixelSizeY*M_PI/180;               meanPixelSizeX = meanPixelSizeX*M_PI/180;
-    meanPixelSizeY = PlumeDistance*sin(meanPixelSizeY);     meanPixelSizeX = PlumeDistance*sin(meanPixelSizeX);
+    #if USEDIV
+        double meanPixelSizeY =(RetImage.valueBuffer[0][0]->mirrorCoordinate->getAngleCoordinate().y()+RetImage.valueBuffer[RetImage.getHeight()-1][0]->mirrorCoordinate->getAngleCoordinate().y())/(RetImage.getHeight()-1);
+        double meanPixelSizeX =(RetImage.valueBuffer[0][0]->mirrorCoordinate->getAngleCoordinate().x()+RetImage.valueBuffer[0][RetImage.getWidth()-1]->mirrorCoordinate->getAngleCoordinate().x())/(RetImage.getWidth()-1);
+        if (UseDirectPixelsize){
 
-    SparseMatrix<double,RowMajor> coloumDensitiesDiag = matrixToDiag(values);// for col multiplication
+        }else{
+            meanPixelSizeY = meanPixelSizeY*M_PI/180;               meanPixelSizeX = meanPixelSizeX*M_PI/180;
+            meanPixelSizeY = PlumeDistance*sin(meanPixelSizeY);     meanPixelSizeX = PlumeDistance*sin(meanPixelSizeX);
+        }
 
-    SparseMatrix<double,RowMajor> divergenceX         = L1BlockTranspose  (RetImage.getWidth()*RetImage.getHeight(),RetImage.getWidth());// /PIXELSIZE
-    SparseMatrix<double,RowMajor> divergenceY         = L1Block           (RetImage.getWidth()*RetImage.getHeight(),RetImage.getHeight());// /PIXELSIZE
+        SparseMatrix<double,RowMajor> coloumDensitiesDiag = matrixToDiag(values);// for col multiplication
 
-
-    double cotient = dt/meanPixelSizeX;
-    divergenceX = divergenceX*cotient;
-    cotient = dt/meanPixelSizeY;
-    divergenceY = divergenceY*cotient;
-
-
-    divergenceX = coloumDensitiesDiag*divergenceX.transpose();
-    divergenceY = coloumDensitiesDiag*divergenceY.transpose();
+        SparseMatrix<double,RowMajor> divergenceX         = L1BlockTranspose  (RetImage.getWidth()*RetImage.getHeight(),RetImage.getWidth());// /PIXELSIZE
+        SparseMatrix<double,RowMajor> divergenceY         = L1Block           (RetImage.getWidth()*RetImage.getHeight(),RetImage.getHeight());// /PIXELSIZE
 
 
+        double cotient = dt/meanPixelSizeX;
+        divergenceX = divergenceX*cotient;
+        cotient = dt/meanPixelSizeY;
+        divergenceY = divergenceY*cotient;
+
+
+        divergenceX = coloumDensitiesDiag*divergenceX.transpose();
+        divergenceY = coloumDensitiesDiag*divergenceY.transpose();
+
+    #endif
 //    (x00|y00|SRC)         (100)   x = grad_x + divergenceX
 //    (0x0|0y0|SRC) SRC =   (010)
 //    (00x|00y|SRC)         (001)   y = grad_y + divergenceY
@@ -281,21 +331,21 @@ SparseMatrix<double,RowMajor> getK(const MatrixXd& values, TRetrievalImage& RetI
 
             result.startVec(row);
 
+            #if USEDIV
+                SparseMatrix<double,RowMajor>::InnerIterator IteratorX(divergenceX,row);
+                SparseMatrix<double,RowMajor>::InnerIterator IteratorY(divergenceY,row);
 
-            SparseMatrix<double,RowMajor>::InnerIterator IteratorX(divergenceX,row);
-            SparseMatrix<double,RowMajor>::InnerIterator IteratorY(divergenceY,row);
-
-            while(IteratorX){ //lets fill up first port before diagonal
-               //CHECKME: does it really work?
-                int itcol=IteratorX.col();
-                if (row<itcol){
-                  result.insertBack(row,itcol) = IteratorX.value();
-                }else{
-                    break;
+                while(IteratorX){ //lets fill up first port before diagonal
+                   //CHECKME: does it really work?
+                    int itcol=IteratorX.col();
+                    if (row<itcol){
+                      result.insertBack(row,itcol) = IteratorX.value();
+                    }else{
+                        break;
+                    }
+                    ++IteratorX;
                 }
-                ++IteratorX;
-            }
-
+            #endif
             if (retcol==0){
                 val = values(retrow,retcol+1)-values(retrow,retcol);
                 dist =  RetImage.valueBuffer[retrow][retcol+1]->mirrorCoordinate->getAngleCoordinate().x();
@@ -309,39 +359,53 @@ SparseMatrix<double,RowMajor> getK(const MatrixXd& values, TRetrievalImage& RetI
                 dist =  RetImage.valueBuffer[retrow][retcol+1]->mirrorCoordinate->getAngleCoordinate().x();
                 dist -=  RetImage.valueBuffer[retrow][retcol-1]->mirrorCoordinate->getAngleCoordinate().x();
             }
-            dist = dist*M_PI/180.0;
-            val = val*dt/(PlumeDistance*sin(dist));
-            if (IteratorX){
-                int itcol=IteratorX.col();
-                if (itcol==row){//CHECKME: does it really work? should be diagonal element
-                    double itval = IteratorX.value();
-                    val += itval;
+
+            dist = -dist;//gradient is negative in continuity equ
+            if (UseDirectPixelsize){
+                val = val*dt/dist;
+            }else{
+                dist = dist*M_PI/180.0;
+                val = val*dt/(PlumeDistance*sin(dist));
+            }
+            #if PLOTGRADIENT
+                QPointF gradient;
+                gradient.setX(val);
+            #endif
+            #if USEDIV
+                if (IteratorX){
+                    int itcol=IteratorX.col();
+                    if (itcol==row){
+                        double itval = IteratorX.value();
+                        val += itval;
+                        ++IteratorX;
+                    }
+                }
+            #endif
+//             if (CorrelationMatrix(retrow,retcol) == 0)
+//                 val = 0;
+            result.insertBack(row,col) = val; //DiagonalX passed..
+            #if USEDIV
+                while(IteratorX){//lets fill up first part behind diagonal
+                    int itcol=IteratorX.col();
+                    if (row < itcol){
+                      result.insertBack(row,itcol) = IteratorX.value();
+                    }else{
+                        break;
+                    }
                     ++IteratorX;
                 }
-            }
-            result.insertBack(row,col) = val; //DiagonalX passed..
 
-            while(IteratorX){//lets fill up first part behind diagonal
-                int itcol=IteratorX.col();
-                if (row < itcol){
-                  result.insertBack(row,itcol) = IteratorX.value();
-                }else{
-                    break;
+                while(IteratorY){ //lets fill up first port before diagonal
+                    int itcol=IteratorY.col();
+                    if (row<itcol){
+                      result.insertBack(row,itcol+RetImage.getWidth()*RetImage.getHeight()) = IteratorY.value();
+                    }else{
+                        break;
+                    }
+                    ++IteratorY;
                 }
-                ++IteratorX;
-            }
 
-            while(IteratorY){ //lets fill up first port before diagonal
-                int itcol=IteratorY.col();
-                if (row<itcol){
-                  result.insertBack(row,itcol+RetImage.getWidth()*RetImage.getHeight()) = IteratorY.value();
-                }else{
-                    break;
-                }
-                ++IteratorY;
-            }
-
-
+            #endif
             if (retrow==0){
                val = values(retrow+1,retcol)- values(retrow,retcol);
                dist =  RetImage.valueBuffer[retrow+1][retcol]->mirrorCoordinate->getAngleCoordinate().y();
@@ -356,32 +420,51 @@ SparseMatrix<double,RowMajor> getK(const MatrixXd& values, TRetrievalImage& RetI
                dist -=  RetImage.valueBuffer[retrow-1][retcol]->mirrorCoordinate->getAngleCoordinate().y();
             }
 
-            dist = dist*M_PI/180.0;
-            val = val*dt/(PlumeDistance*sin(dist));
-            if (IteratorY){
-                int itcol=IteratorY.col();
-                if (itcol==row){//CHECKME: does it really work?
-                    double itval = IteratorY.value();
-                    val += itval;
+            dist = -dist;//gradient is negative in continuity equ
+            if (UseDirectPixelsize){
+                val = val*dt/dist;
+            }else{
+                dist = dist*M_PI/180.0;
+                val = val*dt/(PlumeDistance*sin(dist));
+            }
+            #if PLOTGRADIENT
+                gradient.setY(val);
+                grad->valueBuffer[retrow][retcol]->setWindVector(gradient);
+            #endif
+            #if USEDIV
+                if (IteratorY){
+                    int itcol=IteratorY.col();
+                    if (itcol==row){
+                        double itval = IteratorY.value();
+                        val += itval;
+                        ++IteratorY;
+                    }
+                }
+            #endif
+//            if (CorrelationMatrix(retrow,retcol) == 0)
+//                val = 0;
+            result.insertBack(row,col+RetImage.getWidth()*RetImage.getHeight()) = val;
+            #if USEDIV
+                while(IteratorY){//lets fill up first part behind diagonal
+                    int itcol=IteratorY.col();
+                    if (row < itcol){
+                      result.insertBack(row,itcol+RetImage.getWidth()*RetImage.getHeight()) = IteratorY.value();
+                    }else{
+                        break;
+                    }
                     ++IteratorY;
                 }
-            }
-            result.insertBack(row,col+RetImage.getWidth()*RetImage.getHeight()) = val;
-            while(IteratorY){//lets fill up first part behind diagonal
-                int itcol=IteratorY.col();
-                if (row < itcol){
-                  result.insertBack(row,itcol+RetImage.getWidth()*RetImage.getHeight()) = IteratorY.value();
-                }else{
-                    break;
-                }
-                ++IteratorY;
-            }
+            #endif
             result.insertBack(row,col+2*RetImage.getWidth()*RetImage.getHeight());//sourceMatrix
             col++;
             row++;
         }
     }
     result.finalize();
+    #if PLOTGRADIENT
+        TSpectrumPlotter* SpectrumPlotter = TSpectrumPlotter::instance(0);
+        SpectrumPlotter->plotVectorField(grad,0,1,true,false);
+    #endif
     return result;
 }
 
@@ -454,16 +537,7 @@ VectorXd getAprioriX(int Rows,int Cols,QPointF &APrioriVec,MatrixXd &AprioriSRC)
     return result;
 }
 
-VectorXd getDeltaY(VectorXd &DiffVector,VectorXd &AprioriX, SparseMatrix<double,RowMajor> &K){
-    VectorXd result;
-    std::cout << "AprioriX rows,cols " << AprioriX.rows() << ","<< AprioriX.cols() << std::endl;
-    std::cout << "K rows,cols " << K.rows() << ","<< K.cols() << std::endl;
-    VectorXd yFit = K*AprioriX;
-    std::cout << "yFit rows,cols " << yFit.rows() << ","<< yFit.cols() << std::endl;
-    std::cout << "DiffVector rows,cols " << DiffVector.rows() << ","<< DiffVector.cols() << std::endl;
-    result = DiffVector - yFit;
-    return result;
-}
+
 
 
 SparseMatrix<double,RowMajor> getSAInv(double constraintVec,double constraintSrcOET,double constraintSrcTikhonov, double saDiagonal, int Rows,int Cols, SparseMatrix<double,RowMajor> &Rv ,QMap<int, QPoint>SrcPoints){
@@ -776,7 +850,7 @@ SparseMatrix<double,RowMajor> L1BlockTranspose(int dim,int blockrows){
     SparseMatrix<double,RowMajor> L1=L1Block(dim,blockrows);
 
     result = T.transpose()*L1*T;
-     std::cout << "L1BlockTranspose nonzeros: " << result.nonZeros() << std::endl;
+     //std::cout << "L1BlockTranspose nonzeros: " << result.nonZeros() << std::endl;
     return result;
 #endif
 }
@@ -792,10 +866,10 @@ VectorXd nextstepOET(const VectorXd& xapriori,const SparseMatrix<double,RowMajor
     VectorXd                      y1 =  SXinv*xapriori;
     SparseMatrix<double,RowMajor> y2 =  Kt*SEinv;
 
-    std::cout << "SXinv rows,cols " << SXinv.rows() << ","<< SXinv.cols() << std::endl;
-    std::cout << "deltay rows,cols " << deltay.rows() << ","<< deltay.cols() << std::endl;
-    std::cout << "y2 rows,cols " << y2.rows() << ","<< y2.cols() << std::endl;
-    std::cout << "y1 rows,cols " << y1.rows() << ","<< y1.cols() << std::endl;
+//    std::cout << "SXinv rows,cols " << SXinv.rows() << ","<< SXinv.cols() << std::endl;
+//    std::cout << "deltay rows,cols " << deltay.rows() << ","<< deltay.cols() << std::endl;
+//    std::cout << "y2 rows,cols " << y2.rows() << ","<< y2.cols() << std::endl;
+//    std::cout << "y1 rows,cols " << y1.rows() << ","<< y1.cols() << std::endl;
 
     VectorXd                      y = y1+VectorXd(y2*deltay);
     VectorXd result;
@@ -822,3 +896,43 @@ VectorXd nextstepOET(const VectorXd& xapriori,const SparseMatrix<double,RowMajor
 
     return result;
 }
+
+//MatrixXd getAK(SparseMatrix<double,RowMajor>  sainv,SparseMatrix<double,RowMajor> Seinv,SparseMatrix<double,RowMajor> K){
+//    SparseMatrix<double,RowMajor> KTSK = K.transpose()*Seinv*K;
+//    SparseMatrix<double,RowMajor> Sx = SparseMatrix<double,RowMajor>(KTSK) + sainv;
+//    MatrixXd AK;
+//    bool ok = true;
+//    // solve Sx*AK = KTSK
+//    //SimplicialLLt< SparseMatrix<double,RowMajor> > solver;
+//    SuperLU< SparseMatrix<double,RowMajor> > solver;
+//    //ConjugateGradient< SparseMatrix<double,RowMajor> > solver;
+//    solver.compute(Sx);
+//    if(solver.info()!=Success) {
+//      // decomposition failed
+//        ok = false;
+//        std::cout << "decomposition failed" << std::endl;
+//    }
+
+//    if (ok){
+//        AK = solver.;
+//        if(solver.info()!=Success) {
+//          // solving failed
+//            ok = false;
+//            std::cout << "solving failed" << std::endl;
+//        }
+//    }
+
+//    return AK;
+
+//}
+
+//function AK_OET,xapriori,sainv,deltay,Seinv,Kmat,dof
+//	;deltay=y-F(xapriori)
+//	KT=transpose(Kmat)
+//	Sx=Invert(KT#seinv#Kmat+sainv,/Double)
+//	G=Sx#KT#seinv
+//	AK=G#Kmat
+//	dof=trace(AK)
+//	print,'DOF:',dof
+//	return,AK
+//end

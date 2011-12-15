@@ -4,6 +4,8 @@
 #include <QDir>
 #include <QObject>
 #include <QDateTime>
+#include <iostream>
+#include <locale>
 
 QString DefaultFileNameFromSeqNumber(QString Directory, QString BaseName,int seqnumber,QDateTime datetime){
     QString seq = QString::number(seqnumber).rightJustified(5, '0');
@@ -384,15 +386,213 @@ void TSpectrum::setYPixelIndex(int index){
     }
 }
 
-bool TSpectrum::LoadSpectrum(QTextStream &file, QTextStream &meta){
-    float x;
-    float y;
+
+bool getnextword(char *linebuffer,int linebufferlength, char *wordbuffer, int wordbufferlength, int *bufferindex, int *wordbufferindex, bool *newline,bool replacedecimalpoint){
+    bool wasspace = true;
+    bool isspace = false;
+    bool result = false;
+    char decimalpoint = *(localeconv()->decimal_point);
+    while(*bufferindex<linebufferlength){
+        isspace = (linebuffer[*bufferindex] == ' ') || (linebuffer[*bufferindex] == '\t');
+        if(linebuffer[*bufferindex] == '\n'){
+            *newline = true;
+          //  break;
+        }
+   //     qDebug() << buffer[bufferindex];
+        if (!isspace){
+            if (*wordbufferindex > wordbufferlength){
+//                index = -1;//error
+                break;
+            }
+            if((linebuffer[*bufferindex] == '.')&&(replacedecimalpoint)){
+                wordbuffer[*wordbufferindex] = decimalpoint;
+            }else{
+                wordbuffer[*wordbufferindex] = linebuffer[*bufferindex];
+            }
+            (*wordbufferindex)++;
+        }else{
+            if ((!wasspace && isspace) || *newline){
+                wordbuffer[*wordbufferindex] = '\0';
+                *wordbufferindex = 0;
+                result = true;
+                break;
+            }
+        }
+        (*bufferindex)++;
+        wasspace = isspace;
+    }
+    return result;
+}
+
+QString getNextString(QFile *data,char *linebuffer,int *linebufferlength, int linebuffersize, char *wordbuffer, int wordbufferlength, int *bufferindex, int *wordbufferindex, bool *newline){
+
+    bool ok;
+
+    QString result;
+    if (*bufferindex == 0)
+        *linebufferlength = data->readLine(linebuffer,linebuffersize);
+    do{
+        if (*linebufferlength < 0)
+            *newline = true;
+        ok = getnextword(linebuffer,*linebufferlength, wordbuffer, wordbufferlength, bufferindex, wordbufferindex, newline,false);
+        if(!ok && !*newline){
+            *linebufferlength = data->readLine(linebuffer,linebuffersize);
+        }
+        if(ok){
+            result = QString(wordbuffer);
+        }
+    }while(!ok && !newline);
+
+
+
+    return result;
+}
+
+double getNextDouble(QFile *data,char *linebuffer,int *linebufferlength,int linebuffersize, char *wordbuffer, int wordbufferlength, int *bufferindex, int *wordbufferindex, bool *newline){
+
+    double result;
+    QString t;
+    t = getNextString(data,linebuffer,linebufferlength,linebuffersize, wordbuffer, wordbufferlength, bufferindex, wordbufferindex, newline);
+    result = t.toDouble();
+
+    return result;
+}
+
+bool TSpectrum::LoadMeta(QFile &meta,bool versionWithDateInLineWithoutSZA){
+    char wordbuffer[50];
+    int wordbufferindex=0;
+    char buffer[15000];
+    int lineLength;
+    int bufferindex=0;
+    bool newline=false;
+
+    float x,y;
+    TMirrorCoordinate mc;
+    QPointF ac;
+    QString tm1;
+    QString tm2;
+
+    //QString line_str = meta.readLine();
+    //QTextStream line(&line_str);
+    tm1 = getNextString(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+    tm2 = getNextString(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+    tm1 = tm1+" "+tm2;
+    datetime = QDateTime::fromString(tm1,"dd.MM.yyyy hh:mm:ss");
+
+    x = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+    y = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+    if (!versionWithDateInLineWithoutSZA) // There was a bug in TMirrorCoordinate.setMotorCoordinate(x,y) sign of Y was wrong
+        y = -y;                          //fixed 13.nov.2011 (the same date when date introduced in spectrumfile)
+    ac.setX(x);
+    ac.setY(y);
+    mc.setAngleCoordinate(ac);
+    setMirrorCoordinate(&mc);
+    QString integstyle;
+    integstyle = getNextString(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+
+    if(integstyle == "auto"){
+        IntegConf.autoenabled = true;
+        IntegConf.targetPeak = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+        IntegConf.targetCorridor = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+        IntegConf.maxIntegTime = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+        IntegTime = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+    }else{
+        bool ok;
+        IntegConf.autoenabled = false;
+        IntegConf.targetPeak = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+        IntegConf.targetCorridor = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+        integstyle = getNextString(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+        if (integstyle == "nan")
+            IntegConf.maxIntegTime = 0;
+        else
+            IntegConf.maxIntegTime = integstyle.toDouble(&ok);
+        IntegConf.fixedIntegtime = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+        IntegTime = IntegConf.fixedIntegtime;
+    }
+    AvgCount = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+    Temperature = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+    MaxPossibleValue = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+    WLCoefficients.Offset = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+    WLCoefficients.Coeff1 = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+    WLCoefficients.Coeff2 = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+    WLCoefficients.Coeff3 = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+    WLCoefficients.uninitialized = false;
+    SpectrometerSerialNumber = getNextString(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+    x = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+    y = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+    Tilt.setY(y);
+    Tilt.setX(x);
+    mc.pixelIndexX = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+    mc.pixelIndexY = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+
+    hash = -1;
+}
+
+int TSpectrum::LoadSpectraldata(QFile &data,bool &versionWithDateInLineWithoutSZA,bool isdark){
+    int start = 2;
+    int index = 0;
+    char wordbuffer[50];
+    int wordbufferindex=0;
+    char buffer[15000];
+    int lineLength;
+    int bufferindex=0;
+    bool newline=false;
+    bool ok;
+    bool headeranalyzing = !isdark;
+    if (isdark)
+        start = 0;
+    //char decimalpoint = std::use_facet<std::numpunct<char> >(std::cout.getloc()).decimal_point();
+    //decimalpoint = *(localeconv()->decimal_point);
+    while(!newline){
+        lineLength = data.readLine(&buffer[0],sizeof(buffer));
+        if (lineLength < 0)
+            newline = true;
+        do{
+            ok = getnextword(buffer,lineLength, wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline,true);
+            if(ok){
+
+                if (headeranalyzing){
+                    if (index == 2){//day
+                        QString w = QString(wordbuffer);
+                        if (w.contains("/")){
+                            versionWithDateInLineWithoutSZA = true;
+                            start = 4;
+                        }else{
+                            start = 2;
+                        }
+                        headeranalyzing = false;
+                    }
+                }
+                if (index >= start){
+                    double val;
+                    val  = atof(wordbuffer);
+                   //qDebug() << "["<<index-start<<"]" << val;
+                    spectrum[index-start] = val;
+                    if(!ok){
+                        index = -1;
+                        break;
+                    }
+                }
+                index++;
+                wordbufferindex = 0;
+                if(index >= MAXWAVELEGNTH_BUFFER_ELEMTENTS)
+                    break;
+            }
+        }while(ok&&!newline);
+    }
+    index = index - start;
+    NumOfSpectrPixels = index;
+
+    return NumOfSpectrPixels;
+}
+
+bool TSpectrum::LoadSpectrum(QFile &file, QFile &meta){
+
     int index=0;
     bool fileatend = false;
     bool result = true;
     bool versionWithDateInLineWithoutSZA=false;
     bool DarkSpectrum = false;
-    QString nl;
     if (!file.atEnd()) {
         if (!meta.atEnd()&&!fileatend){
             int pos = meta.pos();
@@ -414,83 +614,8 @@ bool TSpectrum::LoadSpectrum(QTextStream &file, QTextStream &meta){
             meta.seek(pos);
         }
         bool ok;
-        QString w;
-        if (!DarkSpectrum){
-            int oldPos = file.pos();
-            file >> w;
-            file >> w;
-            file >> w;
-            if (w.contains("/")){
-                versionWithDateInLineWithoutSZA = true;
-            }
-            file.seek(oldPos);
-
-            if (versionWithDateInLineWithoutSZA){
-                file >> w;//Azimuth viewing angle
-                file >> w;//Elevation viewing angle
-                file >> w;//day
-                file >> w;//decimaltime
-            }else{
-                file >> x;
-                file >> y;
-            }
-        }
         ok = true;
-
-        while(!file.atEnd() && ok){
-            double val;
-            bool end=false;
-            nl = file.read(1);
-            int chaindex=0;
-            if (file.atEnd()){
-                end = true;
-                break;
-            }
-            while (nl[chaindex].isSpace() && (!file.atEnd())){
-                if (nl[chaindex] == QChar('\n')){
-                    end = true;
-                    break;
-                }
-                nl = nl + file.read(1);
-                if(file.atEnd()){
-                    end = true;
-                    break;
-                }
-
-                chaindex++;
-            }
-            if (end){
-               // index++;
-                break;
-            }
-            end = false;
-            while ((!nl[chaindex].isSpace()) && (!file.atEnd())){
-
-                nl = nl + file.read(1);
-                if(file.atEnd()){
-                    end = true;
-                    break;
-                }
-                chaindex++;
-                if (nl[chaindex] == QChar('\n')){
-                    end = true;
-                    break;
-                }
-            }
-
-            w = nl;
-            val  = w.toDouble(&ok);
-            spectrum[index] = val;
-
-            index++;
-            if(end)
-                break;
-            if(index >= MAXWAVELEGNTH_BUFFER_ELEMTENTS)
-                break;
-            if(index >= 2047)
-                w = "";
-        }
-        NumOfSpectrPixels = index;
+        index = LoadSpectraldata(file,versionWithDateInLineWithoutSZA,DarkSpectrum);
         hash = -1;
         if(index == 0)
             result = false;
@@ -498,65 +623,10 @@ bool TSpectrum::LoadSpectrum(QTextStream &file, QTextStream &meta){
         result = false;
         fileatend = true;
     }
-    if (!meta.atEnd()&&!fileatend){
-        TMirrorCoordinate mc;
-        QPointF ac;
-        QString tm1;
-        QString tm2;
-        QString line_str = meta.readLine();
-        QTextStream line(&line_str);
-        line >> tm1;
-        line >> tm2;
-        tm1 = tm1+" "+tm2;
-        datetime = QDateTime::fromString(tm1,"dd.MM.yyyy hh:mm:ss");
-        line >> x;
+    if (!meta.atEnd()&&result){
+       LoadMeta(meta,versionWithDateInLineWithoutSZA);
 
-
-        line >> y;
-        if (!versionWithDateInLineWithoutSZA) // There was a bug in TMirrorCoordinate.setMotorCoordinate(x,y) sign of Y was wrong
-            y = -y;                          //fixed 13.nov.2011 (the same date when date introduced in spectrumfile)
-        ac.setX(x);
-        ac.setY(y);
-        mc.setAngleCoordinate(ac);
-        setMirrorCoordinate(&mc);
-        QString integstyle;
-        line >> integstyle;
-
-        if(integstyle == "auto"){
-            IntegConf.autoenabled = true;
-            line >> IntegConf.targetPeak;
-            line >> IntegConf.targetCorridor;
-            line >> IntegConf.maxIntegTime;
-            line >> IntegTime;
-        }else{
-            bool ok;
-            IntegConf.autoenabled = false;
-            line >> IntegConf.targetPeak;
-            line >> IntegConf.targetCorridor;
-            line >> integstyle;
-            if (integstyle == "nan")
-                IntegConf.maxIntegTime = 0;
-            else
-                IntegConf.maxIntegTime = integstyle.toDouble(&ok);
-            line >> IntegConf.fixedIntegtime;
-            IntegTime = IntegConf.fixedIntegtime;
-        }
-        line >> AvgCount;
-        line >> Temperature;
-        line >> MaxPossibleValue;
-        line >> WLCoefficients.Offset;
-        line >> WLCoefficients.Coeff1;
-        line >> WLCoefficients.Coeff2;
-        line >> WLCoefficients.Coeff3;
-        WLCoefficients.uninitialized = false;
-        line >> SpectrometerSerialNumber;
-        line >> x; Tilt.setX(x);
-        line >> y; Tilt.setY(y);
-        line >> mc.pixelIndexX;
-        line >> mc.pixelIndexY;
-
-        hash = -1;
-      //  HWDriver->hwdOverwriteWLCoefficients(&WLCoefficients);
+       Wavelength->setCoefficients(&WLCoefficients);
     }else{
         result = false;
     }
@@ -572,10 +642,9 @@ bool TSpectrum::LoadSpectrum_(QString fn,bool istmp){
     QFile dataf(fn);
     QFile metaf(fnToMetafn(fn));
     if ((dataf.open(QIODevice::ReadOnly | QIODevice::Text))&&(metaf.open(QIODevice::ReadOnly | QIODevice::Text))){
-        QTextStream data(&dataf);
-        QTextStream meta(&metaf);
-        meta.readLine();
-        result = LoadSpectrum(data,meta);
+     //   QTextStream meta(&metaf);
+        metaf.readLine();
+        result = LoadSpectrum(dataf,metaf);
         dataf.close();
         metaf.close();
 

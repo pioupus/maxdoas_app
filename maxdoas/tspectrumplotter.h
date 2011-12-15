@@ -107,6 +107,7 @@ public slots:
     void setLegend(QString title,int pos, int plotindex,int curveindex = -1);
     void setCurveColor(int color,int plotindex = -1);
 
+    void setColorbarMinMax(float Min,float Max);
     void plotVMarker(double x,QString title,int plotindex);
     void plotHMarker(double y,QString title,int plotindex);
     void plotXYMarker(double x,double y,QString title,int plotindex);
@@ -136,6 +137,8 @@ private:
     QPair<double,double> nextXRange;
     QPair<double,double> nextYRange;
     QColor *nextColor;
+    float nextColorbarMin;
+    float nextColorbarMax;
     bool plotAutoIntegrationtimeParametersEnabled;
 };
 

@@ -1448,9 +1448,9 @@ THWDriver::THWDriver()
     TiltTimer->start(5000);
    // hwdSetComPort("/dev/ttyUSB0");
     WavelengthBuffer = TWavelengthbuffer::instance();
-    memset(&SpectrCoefficients,0,sizeof(SpectrCoefficients));
-    SpectrCoefficients.uninitialized = true;
-    SpectrCoefficients.Coeff1 = 1;
+   // memset(&SpectrCoefficients,0,sizeof(SpectrCoefficients));
+//    SpectrCoefficients.uninitialized = true;
+//    SpectrCoefficients.Coeff1 = 1;
 }
 
 THWDriver::~THWDriver(){
@@ -1534,10 +1534,6 @@ void THWDriver::hwdSlothreadFinished(){
         emit hwdSigHWThreadFinished();
 }
 
-TSPectrWLCoefficients THWDriver::hwdGetWLCoefficients()
-{
-    return this->SpectrCoefficients;
-}
 
 
 
@@ -1771,19 +1767,22 @@ void THWDriver::hwdMeasureSpectrum(uint avg, uint integrTime,THWShutterCMD shutt
 
 void THWDriver::hwdOverwriteWLCoefficients(TSPectrWLCoefficients* WlCoefficients)
 {
-    if (!WlCoefficients->uninitialized){
-        if (WavelengthBuffer != NULL){
-            for (uint i = 0;i<MAXWAVELEGNTH_BUFFER_ELEMTENTS;i++){
-                WavelengthBuffer->buf[i] = WlCoefficients->Offset+
-                                           (double)i*WlCoefficients->Coeff1+
-                                           pow((double)i,2.0)*WlCoefficients->Coeff2+
-                                           pow((double)i,3.0)*WlCoefficients->Coeff3;
-            }
-        }
-        memcpy(&this->SpectrCoefficients,WlCoefficients,sizeof(TSPectrWLCoefficients));
-        this->SpectrCoefficients.overWrittenFromFile = true;
-        this->SpectrCoefficients.uninitialized = false;
-    }
+//    if (!WlCoefficients->uninitialized){
+//        if (WavelengthBuffer != NULL){
+//            for (uint i = 0;i<MAXWAVELEGNTH_BUFFER_ELEMTENTS;i++){
+//                WavelengthBuffer->buf[i] = WlCoefficients->Offset+
+//                                           (double)i*WlCoefficients->Coeff1+
+//                                           pow((double)i,2.0)*WlCoefficients->Coeff2+
+//                                           pow((double)i,3.0)*WlCoefficients->Coeff3;
+//            }
+//        }
+//        memcpy(&this->SpectrCoefficients,WlCoefficients,sizeof(TSPectrWLCoefficients));
+//        this->SpectrCoefficients.overWrittenFromFile = true;
+//        this->SpectrCoefficients.uninitialized = false;
+//        WavelengthBuffer->setCoefficients(WlCoefficients);
+//    }
+    WlCoefficients->overWrittenFromFile = true;
+    WavelengthBuffer->setCoefficients(WlCoefficients);
 }
 
 uint THWDriver::hwdGetMinimumIntegrationTime(){
@@ -1810,17 +1809,18 @@ uint THWDriver::hwdGetSpectrum(TSpectrum *Spectrum)
     Spectrum->Tilt = *ActualTilt;
     Spectrum->Temperature = (Temperatures[sensorIDtoInt(tsPeltier)]+Temperatures[sensorIDtoInt(tsSpectrometer)])/2;
 
-    if (SpectrCoefficients.uninitialized){
-        memcpy(&SpectrCoefficients,&coef,sizeof(TSPectrWLCoefficients));
-        if (WavelengthBuffer != NULL){
-            for (uint i = 0;i<MAXWAVELEGNTH_BUFFER_ELEMTENTS;i++){
-                WavelengthBuffer->buf[i] = SpectrCoefficients.Offset+
-                                           (double)i*SpectrCoefficients.Coeff1+
-                                           pow((double)i,2.0)*SpectrCoefficients.Coeff2+
-                                           pow((double)i,3.0)*SpectrCoefficients.Coeff3;
-            }
-        }
-    }
+    WavelengthBuffer->setCoefficients(&coef);
+//    if (SpectrCoefficients.uninitialized){
+//        memcpy(&SpectrCoefficients,&coef,sizeof(TSPectrWLCoefficients));
+//        if (WavelengthBuffer != NULL){
+//            for (uint i = 0;i<MAXWAVELEGNTH_BUFFER_ELEMTENTS;i++){
+//                WavelengthBuffer->buf[i] = SpectrCoefficients.Offset+
+//                                           (double)i*SpectrCoefficients.Coeff1+
+//                                           pow((double)i,2.0)*SpectrCoefficients.Coeff2+
+//                                           pow((double)i,3.0)*SpectrCoefficients.Coeff3;
+//            }
+//        }
+//    }
 
     return Spectrum->NumOfSpectrPixels;
 }
@@ -1849,7 +1849,8 @@ QList<QString> THWDriver::hwdGetListSpectrometer()
 
 void THWDriver::hwdOpenSpectrometer(QString SerialNumber)
 {
-    SpectrCoefficients.uninitialized = true;
+    WavelengthBuffer->setUnintialised();
+    //SpectrCoefficients.uninitialized = true;
     emit hwdtSigOpenSpectrometer(SerialNumber);
 }
 

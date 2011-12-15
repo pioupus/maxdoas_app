@@ -39,10 +39,12 @@ public:
     int getyCount();
     bool getPositionArray(TRetrieval* **buffer, int cntX, int cntY);
     TRetrievalImage* getIntensityImage();
+
     int getPixelIndex(TMirrorCoordinate* mc);
     QString getFileName();
     QDateTime getDateTime();
 private:
+    int test;
     QHash<QPair<int,int>, QPair<TSpectrum*,double> > spectrumtable;
     QDateTime FirstDate;
     QList<TSpectrum*> spectrumlist;
@@ -57,6 +59,8 @@ private:
     bool getPositionArrayRect(TPatternType *pt, TRetrieval* **buffer, int cntX, int cntY);
     bool getPositionArrayLine(TPatternType *pt, TRetrieval* **buffer, int cntX, int cntY);
     QString fn;
+    TRetrievalImage* IntenseImg;
+    bool calcIntensityImage();
 public slots:
     void plot(int plotIndex,int Pixelsize=10);
     QString getSpectSerialNo();

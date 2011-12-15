@@ -3,13 +3,30 @@
 #include <QString>
 #include <QSettings>
 
-#include "maxdoassettings.h"
+//#include "maxdoassettings.h"
 
 #include <QMutex>
+
+#define MAXWAVELEGNTH_BUFFER_ELEMTENTS 4096
+
+struct TSPectrWLCoefficients {
+    double Offset;
+    double Coeff1;
+    double Coeff2;
+    double Coeff3;
+    bool overWrittenFromFile;
+    bool uninitialized;
+} ;
 
 class TWavelengthbuffer
 {
 public:
+    void setCoefficients(TSPectrWLCoefficients* coeff);
+    TSPectrWLCoefficients hwdGetWLCoefficients();
+
+    void setUnintialised();
+    bool isInitialised();
+
 
     double buf[MAXWAVELEGNTH_BUFFER_ELEMTENTS];
 
@@ -21,7 +38,7 @@ public:
             mutex.lock();
 
             if (!m_Instance)
-                m_Instance = new TWavelengthbuffer;
+                m_Instance = new TWavelengthbuffer();
 
             mutex.unlock();
         }
@@ -39,7 +56,9 @@ public:
     }
 
 private:
-    TWavelengthbuffer(){};
+
+
+    TWavelengthbuffer();
     ~TWavelengthbuffer();
     TWavelengthbuffer(const TWavelengthbuffer &); // hide copy constructor
     TWavelengthbuffer& operator=(const TWavelengthbuffer &); // hide assign op
@@ -47,5 +66,7 @@ private:
                                  // if we try to use those two functions by accident
 
     static TWavelengthbuffer* m_Instance;
+    TSPectrWLCoefficients SpectrCoefficients;
+    bool initialised;
 };
 #endif // WAVELEGNTHBUFFER_H

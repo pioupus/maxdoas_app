@@ -254,6 +254,8 @@ TSpectrumPlotter::TSpectrumPlotter(QObject *parent)
     nextYRange.second = 0.0;
     nextColor = NULL;
     plotAutoIntegrationtimeParametersEnabled = false;
+    nextColorbarMin = 0;
+    nextColorbarMax = 0;
 }
 
 
@@ -402,7 +404,7 @@ void TSpectrumPlotter::plotVectorField(TRetrievalImage *img,int plotIndex,int av
                 PosX /= (float)sum;
                 PosY /= (float)sum;
                 valavg /= (float)sum;
-                if (((excludeZero && (valavg != 0)) || !excludeZero) &&  (WindAvg != QPointF(0,0))){
+                if (((excludeZero && (valavg > 10)) || !excludeZero) &&  (WindAvg != QPointF(0,0))){
                     marker = new QwtMarkerArrow();
 
                     marker->setSymbol( new QwtSymbolArrow(QwtSymbolArrow::  UserStyle,
@@ -413,8 +415,8 @@ void TSpectrumPlotter::plotVectorField(TRetrievalImage *img,int plotIndex,int av
                         float norm = sqrt(x*x+y*y);
                         x /= norm;
                         y /= norm;
-                        x *= average;
-                        y *= average;
+                        x *= average/2;
+                        y *= average/2;
                     }
                     marker->setValue(PosX,PosY,x,y);
                     marker->attach(plot->getPlot());
@@ -452,9 +454,21 @@ void TSpectrumPlotter::plotRetrievalImage(TRetrievalImage *img,int plotIndex, in
         }
     }
     s->setPenWidth(Pixelsize);
-    QwtInterval interval(minval,maxval);
+    QwtInterval interval;
+    if (nextColorbarMin == nextColorbarMax)
+        interval.setInterval(minval,maxval);
+    else
+        interval.setInterval(nextColorbarMin,nextColorbarMax);
     s->setColorRange(interval);
     s->setSamples(*vec);
+
+    plot->getPlot()->enableAxis(QwtPlot::xTop,true);
+    QwtScaleWidget *rightAxis = plot->getPlot()->axisWidget(QwtPlot::xTop);
+    rightAxis->setTitle("Intensity");
+    rightAxis->setColorBarEnabled(true);
+    rightAxis->setColorMap( interval, new ColorMap());
+    plot->getPlot()->setAxisScale(QwtPlot::xTop,interval.minValue(),interval.maxValue());
+    rightAxis->setColorBarWidth(20);
     plot->getPlot()->replot();
 }
 
@@ -569,6 +583,11 @@ void TSpectrumPlotter::setCurveColor(int color,int plotindex){
         delete nextColor;
         nextColor = new QColor(intToColor(color));
     }
+}
+
+void TSpectrumPlotter::setColorbarMinMax(float Min,float Max){
+    nextColorbarMin = Min;
+    nextColorbarMax = Max;
 }
 
 void TSpectrumPlotter::plotVMarker(double x,QString title,int plotindex){

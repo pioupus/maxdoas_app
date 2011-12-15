@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QDateTime>
 #include <QTextStream>
+#include <QFile>
 
 #include "wavelengthbuffer.h"
 #include "maxdoassettings.h"
@@ -23,7 +24,7 @@ public:
     ~TSpectrum();
     void SaveSpectrum(QTextStream &file, QTextStream &meta, bool DarkSpectrum);
 
-    bool LoadSpectrum(QTextStream &file, QTextStream &meta);
+    bool LoadSpectrum(QFile &file, QFile &meta);
 
     bool LoadSpectrEMT(QString fn);
 
@@ -97,6 +98,8 @@ public slots:
 private:
     void SaveSpectrum_(QString fn,bool Dark,bool istmp);
     bool LoadSpectrum_(QString fn,bool istmp);
+    bool LoadMeta(QFile &meta,bool versionWithDateInLineWithoutSZA);
+    int LoadSpectraldata(QFile &data,bool &versionWithDateInLineWithoutSZA,bool isdark);
     bool isSpectrumChanged();
     double rmsval;
     double maxval;

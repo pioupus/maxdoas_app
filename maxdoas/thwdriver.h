@@ -208,7 +208,7 @@ public:
     THWDriver();
     ~THWDriver();
     void hwdOverwriteWLCoefficients(TSPectrWLCoefficients* WlCoefficients);
-    TSPectrWLCoefficients hwdGetWLCoefficients();
+    //TSPectrWLCoefficients hwdGetWLCoefficients();
 
     void hwdSetComPort(TCOMPortConf ComConf);
     void hwdSetBaud(AbstractSerial::BaudRate baud);
@@ -330,7 +330,7 @@ private:
 
     THWDriverThread *HWDriverObject;
     QThreadEx *HWDriverThread;
-    TSPectrWLCoefficients SpectrCoefficients;
+   // TSPectrWLCoefficients SpectrCoefficients;
     QStringList *ComPortList;
     QTimer *TemperatureTimer;
     QTimer *TiltTimer;

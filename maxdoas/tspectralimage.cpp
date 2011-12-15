@@ -18,6 +18,7 @@ TSpectralImage::TSpectralImage(TScanPath *parent) :
     rmsSpectrum = NULL;
     stdDevSpectrum = NULL;
     maxRMSPos = NULL;
+    IntenseImg = NULL;
     fn = "";
     if (parent != NULL){
         QList<TPatternType*> ps = parent->getPatternSources();
@@ -50,6 +51,8 @@ TSpectralImage::~TSpectralImage(){
         delete pt;
     }
     Patternsources.clear();
+    delete IntenseImg;
+    IntenseImg = NULL;
 }
 
 int TSpectralImage::getxCount(){
@@ -161,12 +164,14 @@ bool TSpectralImage::getPositionArrayRect(TPatternType *pt, TRetrieval* **buffer
         getPositionLine(pt->edge3, pt->edge4, PointList, pt->divy, LineLeft,false);
         if (LineRight.count() != pt->divy){
             logger()->error("Could not realign Rect Pattern edges in file "+fn);
+            result = false;
         }
     }
     if (LineLeft.count() != pt->divy){
         logger()->error("Could not realign Rect Pattern edges in file "+fn);
+        result = false;
     }
-    result = LineLeft.count()==LineRight.count();
+    result = (LineLeft.count()==LineRight.count()) && result;
     int i=0;
 
     QMapIterator<float, TMirrorCoordinate*> i_r(LineRight);
@@ -182,6 +187,7 @@ bool TSpectralImage::getPositionArrayRect(TPatternType *pt, TRetrieval* **buffer
         getPositionLine(mc_l->getAngleCoordinate(), mc_r->getAngleCoordinate(), PointList, pt->divx, LineHoriz,true);
         if (LineHoriz.count() != pt->divx){
             logger()->error("Could not realign Rect Pattern edges in file "+fn);
+            result = false;
         }
         QMapIterator<float, TMirrorCoordinate*> i_h(LineHoriz);
         i_h.toBack();
@@ -225,6 +231,7 @@ bool TSpectralImage::getPositionArrayLine(TPatternType *pt,  TRetrieval* **buffe
         getPositionLine(pt->edge1, pt->edge2, PointList, pt->divx, Line,true);
         if (Line.count() == 0 && pt->divx != 0){
             logger()->error("Could not realign Line Pattern edges in file "+fn);
+            result = false;
         }
     }
     QMapIterator<float, TMirrorCoordinate*> i_l(Line);
@@ -269,20 +276,40 @@ bool TSpectralImage::getPositionArray( TRetrieval* **buffer, int cntX, int cntY)
     return result;
 }
 
-TRetrievalImage* TSpectralImage::getIntensityImage(){
-    TRetrievalImage* result=new TRetrievalImage(getxCount(),getyCount());
-    if  (getPositionArray( result->valueBuffer, result->getWidth(), result->getHeight())){
-        for(int i = 0;i<result->getHeight();i++){
-            for(int n = 0;n<result->getWidth();n++){
-                TRetrieval *tr = result->valueBuffer[i][n];
+bool TSpectralImage::calcIntensityImage(){
+    delete IntenseImg;
+    IntenseImg = NULL;
+    bool result=false;
+    IntenseImg=new TRetrievalImage(getxCount(),getyCount());
+    if  (getPositionArray( IntenseImg->valueBuffer, IntenseImg->getWidth(), IntenseImg->getHeight())){
+        result = true;
+        for(int i = 0;i<IntenseImg->getHeight();i++){
+            for(int n = 0;n<IntenseImg->getWidth();n++){
+                TRetrieval *tr = IntenseImg->valueBuffer[i][n];
                 int index = tr->mirrorCoordinate->pixelIndex;
                 //double val = spectrumlist[index]->ScanPixelIndex;//for testing porpuses
                 double val = spectrumlist[index]->rms();
-                result->valueBuffer[i][n]->val = val;
+                IntenseImg->valueBuffer[i][n]->val = val;
             }
         }
+        QHashIterator<QPair<int,int>,  QPair<TSpectrum*,double> > i(spectrumtable);
+        while (i.hasNext()) {
+            QPair<TSpectrum*,double> val;
+            val = i.next().value();
+
+            val.second = val.first->getHash();
+            spectrumtable[i.key()] = val;
+        }
+        return result;
     }
 
+}
+
+TRetrievalImage* TSpectralImage::getIntensityImage(){
+    isChanged();
+    if (IntenseImg == NULL)
+        calcIntensityImage();
+    TRetrievalImage* result=new TRetrievalImage(IntenseImg);
     //buffer
     return result;
 }
@@ -334,10 +361,12 @@ void TSpectralImage::add(TMirrorCoordinate* coord, TSpectrum* spektrum){
     delete rmsSpectrum;
     delete stdDevSpectrum;
     delete maxRMSPos;
+    delete IntenseImg;
     stdDevSpectrum = NULL;
     rmsSpectrum = NULL;
     meanSpectrum = NULL;
     maxRMSPos = NULL;
+    IntenseImg = NULL;
 }
 
 void TSpectralImage::save(QString FileName){
@@ -428,13 +457,20 @@ bool TSpectralImage::Load(QString fn){
     if ((dataf.open(QIODevice::ReadOnly | QIODevice::Text))&&(metaf.open(QIODevice::ReadOnly | QIODevice::Text))){
         bool ok;
         TSpectrum *spec;
-        QTextStream data(&dataf);
-        QTextStream meta(&metaf);
-        meta.readLine();
+        //QTextStream data(&dataf);
+        //QTextStream meta(&metaf);
+        metaf.readLine(); //!!!FIXME!!!
+//        QByteArray a = dataf.readLine(512*1024);
+//        char space = ' ';
+//        QList<QByteArray> list = a.split(space);
+//        QString line(list[0]);
+//        test = line.length();
+//        if (line=="")
+//            ok= false;
         ok = true;
         while (ok){
             spec = new TSpectrum();
-            ok = spec->LoadSpectrum(data,meta);
+            ok = spec->LoadSpectrum(dataf,metaf);
             if(ok){
                 add(spec->getMirrorCoordinate(), spec);
                 result = true;
@@ -443,16 +479,16 @@ bool TSpectralImage::Load(QString fn){
             }
         }
         ok = true;
-        while(!meta.atEnd()){
+        while(!metaf.atEnd()){
 
-            QString line_str = meta.readLine();
+            QString line_str = metaf.readLine();
             QTextStream line(&line_str);
             QString t;
             line >> t;
             if (t.startsWith("pattern")){
                 while (ok){
                     TPatternType *pt = new(TPatternType);
-                    ok = pt->load(meta);
+                    ok = pt->load(metaf);
                     if(ok)
                         Patternsources.append(pt);
                     else
@@ -463,9 +499,11 @@ bool TSpectralImage::Load(QString fn){
         }
         dataf.close();
         metaf.close();
-
+        delete IntenseImg;
+        IntenseImg = NULL;
+        isChanged();
+        result = calcIntensityImage();
     }
-
     return result;
 }
 
@@ -487,10 +525,12 @@ bool TSpectralImage::isChanged(){
             delete rmsSpectrum;
             delete stdDevSpectrum;
             delete maxRMSPos;
+            delete IntenseImg;
             stdDevSpectrum = NULL;
             rmsSpectrum = NULL;
             meanSpectrum = NULL;
             maxRMSPos = NULL;
+            IntenseImg = NULL;
             break;
         }
     }

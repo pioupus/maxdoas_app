@@ -42,8 +42,8 @@ QT += svg
 QT += xml
 DEFINES += LINUX \
     EIGEN_YES_I_KNOW_SPARSE_MODULE_IS_NOT_STABLE_YET
-
-QMAKE_CXXFLAGS += -msse2 -fopenmp
+QMAKE_CXXFLAGS += -msse2 \
+    -fopenmp
 
 # Input
 HEADERS += maxdoas/mainwindow.h \
@@ -70,7 +70,8 @@ HEADERS += maxdoas/mainwindow.h \
     maxdoas/tdirlist.h \
     maxdoas/tvectorsolver.h \
     maxdoas/vectorsolverservice.h \
-    maxdoas/matrixoutputs.h
+    maxdoas/matrixoutputs.h \
+    maxdoas/temissionrate.h
 FORMS += maxdoas/mainwindow.ui \
     maxdoas/tfrmtempctrl.ui \
     maxdoas/tfrmspectrconfig.ui
@@ -99,4 +100,5 @@ SOURCES += maxdoas/main.cpp \
     maxdoas/tdirlist.cpp \
     maxdoas/tvectorsolver.cpp \
     maxdoas/vectorsolverservice.cpp \
-    maxdoas/vectorsolverservicetester.cpp
+    maxdoas/vectorsolverservicetester.cpp \
+    maxdoas/temissionrate.cpp

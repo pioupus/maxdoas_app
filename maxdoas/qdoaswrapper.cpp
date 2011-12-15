@@ -429,8 +429,9 @@ bool QDoasWrapper::retrieve(TSpectralImage *specImage, QDoasConfigFile *cf){
     QString result = retrieve(infile,specImage->getFileName(),cf);
     if (lastposImage != NULL)
         delete lastposImage;
-    lastposImage = new TRetrievalImage(specImage->getxCount(),specImage->getyCount());
-    specImage->getPositionArray(lastposImage->valueBuffer,lastposImage->getWidth(),lastposImage->getHeight());
+    lastposImage = specImage->getIntensityImage();
+//    lastposImage = new TRetrievalImage(specImage->getxCount(),specImage->getyCount());
+//    specImage->getPositionArray(lastposImage->valueBuffer,lastposImage->getWidth(),lastposImage->getHeight());
     lastposImage->datetime = specImage->getDateTime();
     QFile::remove(infile);
     return !result.isEmpty();

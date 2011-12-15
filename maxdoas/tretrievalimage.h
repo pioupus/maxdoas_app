@@ -31,6 +31,8 @@ public slots:
     void save(QString fn);
     void plot(int plotIndex, int Pixelsize=10);
     void oplotWindField(int plotIndex, int Average=1, bool normalize=true,bool excludezero=true);
+    float getMinVal();
+    float getMaxVal();
 private:
     void inibuffer(int width, int height, TRetrievalImage *other);
     int width;

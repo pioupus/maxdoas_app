@@ -9,6 +9,7 @@
 #include <QScriptValue>
 #include <QScriptable>
 #include <QTextStream>
+#include <QFile>
 
 enum TPatternStyle {psNone,psRect,psEllipse,psLine};
 
@@ -18,7 +19,7 @@ public:
     TPatternType();
 
     void save(QTextStream &meta);
-    bool load(QTextStream &meta);
+    bool load(QFile &meta);
 
     void setLine(QPointF p1,QPointF p2, uint Divisions);
     void setRectangle(QPointF p1,QPointF p2, QPointF p3, QPointF p4, QPoint Divisions);
@@ -45,13 +46,19 @@ class TParamLine
 {
 public:
     TParamLine(QPointF P1,QPointF P2);
+    TParamLine();
+    TParamLine(TParamLine* other);
+    void iniDiff(QPointF Offset,QPointF Diff);
     void ini(QPointF P1,QPointF P2);
     float getCollisionParam(TParamLine *line);
     QPointF getPointbyParam(float p);
     float getLength();
+    float getLength(float Param);
     float containsPoint(QPointF P, bool &contains);
+    TParamLine* getOrthoLine(QPointF P);
     QPointF getOffset();
     QPointF getDiffVec();
+    float GetDistanceToPoint(QPointF Point);
 
 private:
     QPointF d;

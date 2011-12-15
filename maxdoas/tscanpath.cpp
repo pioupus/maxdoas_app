@@ -93,7 +93,7 @@ void TPatternType::save(QTextStream &meta){
     }
 }
 
-bool TPatternType::load(QTextStream &meta){
+bool TPatternType::load(QFile &meta){
     int fields = 0;
     float f;
     QString line_str = meta.readLine();
@@ -197,6 +197,20 @@ TParamLine::TParamLine(QPointF P1,QPointF P2){
     ini(P1,P2);
 }
 
+TParamLine::TParamLine(){
+
+}
+
+TParamLine::TParamLine(TParamLine* other){
+    Offset = other->Offset;
+    d = other->d;
+}
+
+void TParamLine::iniDiff(QPointF Offset,QPointF Diff){
+    this->Offset = Offset;
+    d = Diff;
+}
+
 void TParamLine::ini(QPointF P1,QPointF P2){
     Offset = P1;
     d = P2-P1;
@@ -229,12 +243,18 @@ float TParamLine::containsPoint(QPointF P, bool &contains){
     return a;
 }
 
+
 QPointF TParamLine::getPointbyParam(float p){
     return Offset+d*p;
 }
 
 float TParamLine::getLength(){
     return sqrt(pow(d.x(),2.0)+pow(d.y(),2.0));
+}
+
+float TParamLine::getLength(float Param){
+    QPointF P = getPointbyParam(Param);
+    return sqrt(pow(Offset.x()-P.x(),2.0)+pow(Offset.y()-P.y(),2.0));
 }
 
 QPointF TParamLine::getOffset(){
@@ -245,6 +265,21 @@ QPointF TParamLine::getDiffVec(){
     return d;
 }
 
+TParamLine* TParamLine::getOrthoLine(QPointF P){
+    TParamLine* result = new TParamLine();
+    QPointF Direction = QPointF(d.x(),-d.y());
+    result->iniDiff(P,Direction);
+    return result;
+}
+
+float TParamLine::GetDistanceToPoint(QPointF Point){
+    float result;
+    TParamLine* Distance = getOrthoLine(Point);
+    result = getCollisionParam(Distance);
+    result = Distance->getLength(result);
+    delete Distance;
+    return result;
+}
 
 TScanPath::TScanPath(QObject *parent) :
     QObject(parent)

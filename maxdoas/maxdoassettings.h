@@ -4,15 +4,10 @@
 #include <QSettings>
 
 #include <QMutex>
-#define MAXWAVELEGNTH_BUFFER_ELEMTENTS 4096
-struct TSPectrWLCoefficients{
-    double Offset;
-    double Coeff1;
-    double Coeff2;
-    double Coeff3;
-    bool overWrittenFromFile;
-    bool uninitialized;
-};
+#include "wavelengthbuffer.h"
+
+
+
 
 struct TAutoIntegConf{
     bool autoenabled;

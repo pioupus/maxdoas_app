@@ -35,7 +35,7 @@ QMap<int, QPoint>               getSrcPoints(int Rows,int Cols,TRetrievalImage &
 MatrixXd                        getAprioriSRC(int Rows,int Cols,int srcRow, int srcCol, double srcVal,int srcSmoothSize);
 VectorXd                        getAprioriX(int Rows,int Cols,QPointF &APrioriVec,MatrixXd &AprioriSRC);
 VectorXd                        getDiffVector(const MatrixXd& ImgFirst, const MatrixXd ImgSecond, float DiffSeconds);
-SparseMatrix<double,RowMajor>   getK(const MatrixXd& values, TRetrievalImage& RetImage,double dt,float PlumeDistance );
+SparseMatrix<double,RowMajor> getK(const MatrixXd& values, TRetrievalImage& RetImage,double dt,float PlumeDistance,bool UseDirectPixelsize, MatrixXd CorrelationMatrix);
 SparseMatrix<double,RowMajor>   getSAInv(double constraintVec,double constraintSrcOET,double constraintSrcTikhonov, double saDiagonal, int Rows,int Cols, SparseMatrix<double,RowMajor> &Rv ,QMap<int, QPoint>SrcPoints);
 SparseMatrix<double,RowMajor>   getSEinv(MatrixXd &CorrelationMatrix);
 VectorXd                        getDeltaY(VectorXd &DiffVector,VectorXd &AprioriX, SparseMatrix<double,RowMajor> &K);
@@ -44,6 +44,11 @@ SparseMatrix<double,RowMajor>   xy_tikhonov(int Rows,int Cols);
 VectorXd                        nextstepOET(const VectorXd& xapriori,const SparseMatrix<double,RowMajor> SAinv,const  VectorXd& deltay,const SparseMatrix<double,RowMajor>SEinv, const SparseMatrix<double,RowMajor>K);
 
 TRetrievalImage*                mapDirectionVector(const  VectorXd& XVec, int Rows, int Cols,TRetrievalImage *pixelpositions);
+TRetrievalImage*                mapSrcMatrix(const  VectorXd& XVec, int Rows, int Cols,TRetrievalImage *pixelpositions);
+TRetrievalImage*                mapDiffVector(const  VectorXd& Diff,int Rows, int Cols,TRetrievalImage *pixelpositions);
+
+
 void                            mapMatrixValues(const  MatrixXd& Values, TRetrievalImage* RetImage);
+
 
 #endif // VECTORSOLVERSERVICE_H

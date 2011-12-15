@@ -130,6 +130,30 @@ void TRetrievalImage::save(QString fn){
     }
 }
 
+float TRetrievalImage::getMinVal(){
+    float result = 0;
+    for (int i=0; i < height; i++){
+        for(int n = 0; n< width; n++){
+
+            if ((valueBuffer[i][n]->val <  result) || (n+i==0))
+                result = valueBuffer[i][n]->val;
+        }
+    }
+    return result;
+}
+
+float TRetrievalImage::getMaxVal(){
+    float result = 0;
+    for (int i=0; i < height; i++){
+        for(int n = 0; n< width; n++){
+
+            if ((valueBuffer[i][n]->val >  result) || (n+i==0))
+                result = valueBuffer[i][n]->val;
+        }
+    }
+    return result;
+}
+
 
 
 void TRetrievalImage::plot(int plotIndex, int Pixelsize){
