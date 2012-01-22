@@ -295,15 +295,15 @@ void TRetrievalImage::thresholdImageValues(float threshold){
 
 QPointF TRetrievalImage::getMeanVec(void){
     QPointF result = QPointF(0,0);
-    //float sum=0;
+    float sum=0;
     for(int row=0;row<getHeight();row++){
         for (int col = 0; col<getWidth();col++){
-            result += valueBuffer[row][col]->getWindVector();//*valueBuffer[row][col]->val;
-            //sum += valueBuffer[row][col]->val;
+            result += valueBuffer[row][col]->getWindVector()*valueBuffer[row][col]->val;
+            sum += valueBuffer[row][col]->val;
         }
     }
-    //result /= sum;
-    result /= getHeight()*getWidth();
+    result /= sum;
+    //result /= getHeight()*getWidth();
     return result;
 }
 
