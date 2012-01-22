@@ -12,6 +12,8 @@ TRetrieval::TRetrieval(TRetrieval * other){
     val = other->val;
     symbName = other->symbName;
     WindVector = other->WindVector;
+    weight = other->weight;
+    origval = other->origval;
 }
 
 TRetrieval::~TRetrieval(){

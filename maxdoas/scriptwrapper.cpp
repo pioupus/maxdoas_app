@@ -14,6 +14,7 @@
 #include "qdoaswrapper.h"
 #include "tdirlist.h"
 #include "tvectorsolver.h"
+#include "temissionrate.h"
 
 TScanner* TScanner::m_Instance = 0;
 
@@ -167,6 +168,17 @@ QScriptValue TRetrievalImageConstructorSIGIS(QScriptContext *context, QScriptEng
     return engine->newQObject(object, QScriptEngine::ScriptOwnership);
 }
 
+QScriptValue TRetrievalImageConstructorCopy(QScriptContext *context, QScriptEngine *engine)
+{
+    QObject *from = context->argument(0).toQObject();
+    TRetrievalImage *rtimg = dynamic_cast<TRetrievalImage*>(from);
+    if (rtimg != NULL){
+        QObject *object = new TRetrievalImage(rtimg);
+        return engine->newQObject(object, QScriptEngine::ScriptOwnership);
+    }else{
+        return 0;
+    }
+}
 
 QScriptValue SetAutoIntegrationTime(QScriptContext *context, QScriptEngine *engine)
 {
@@ -200,6 +212,17 @@ QScriptValue SetFixedIntegrationTime(QScriptContext *context, QScriptEngine *eng
     return 0;
 }
 
+QScriptValue leadingZero(QScriptContext *context, QScriptEngine *engine)
+{
+    (void)context;
+    (void)engine;
+    int count = context->argument(0).toInteger();
+    int num   = context->argument(1).toInteger();
+    QString result = QString::number(num).rightJustified(count, '0');
+
+    return result;
+}
+
 QScriptValue FreeObject(QScriptContext *context, QScriptEngine *engine)
 {
     (void)context;
@@ -226,6 +249,11 @@ QScriptValue FreeObject(QScriptContext *context, QScriptEngine *engine)
                    tdirlist *dl = dynamic_cast<tdirlist*>(obj);
                    if(dl != NULL){
                        delete dl;
+                   }else{
+                       TEmissionrate *er = dynamic_cast<TEmissionrate*>(obj);
+                       if(er != NULL){
+                           delete er;
+                       }
                    }
                }
            }
@@ -493,6 +521,9 @@ TScriptWrapper::TScriptWrapper(THWDriver* hwdriver)
     QScriptValue isAbortingFree = ScriptEngine->newFunction(FreeObject);
     ScriptEngine->globalObject().setProperty("free", isAbortingFree);
 
+    QScriptValue leadingZeroFun = ScriptEngine->newFunction(leadingZero);
+    ScriptEngine->globalObject().setProperty("leadingZero", leadingZeroFun);
+
 
     QScriptValue SetAutoIntegrationTimeFun = ScriptEngine->newFunction(SetAutoIntegrationTime);
     ScriptEngine->globalObject().setProperty("SetAutoIntegrationTime", SetAutoIntegrationTimeFun);
@@ -552,6 +583,10 @@ TScriptWrapper::TScriptWrapper(THWDriver* hwdriver)
     QScriptValue ctordretimg = ScriptEngine->newFunction(TRetrievalImageConstructorSIGIS);
     QScriptValue metactordretimg = ScriptEngine->newQMetaObject(&QObject::staticMetaObject, ctordretimg);
     ScriptEngine->globalObject().setProperty("TRetrievalImageSIGIS", metactordretimg);
+
+    QScriptValue ctordretimgc = ScriptEngine->newFunction(TRetrievalImageConstructorCopy);
+    QScriptValue metactordretimgc = ScriptEngine->newQMetaObject(&QObject::staticMetaObject, ctordretimgc);
+    ScriptEngine->globalObject().setProperty("TRetrievalImage", metactordretimgc);
 
 
     QScriptValue ctorSpec = ScriptEngine->newFunction(TSpectrumConstructor);

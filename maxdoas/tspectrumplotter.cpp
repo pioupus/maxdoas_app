@@ -373,7 +373,201 @@ void TSpectrumPlotter::plotDenseMatrix(const MatrixXd& values,int plotIndex, int
     s->setColorRange(interval);
     s->setSamples(*vec);
     plot->getPlot()->replot();
+    if(!nextTitle.isEmpty())
+        plot->getPlot()->setTitle(nextTitle);
+    nextTitle = "";
+    if(!nextXTitle.isEmpty())
+        plot->getPlot()->setAxisTitle(QwtPlot::xBottom,nextXTitle);
+    nextXTitle = "";
+    if(!nextYTitle.isEmpty())
+        plot->getPlot()->setAxisTitle(QwtPlot::yLeft,nextYTitle);
+    nextYTitle = "";
 }
+
+void TSpectrumPlotter::oplotLine(QPointF p1, QPointF p2,int plotIndex){
+    TPlot *plot = getPlot(plotIndex);
+    QPen pe;
+    pe.setWidthF(1.5);
+    pe.setColor(Qt::white);
+    //plot->clearCurves();
+    QwtPlotCurve *c = plot->getCurve(plot->CurveCount());
+    c->setPen(pe);
+    double xbuf[2];
+    double ybuf[2];
+    xbuf[0] = p1.x();
+    ybuf[0] = p1.y();
+    xbuf[1] = p2.x();
+    ybuf[1] = p2.y();
+    c->setSamples(xbuf,ybuf,2);
+}
+
+void TSpectrumPlotter::oplotEmissionRaster(TEmissionrate *emissionrate,int plotIndex){
+    TPlot *plot = getPlot(plotIndex);
+    QPen pe;
+    pe.setWidthF(1.5);
+    pe.setColor(Qt::white);
+    plot->clearCurves();
+    QwtPlotCurve *c = plot->getCurve(0);
+    c->setPen(pe);
+    double xbuf[2];
+    double ybuf[2];
+    xbuf[0] = emissionrate->MainDirectionLineP1.x();
+    ybuf[0] = emissionrate->MainDirectionLineP1.y();
+    xbuf[1] = emissionrate->MainDirectionLineP2.x();
+    ybuf[1] = emissionrate->MainDirectionLineP2.y();
+    c->setSamples(xbuf,ybuf,2);
+
+    int curveindex=0;
+    for (int i = 0;i<emissionrate->count();i++){
+        tEmissionentry* e = emissionrate->EmissionAt(i);
+        if (e->Emission != -1){
+            curveindex++;
+            TParamLine l;
+            QPointF p1,p2;
+            QwtPlotCurve *c = plot->getCurve(curveindex);
+            double xbuf[2];
+            double ybuf[2];
+
+            l.iniDiff(e->CorridorPoint,e->CorridorDirection);
+            p1 = l.getRectCollisionPoint(emissionrate->getImageSize(),false);
+            p2 = l.getRectCollisionPoint(emissionrate->getImageSize(),true);
+            c->setPen(pe);
+            xbuf[0] = p1.x(); ybuf[0] = p1.y();
+            xbuf[1] = p2.x(); ybuf[1] = p2.y();
+            c->setSamples(xbuf,ybuf,2);
+        }
+    }
+        plot->getPlot()->replot();
+}
+
+void  TSpectrumPlotter::plotEmission(TEmissionrate *emissionrate,int plotindex){
+    TPlot *plot = getPlot(plotindex);
+    plot->clearCurves();
+    plotEmission_(emissionrate,plotindex,0);
+}
+void  TSpectrumPlotter::oplotEmission(TEmissionrate *emissionrate,int plotindex){
+    TPlot *plot = getPlot(plotindex);
+    plotEmission_(emissionrate,plotindex,plot->CurveCount());
+    int c = emissionrate->count();
+    tEmissionentry* e = emissionrate->EmissionAt(c-1);
+    float time = e->time;
+    QPointF ap(0,emissionrate->correlationLineFitParameterPrev_a0+emissionrate->correlationLineFitParameterPrev_a1*0);
+    QPointF bp(time,emissionrate->correlationLineFitParameterPrev_a0+emissionrate->correlationLineFitParameterPrev_a1*time);
+
+    QPointF an(0,emissionrate->correlationLineFitParameterNext_a0+emissionrate->correlationLineFitParameterNext_a1*0);
+    QPointF bn(time,emissionrate->correlationLineFitParameterNext_a0+emissionrate->correlationLineFitParameterNext_a1*time);
+
+    oplotLine(ap,bp,plotindex);
+    //oplotLine(an,bn,plotindex);
+}
+
+void  TSpectrumPlotter::plotEmission_(TEmissionrate *emissionrate,int plotindex,int curveindex){
+    TPlot *plot = getPlot(plotindex);
+    double xbuf[emissionrate->count()];
+    double ybuf[emissionrate->count()];
+    float maxval=0;
+    float minval=0;
+    int dp = 0;
+    for(int i=0;i<emissionrate->count();i++){
+        tEmissionentry* e = emissionrate->EmissionAt(i);
+        if(e->Emission != -1){
+            xbuf[dp] = e->time;
+           // xbuf[dp] = dp;
+            ybuf[dp] = e->Emission;
+            if ((maxval<e->Emission)||(dp==0)){
+                maxval = e->Emission;
+            }
+            if((minval>e->Emission)||(dp==0)){
+                minval = e->Emission;
+            }
+            dp++;
+        }
+    }
+    QwtPlot * p = plot->getPlot();
+    QwtPlotCurve * c = plot->getCurve(curveindex);
+    QPen pe;
+   // pe.setWidthF(1.5);
+    //p->setAxisScale(0,minval,maxval);
+    //p->setAxisScale(1,ybuf[0],ybuf[emissionrate->count()-1]);
+    c->setSamples(xbuf,ybuf,dp);
+    c->setPen(pe);
+
+    if(!nextTitle.isEmpty())
+        p->setTitle(nextTitle);
+    nextTitle = "";
+    if(!nextXTitle.isEmpty())
+        p->setAxisTitle(QwtPlot::xBottom,nextXTitle);
+    nextXTitle = "";
+    if(!nextYTitle.isEmpty())
+        p->setAxisTitle(QwtPlot::yLeft,nextYTitle);
+    nextYTitle = "";
+    if(nextXRange.first != nextXRange.second)
+        p->setAxisScale(QwtPlot::xBottom,nextXRange.first,nextXRange.second);
+    nextXRange.first = 0;
+    nextXRange.second = 0;
+    if(nextYRange.first != nextYRange.second)
+        p->setAxisScale(QwtPlot::yLeft,nextYRange.first,nextYRange.second);
+    nextYRange.first = 0;
+    nextYRange.second = 0;
+    if(nextColor != NULL)
+        c->setPen(*nextColor);
+    delete nextColor;
+    nextColor = NULL;
+
+    p->replot();
+}
+
+void  TSpectrumPlotter::plotCorrelation(TEmissionrate *emissionrate,int plotindex){
+    TPlot *plot = getPlot(plotindex);
+    double xbuf[emissionrate->countCorrelation()];
+    double ybuf[emissionrate->countCorrelation()];
+    float maxval=0;
+    float minval=0;
+    int dp = 0;
+    for(int i=0;i<emissionrate->countCorrelation();i++){
+        QPointF p = emissionrate->CorrelationAt(i);
+
+            //xbuf[i] = e->time.toTime_t();
+            xbuf[dp] = p.x();
+            ybuf[dp] = p.y();
+
+            dp++;
+
+    }
+    QwtPlot * p = plot->getPlot();
+    QwtPlotCurve * c = plot->getCurve(0);
+    QPen pe;
+   // pe.setWidthF(1.5);
+    //p->setAxisScale(0,minval,maxval);
+    //p->setAxisScale(1,ybuf[0],ybuf[emissionrate->count()-1]);
+    c->setSamples(xbuf,ybuf,dp);
+    c->setPen(pe);
+
+    if(!nextTitle.isEmpty())
+        p->setTitle(nextTitle);
+    nextTitle = "";
+    if(!nextXTitle.isEmpty())
+        p->setAxisTitle(QwtPlot::xBottom,nextXTitle);
+    nextXTitle = "";
+    if(!nextYTitle.isEmpty())
+        p->setAxisTitle(QwtPlot::yLeft,nextYTitle);
+    nextYTitle = "";
+    if(nextXRange.first != nextXRange.second)
+        p->setAxisScale(QwtPlot::xBottom,nextXRange.first,nextXRange.second);
+    nextXRange.first = 0;
+    nextXRange.second = 0;
+    if(nextYRange.first != nextYRange.second)
+        p->setAxisScale(QwtPlot::yLeft,nextYRange.first,nextYRange.second);
+    nextYRange.first = 0;
+    nextYRange.second = 0;
+    if(nextColor != NULL)
+        c->setPen(*nextColor);
+    delete nextColor;
+    nextColor = NULL;
+
+    p->replot();
+}
+
 
 void TSpectrumPlotter::plotVectorField(TRetrievalImage *img,int plotIndex,int average,bool normalize,bool excludeZero){
     TPlot *plot = getPlot(plotIndex);
@@ -427,6 +621,15 @@ void TSpectrumPlotter::plotVectorField(TRetrievalImage *img,int plotIndex,int av
     }
 
     plot->getPlot()->replot();
+    if(!nextTitle.isEmpty())
+        plot->getPlot()->setTitle(nextTitle);
+    nextTitle = "";
+    if(!nextXTitle.isEmpty())
+        plot->getPlot()->setAxisTitle(QwtPlot::xBottom,nextXTitle);
+    nextXTitle = "";
+    if(!nextYTitle.isEmpty())
+        plot->getPlot()->setAxisTitle(QwtPlot::yLeft,nextYTitle);
+    nextYTitle = "";
 }
 
 void TSpectrumPlotter::plotRetrievalImage(TRetrievalImage *img,int plotIndex, int Pixelsize){
@@ -464,12 +667,21 @@ void TSpectrumPlotter::plotRetrievalImage(TRetrievalImage *img,int plotIndex, in
 
     plot->getPlot()->enableAxis(QwtPlot::xTop,true);
     QwtScaleWidget *rightAxis = plot->getPlot()->axisWidget(QwtPlot::xTop);
-    rightAxis->setTitle("Intensity");
+    //rightAxis->setTitle("Intensity");
     rightAxis->setColorBarEnabled(true);
     rightAxis->setColorMap( interval, new ColorMap());
     plot->getPlot()->setAxisScale(QwtPlot::xTop,interval.minValue(),interval.maxValue());
     rightAxis->setColorBarWidth(20);
     plot->getPlot()->replot();
+    if(!nextTitle.isEmpty())
+        plot->getPlot()->setTitle(nextTitle);
+    nextTitle = "";
+    if(!nextXTitle.isEmpty())
+        plot->getPlot()->setAxisTitle(QwtPlot::xBottom,nextXTitle);
+    nextXTitle = "";
+    if(!nextYTitle.isEmpty())
+        plot->getPlot()->setAxisTitle(QwtPlot::yLeft,nextYTitle);
+    nextYTitle = "";
 }
 
 void TSpectrumPlotter::plotSpectralImage(TSpectralImage *img,int plotIndex, int Pixelsize){
@@ -498,6 +710,15 @@ void TSpectrumPlotter::plotSpectralImage(TSpectralImage *img,int plotIndex, int 
     s->setColorRange(interval);
     s->setSamples(*vec);
     plot->getPlot()->replot();
+    if(!nextTitle.isEmpty())
+        plot->getPlot()->setTitle(nextTitle);
+    nextTitle = "";
+    if(!nextXTitle.isEmpty())
+        plot->getPlot()->setAxisTitle(QwtPlot::xBottom,nextXTitle);
+    nextXTitle = "";
+    if(!nextYTitle.isEmpty())
+        plot->getPlot()->setAxisTitle(QwtPlot::yLeft,nextYTitle);
+    nextYTitle = "";
 }
 
 void TSpectrumPlotter::setTitle(QString text,int plotindex){
@@ -635,6 +856,28 @@ void TSpectrumPlotter::plotXYMarker(double x,double y,QString title,int plotinde
     }
 }
 
+void TSpectrumPlotter::plotXYMarkerNoLine(double x,double y,QString title,int plotindex){
+    TPlot *plot = getPlot(plotindex);
+    if (plot != NULL){
+        QPen p;
+       // p.setWidthF(1.5);
+        QwtPlotMarker * marker = plot->addMarker();
+        QwtSymbol* sym = new QwtSymbol(QwtSymbol::XCross, QBrush(Qt::white), QPen(Qt::white), QSize(11,11));
+        marker->setLineStyle( QwtPlotMarker::NoLine);
+        marker->setSymbol(sym);
+        //marker->setSymbol(QwtSymbol(QwtSymbol::XCross));
+        marker->setXValue(x);
+        marker->setYValue(y);
+        marker->setLinePen(p);
+//      marker->setSymbol( new QwtSymbol(QwtSymbol::Diamond  ,
+//                          Qt::NoBrush, QPen(Qt::red,1), QSize(10,10)));
+//      marker->setSymbol( new QwtSymbol(QwtSymbol::Diamond));
+        marker->setTitle(title);
+        marker->setLabel(title);
+        marker->setLabelAlignment(Qt::AlignLeft);
+    }
+}
+
 void TSpectrumPlotter::reset(int plotindex){
     TPlot *plot = getPlot(plotindex);
     if (plot != NULL){
@@ -692,7 +935,7 @@ void TSpectrumPlotter::plotToFile(QString format, QString filename ,int plotinde
             axisYWidth = axisY->penWidth();
             axisX->setPenWidth(axisYWidth+1);
             axisY->setPenWidth(axisXWidth+1);
-            renderer.setDiscardFlag(QwtPlotRenderer::DiscardCanvasBackground,true);
+            //renderer.setDiscardFlag(QwtPlotRenderer::DiscardCanvasBackground,true);
             renderer.renderDocument(p, filename,format, QSizeF(width, height), resolution);
 
             for (int i = 0;i<plot->CurveCount();i++){

@@ -226,6 +226,49 @@ float TParamLine::getCollisionParam(TParamLine *line){
     return num/denum;
 }
 
+QPointF TParamLine::getRectCollisionPoint(QRectF rect, bool reverse){
+    QPointF result;
+    TParamLine edge;
+    float l;
+    if (reverse)
+        d= -d;
+    if (d.x() > 0){
+        float l1,l2;
+        edge.ini(rect.bottomRight(),rect.topRight());
+        l1 = getCollisionParam(&edge);
+        if (d.y() < 0){
+            edge.ini(rect.topRight(),rect.topLeft());
+            l2 = getCollisionParam(&edge);
+        }else{
+            edge.ini(rect.bottomRight(),rect.bottomLeft());
+            l2 = getCollisionParam(&edge);
+        }
+        if (l1 < l2)
+            l = l1;
+        else
+            l = l2;
+    }else{
+        float l1,l2;
+        edge.ini(rect.bottomLeft(),rect.topLeft());
+        l1 = getCollisionParam(&edge);
+        if (d.y() < 0){
+            edge.ini(rect.topRight(),rect.topLeft());
+            l2 = getCollisionParam(&edge);
+        }else{
+            edge.ini(rect.bottomRight(),rect.bottomLeft());
+            l2 = getCollisionParam(&edge);
+        }
+        if (l1 < l2)
+            l = l1;
+        else
+            l = l2;
+    }
+    result = getPointbyParam(l);
+    if (reverse)
+        d= -d;
+    return result;
+}
+
 float TParamLine::containsPoint(QPointF P, bool &contains){
     float dPx = P.x()-Offset.x();
     float dPy = P.y()-Offset.y();
@@ -253,8 +296,10 @@ float TParamLine::getLength(){
 }
 
 float TParamLine::getLength(float Param){
+    float result = 0;
     QPointF P = getPointbyParam(Param);
-    return sqrt(pow(Offset.x()-P.x(),2.0)+pow(Offset.y()-P.y(),2.0));
+    result = sqrt(pow(Offset.x()-P.x(),2.0)+pow(Offset.y()-P.y(),2.0));
+    return result;
 }
 
 QPointF TParamLine::getOffset(){
@@ -267,7 +312,7 @@ QPointF TParamLine::getDiffVec(){
 
 TParamLine* TParamLine::getOrthoLine(QPointF P){
     TParamLine* result = new TParamLine();
-    QPointF Direction = QPointF(d.x(),-d.y());
+    QPointF Direction = QPointF(-d.y(),d.x());
     result->iniDiff(P,Direction);
     return result;
 }
@@ -275,7 +320,7 @@ TParamLine* TParamLine::getOrthoLine(QPointF P){
 float TParamLine::GetDistanceToPoint(QPointF Point){
     float result;
     TParamLine* Distance = getOrthoLine(Point);
-    result = getCollisionParam(Distance);
+    result = Distance->getCollisionParam(this);
     result = Distance->getLength(result);
     delete Distance;
     return result;

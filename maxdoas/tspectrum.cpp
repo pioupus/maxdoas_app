@@ -526,6 +526,7 @@ bool TSpectrum::LoadMeta(QFile &meta,bool versionWithDateInLineWithoutSZA){
     mc.pixelIndexY = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
 
     hash = -1;
+    return true;
 }
 
 int TSpectrum::LoadSpectraldata(QFile &data,bool &versionWithDateInLineWithoutSZA,bool isdark){

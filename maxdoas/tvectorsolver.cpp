@@ -22,10 +22,24 @@ TVectorSolver::TVectorSolver()
     CorrThreshold = 0.93;
     APrioriVec = QPoint(0,0);
     LastRetrieval = NULL;
+    PrevImageSubavg = NULL;
+    NextImageSubavg = NULL;
+    UseMedianApririFilter = false;
+    EmissionFactor = 1;
+    AprioriVelocity = 0;
+    useNextResultForApriori = true;
+    DOF_X = -1;
+    DOF_Y = -1;
+    DOF_SRC = -1;
+    ThermalThreshold = +10000;
+    ThermalImage = NULL;
+    if (AKDiagVec.rows()>0)
+        AKDiagVec(0) = -1;
 }
 
 TVectorSolver::~TVectorSolver(){
     delete LastRetrieval;
+    delete ThermalImage;
 }
 
 void TVectorSolver::setConstraintVec(double constraint){
@@ -66,6 +80,9 @@ void TVectorSolver::setSADiagonalvalue(float SaDiag){
     this->SaDiag = SaDiag;
 }
 
+void TVectorSolver::setAprioriVelocity(float velocity){
+    AprioriVelocity = velocity;
+}
 
 void TVectorSolver::setCorrThreshold(float CorrThreshold){
     this->CorrThreshold = CorrThreshold;
@@ -85,11 +102,33 @@ void TVectorSolver::setUseDirectPixelsize(bool    UseDirectPixelsize){
     this->UseDirectPixelsize=UseDirectPixelsize;
 }
 
-void TVectorSolver::solve(TRetrievalImage* imgOldCd,TRetrievalImage* imgOldCorr,TRetrievalImage* imgNewCd,TRetrievalImage* imgNewCorr){
+void TVectorSolver::setUseMedianAprioriFilter(bool MedianAprioriFilter){
+    UseMedianApririFilter = MedianAprioriFilter;
+}
+
+void TVectorSolver::setEmissionFactor(float emissionfactor){
+    EmissionFactor = emissionfactor;
+}
+void TVectorSolver::setThermalTheshold(float thres){
+    ThermalThreshold = thres;
+}
+
+void TVectorSolver::loadThermalImage(TRetrievalImage* thermImage){
+    delete ThermalImage;
+    ThermalImage = new TRetrievalImage(thermImage);
+}
+
+void TVectorSolver::solve(TRetrievalImage* imgOldCd,TRetrievalImage* imgNewCd){
+    if (AKDiagVec.rows()>0)
+        AKDiagVec(0) = -1;
+
     Rows = imgOldCd->getHeight();
     Cols = imgOldCd->getWidth();
 
-
+    DOF_X = -1;
+    DOF_Y = -1;
+    DOF_SRC = -1;
+    QPointF AprioriVecloc = APrioriVec;
 
     MatrixXd                        OldCds;
     MatrixXd                        NewCds;
@@ -100,7 +139,6 @@ void TVectorSolver::solve(TRetrievalImage* imgOldCd,TRetrievalImage* imgOldCorr,
     timer.start();
 
     Smoothkernel.setOnes(smoothImg,smoothImg);
-
 
     int tnew = imgNewCd->datetime.toTime_t();
     int told = imgOldCd->datetime.toTime_t();
@@ -116,20 +154,27 @@ void TVectorSolver::solve(TRetrievalImage* imgOldCd,TRetrievalImage* imgOldCorr,
 
     CdsForGrad        = 0.5*(OldCds+NewCds);
 
-    SrcPoints   = getSrcPoints(Rows,Cols,*imgOldCd);
+    SrcPoints   = getSrcPoints(Rows,Cols,ThermalImage,ThermalThreshold);
 
     Rv          = xy_tikhonov(Rows, Cols);
     SAinv       = getSAInv( ConstraintVec, ConstraintSrcOET, ConstraintSrcTikhonov, SaDiag, Rows,Cols, Rv ,SrcPoints);
 
-    CorrelationMatrix = fromRetrImage(*imgNewCorr);
+    CorrelationMatrix = weightsFromRetrImage(*imgNewCd);
     scaleCorrmatrix(CorrelationMatrix,CorrThreshold);
     SEinv             = getSEinv(CorrelationMatrix);
 
 
     K           = getK(CdsForGrad, *imgOldCd, dt, MeanDistance,UseDirectPixelsize,CorrelationMatrix);
+    if (UseMedianApririFilter)
+        AprioriVecloc  = getMedianPoint(APrioriList);
+
+    if (AprioriVelocity != 0){
+        AprioriVecloc = AprioriVecloc/get2Norm(AprioriVecloc);
+        AprioriVecloc = AprioriVecloc*fabs(AprioriVelocity);
+    }
 
     AprioriSRC  = getAprioriSRC(Rows,Cols,SrcPosition.y(), SrcPosition.x(), SrcVal,smoothSrc);
-    AprioriX    = getAprioriX(Rows, Cols,APrioriVec, AprioriSRC);
+    AprioriX    = getAprioriX(Rows, Cols,AprioriVecloc, AprioriSRC);
     DiffVector  = getDiffVector(OldCds,NewCds,1); // Diff = 1 second since grad and divergence already got multiplicated by dt -> bigger numbers, better precision
     deltay      = getDeltaY(DiffVector,AprioriX, K);
 
@@ -140,9 +185,39 @@ void TVectorSolver::solve(TRetrievalImage* imgOldCd,TRetrievalImage* imgOldCorr,
     xVec = nextstepOET(AprioriX,SAinv, deltay,SEinv, K);
 
     delete LastRetrieval;
-
+    LastRetrieval = new TRetrievalImage(imgOldCd);
     LastRetrieval = mapDirectionVector(xVec,Rows,Cols,imgOldCd);
+    LastRetrieval->setMeanDistance(MeanDistance);
+    LastRetrieval->setTimeDiff(dt);
+    LastRetrieval->setEmissionFactor(EmissionFactor);
     mapMatrixValues(CdsForGrad,LastRetrieval);
+
+    //plotSAinvDiagSRC(0, 20);
+    delete  PrevImageSubavg;
+    delete  NextImageSubavg;
+    PrevImageSubavg = new TRetrievalImage(imgOldCd);
+    NextImageSubavg = new TRetrievalImage(imgNewCd);
+    PrevImageSubavg->setMeanDistance(MeanDistance);
+    NextImageSubavg->setMeanDistance(MeanDistance);
+    PrevImageSubavg->setTimeDiff(dt);
+    NextImageSubavg->setTimeDiff(dt);
+    PrevImageSubavg->setEmissionFactor(EmissionFactor);
+    NextImageSubavg->setEmissionFactor(EmissionFactor);
+    PrevImageSubavg->mapWindVektors(LastRetrieval);
+    NextImageSubavg->mapWindVektors(LastRetrieval);
+    //thresholdmatrix(CdsForGrad, CorrelationMatrix, CorrThreshold);
+
+//    PrevImageSubavg->subMatrix(CdsForGrad,true);
+//    NextImageSubavg->subMatrix(CdsForGrad,true);
+
+    if(useNextResultForApriori){
+        if (APrioriList.count()>2)
+            APrioriList.removeAt(0);
+        APrioriList.append(LastRetrieval->getMeanVec());
+    }
+    useNextResultForApriori = true;
+
+
 
     //TSpectrumPlotter* plot = TSpectrumPlotter::instance(0);
     //plot->plotDenseMatrix(CorrelationMatrix,4,10);
@@ -150,6 +225,57 @@ void TVectorSolver::solve(TRetrievalImage* imgOldCd,TRetrievalImage* imgOldCorr,
     qDebug("Time elapsed: %d ms", timer.elapsed());
 }
 
+void TVectorSolver::dontUseThisResultForApriori(){
+    useNextResultForApriori = false;
+}
+
+float TVectorSolver::getDOF_x(){
+    if ((AKDiagVec.rows()==0)||(AKDiagVec(0) == -1))
+        AKDiagVec = getAKDiag(SAinv,SEinv,K);
+
+    DOF_X = calcDOF_x(AKDiagVec);
+    DOF_Y = calcDOF_y(AKDiagVec);
+    DOF_SRC = calcDOF_src(AKDiagVec);
+
+    LastRetrieval->setDOFs(DOF_X,DOF_Y,DOF_SRC);
+
+    PrevImageSubavg->setDOFs(DOF_X,DOF_Y,DOF_SRC);
+    NextImageSubavg->setDOFs(DOF_X,DOF_Y,DOF_SRC);
+
+    return DOF_X;
+}
+
+float TVectorSolver::getDOF_y(){
+    if ((AKDiagVec.rows()==0)||(AKDiagVec(0) == -1))
+        AKDiagVec = getAKDiag(SAinv,SEinv,K);
+
+    DOF_X = calcDOF_x(AKDiagVec);
+    DOF_Y = calcDOF_y(AKDiagVec);
+    DOF_SRC = calcDOF_src(AKDiagVec);
+
+    LastRetrieval->setDOFs(DOF_X,DOF_Y,DOF_SRC);
+
+    PrevImageSubavg->setDOFs(DOF_X,DOF_Y,DOF_SRC);
+    NextImageSubavg->setDOFs(DOF_X,DOF_Y,DOF_SRC);
+
+    return DOF_Y;
+}
+
+float TVectorSolver::getDOF_SRC(){
+    if ((AKDiagVec.rows()==0)||(AKDiagVec(0) == -1))
+        AKDiagVec = getAKDiag(SAinv,SEinv,K);
+
+    DOF_X = calcDOF_x(AKDiagVec);
+    DOF_Y = calcDOF_y(AKDiagVec);
+    DOF_SRC = calcDOF_src(AKDiagVec);
+
+    LastRetrieval->setDOFs(DOF_X,DOF_Y,DOF_SRC);
+
+    PrevImageSubavg->setDOFs(DOF_X,DOF_Y,DOF_SRC);
+    NextImageSubavg->setDOFs(DOF_X,DOF_Y,DOF_SRC);
+
+    return DOF_SRC;
+}
 void TVectorSolver::loadWeightedColoumDensitiesToRetrieval(TRetrievalImage* RetImg){
     for(int row = 0;row < CorrelationMatrix.rows();row++){
         for (int col = 0; col < CorrelationMatrix.cols();col++){
@@ -159,54 +285,18 @@ void TVectorSolver::loadWeightedColoumDensitiesToRetrieval(TRetrievalImage* RetI
 }
 
 QScriptValue TVectorSolver::getRetrieval(void){
-    return engine()->newQObject(LastRetrieval);
+    TRetrievalImage* retimg = new TRetrievalImage(LastRetrieval);
+    return engine()->newQObject(retimg);
 }
 
-QPointF TVectorSolver::getMeanVec(void){
-    QPointF result = QPointF(0,0);
-    if (LastRetrieval != NULL){
-        for(int row=0;row<LastRetrieval->getHeight();row++){
-            for (int col = 0; col<LastRetrieval->getWidth();col++){
-                result += LastRetrieval->valueBuffer[row][col]->getWindVector();
-            }
-        }
-    }
-    result /= LastRetrieval->getHeight()*LastRetrieval->getWidth();
-    return result;
+QScriptValue TVectorSolver::getRetrievalPrevAvg(void){
+    TRetrievalImage* retimg = new TRetrievalImage(PrevImageSubavg);
+    return engine()->newQObject(retimg);
 }
 
-
-QPointF TVectorSolver::getMaxVec(){
-    QPointF result;
-    float maxVal;
-    int maxIndexcol;
-    int maxIndexrow;
-    if (LastRetrieval != NULL){
-        for(int row=0;row<LastRetrieval->getHeight();row++){
-            for (int col = 0; col<LastRetrieval->getWidth();col++){
-                float val;
-                result = LastRetrieval->valueBuffer[row][col]->getWindVector();
-                val = sqrt(result.x()*result.x()+result.y()*result.y());
-                if ((val > maxVal)||(col+row==0)){
-                    maxVal = val;
-                    maxIndexcol = col;
-                    maxIndexrow = row;
-                }
-            }
-        }
-    }
-    result = LastRetrieval->valueBuffer[maxIndexrow][maxIndexcol]->getWindVector();
-    return result;
-}
-
-float TVectorSolver::getMaxVelocity(){
-    QPointF vec = getMaxVec();
-    return sqrt(vec.x()*vec.x()+vec.y()*vec.y());
-}
-
-float TVectorSolver::getMeanVelocity(){
-    QPointF vec = getMeanVec();
-    return sqrt(vec.x()*vec.x()+vec.y()*vec.y());
+QScriptValue TVectorSolver::getRetrievalNextAvg(void){
+    TRetrievalImage* retimg = new TRetrievalImage(NextImageSubavg);
+    return engine()->newQObject(retimg);
 }
 
 void TVectorSolver::retrievalImageDestructed(TRetrievalImage* img){
@@ -216,100 +306,182 @@ void TVectorSolver::retrievalImageDestructed(TRetrievalImage* img){
 
 void TVectorSolver::plotSrcMatrix(int plotindex, int pixelsize){
     //TSpectrumPlotter* SpectrumPlotter = TSpectrumPlotter::instance(0);
-    TRetrievalImage* srcmatrix = mapSrcMatrix(xVec,Rows,Cols,LastRetrieval);
+    TRetrievalImage* srcmatrix = getSrcMatrix_();
     srcmatrix->plot(plotindex,pixelsize);
     delete srcmatrix;
+}
+
+TRetrievalImage* TVectorSolver::getSrcMatrix_(){
+    //TSpectrumPlotter* SpectrumPlotter = TSpectrumPlotter::instance(0);
+    TRetrievalImage* srcmatrix = mapSrcMatrix(xVec,Rows,Cols,LastRetrieval);
+    return srcmatrix;
+}
+
+QScriptValue TVectorSolver::getSrcMatrix(void){
+    TRetrievalImage* img = getSrcMatrix_();
+    return engine()->newQObject(img);
 }
 
 void TVectorSolver::plotdcoldt_observed(int plotindex, int pixelsize){
-    TRetrievalImage* srcmatrix = mapDiffVector(DiffVector,Rows,Cols,LastRetrieval);
+    TRetrievalImage* srcmatrix = getdcoldt_observed_();
     srcmatrix->plot(plotindex,pixelsize);
     delete srcmatrix;
+}
+
+TRetrievalImage* TVectorSolver::getdcoldt_observed_(){
+    TRetrievalImage* srcmatrix = mapDiffVector(DiffVector,Rows,Cols,LastRetrieval);
+    return srcmatrix;
+}
+
+QScriptValue TVectorSolver::getdcoldt_observed(void){
+    TRetrievalImage* img = getdcoldt_observed_();
+    return engine()->newQObject(img);
 }
 
 void TVectorSolver::plotdcoldt_retrieved(int plotindex, int pixelsize){
-    VectorXd DiffRetrieved = K*xVec;
-    TRetrievalImage* srcmatrix = mapDiffVector(DiffRetrieved,Rows,Cols,LastRetrieval);
-    srcmatrix->plot(plotindex,pixelsize);
-    delete srcmatrix;
+    TRetrievalImage* img = getdcoldt_retrieved_();
+    img->plot(plotindex,pixelsize);
+    delete img;
 }
 
-void TVectorSolver::plotresiduum(int plotindex, int pixelsize){
+TRetrievalImage* TVectorSolver::getdcoldt_retrieved_(){
+    VectorXd DiffRetrieved = K*xVec;
+    TRetrievalImage* srcmatrix = mapDiffVector(DiffRetrieved,Rows,Cols,LastRetrieval);
+    return srcmatrix;
+}
+
+QScriptValue TVectorSolver::getdcoldt_retrieved(void){
+    TRetrievalImage* img = getdcoldt_retrieved_();
+    return engine()->newQObject(img);
+}
+
+TRetrievalImage* TVectorSolver::getResiduum_(){
     VectorXd DiffRetrieved = K*xVec;
     VectorXd Residuum = DiffRetrieved-DiffVector;
     TRetrievalImage* srcmatrix = mapDiffVector(Residuum,Rows,Cols,LastRetrieval);
+    return srcmatrix;
+}
+
+void TVectorSolver::plotresiduum(int plotindex, int pixelsize){
+    TRetrievalImage* srcmatrix = getResiduum_();
     srcmatrix->plot(plotindex,pixelsize);
     delete srcmatrix;
 }
 
-TEmissionrate* TVectorSolver::emissionrate(float TimeStep, float ScanPixelsize, bool plotit){
-    TEmissionrate* result = new TEmissionrate();
-    float maxVal;
-    QPointF maxPoint;
-    if (LastRetrieval != NULL){
-        for(int row=0;row<LastRetrieval->getHeight();row++){
-            for (int col = 0; col<LastRetrieval->getWidth();col++){
-                float val;
-                val += LastRetrieval->valueBuffer[row][col]->val;
-                if ((val > maxVal)||(col+row==0)){
-                    maxVal = val;
-                    maxPoint.setX(col);
-                    maxPoint.setY(row);
-                }
-            }
-        }
-    }
-
-    float emissionrate=0;
-    TParamLine Windvector;
-    Windvector.iniDiff(maxPoint,getMeanVec());
-    QDateTime EmissionTime = LastRetrieval->datetime;
-    float LineParam = 0;
-    do{
-
-        QPointF nextPoint = Windvector.getPointbyParam(LineParam);
-        LineParam -= TimeStep/ScanPixelsize;//Here we should take the real Pixeldistances into account. aswell with its projections
-        EmissionTime.addMSecs(-TimeStep*1000);
-        TParamLine* corridor = Windvector.getOrthoLine(nextPoint);
-        emissionrate = selectAndIntegrateCorridor(*corridor,0.5);
-        result->AddEmmision(EmissionTime,emissionrate,corridor);
-        delete corridor;
-    }while(emissionrate>0);
-    result->setTimeOffset(EmissionTime);
-    EmissionTime = LastRetrieval->datetime;
-    LineParam = 0;
-    do{
-        QPointF nextPoint = Windvector.getPointbyParam(LineParam);
-        TParamLine* corridor = Windvector.getOrthoLine(nextPoint);
-        emissionrate = selectAndIntegrateCorridor(*corridor,0.5);
-        result->AddEmmision(EmissionTime,emissionrate,corridor);
-        EmissionTime.addMSecs(TimeStep*1000);
-
-        LineParam += TimeStep/ScanPixelsize;//Here we should take the real Pixeldistances into account. aswell with its projections
-
-
-        delete corridor;
-    }while(emissionrate>0);
-
-    return result;
+QScriptValue TVectorSolver::getResiduum(void){
+    TRetrievalImage* residuum = getResiduum_();
+    return engine()->newQObject(residuum);
 }
 
 
+TRetrievalImage* TVectorSolver::getAKDiagX_(){
 
-float TVectorSolver::selectAndIntegrateCorridor(TParamLine &corridor, float CorridorWidth){
-    float result=0;
-    QPointF unitydirectionvector = QPointF(corridor.getDiffVec());
-    result = sqrt(unitydirectionvector.x()*unitydirectionvector.x()+unitydirectionvector.y()*unitydirectionvector.y());
-    unitydirectionvector /= result;
-    result = 0;
-    for (int row=0;row<LastRetrieval->getHeight();row++){
-        for (int col=0;col<LastRetrieval->getWidth();col++){
-            QPointF p = LastRetrieval->valueBuffer[row][col]->mirrorCoordinate->getAngleCoordinate();
-            if (corridor.GetDistanceToPoint(p) < CorridorWidth){
-                float windspeedprojection = unitydirectionvector.x()*LastRetrieval->valueBuffer[row][col]->getWindVector().x()+
-                                            unitydirectionvector.y()*LastRetrieval->valueBuffer[row][col]->getWindVector().y();
-                result += LastRetrieval->valueBuffer[row][col]->val*windspeedprojection;
-            }
-        }
+    if ((AKDiagVec.rows()==0)||(AKDiagVec(0) == -1))
+        AKDiagVec = getAKDiag(SAinv,SEinv,K);
+
+    TRetrievalImage* img = mapVector(AKDiagVec,0,Rows,Cols,LastRetrieval);
+
+    LastRetrieval->setDOFs(calcDOF_x(AKDiagVec),calcDOF_y(AKDiagVec),calcDOF_src(AKDiagVec));
+    PrevImageSubavg->setDOFs(calcDOF_x(AKDiagVec),calcDOF_y(AKDiagVec),calcDOF_src(AKDiagVec));
+    NextImageSubavg->setDOFs(calcDOF_x(AKDiagVec),calcDOF_y(AKDiagVec),calcDOF_src(AKDiagVec));
+    img->setDOFs(calcDOF_x(AKDiagVec),calcDOF_y(AKDiagVec),calcDOF_src(AKDiagVec));
+
+    return img;
+}
+
+void TVectorSolver::plotAKDiagX(int plotindex, int pixelsize){
+    TRetrievalImage* srcmatrix = getAKDiagX_();
+    srcmatrix->plot(plotindex,pixelsize);
+    delete srcmatrix;
+}
+
+QScriptValue TVectorSolver::getAKDiagX(void){
+    TRetrievalImage* residuum = getAKDiagX_();
+    return engine()->newQObject(residuum);
+}
+
+TRetrievalImage* TVectorSolver::getAKDiagY_(){
+
+    if ((AKDiagVec.rows()==0)||(AKDiagVec(0) == -1))
+        AKDiagVec = getAKDiag(SAinv,SEinv,K);
+
+    TRetrievalImage* img = mapVector(AKDiagVec,Rows*Cols,Rows,Cols,LastRetrieval);
+    LastRetrieval->setDOFs(calcDOF_x(AKDiagVec),calcDOF_y(AKDiagVec),calcDOF_src(AKDiagVec));
+    PrevImageSubavg->setDOFs(calcDOF_x(AKDiagVec),calcDOF_y(AKDiagVec),calcDOF_src(AKDiagVec));
+    NextImageSubavg->setDOFs(calcDOF_x(AKDiagVec),calcDOF_y(AKDiagVec),calcDOF_src(AKDiagVec));
+    img->setDOFs(calcDOF_x(AKDiagVec),calcDOF_y(AKDiagVec),calcDOF_src(AKDiagVec));
+
+    return img;
+}
+
+void TVectorSolver::plotAKDiagY(int plotindex, int pixelsize){
+    TRetrievalImage* srcmatrix = getAKDiagY_();
+    srcmatrix->plot(plotindex,pixelsize);
+    delete srcmatrix;
+}
+
+QScriptValue TVectorSolver::getAKDiagY(void){
+    TRetrievalImage* residuum = getAKDiagY_();
+    return engine()->newQObject(residuum);
+}
+
+TRetrievalImage* TVectorSolver::getAKDiagSRC_(){
+
+    if ((AKDiagVec.rows()==0)||(AKDiagVec(0) == -1))
+        AKDiagVec = getAKDiag(SAinv,SEinv,K);
+
+    TRetrievalImage* img = mapVector(AKDiagVec,2*Rows*Cols,Rows,Cols,LastRetrieval);
+
+    LastRetrieval->setDOFs(calcDOF_x(AKDiagVec),calcDOF_y(AKDiagVec),calcDOF_src(AKDiagVec));
+    PrevImageSubavg->setDOFs(calcDOF_x(AKDiagVec),calcDOF_y(AKDiagVec),calcDOF_src(AKDiagVec));
+    NextImageSubavg->setDOFs(calcDOF_x(AKDiagVec),calcDOF_y(AKDiagVec),calcDOF_src(AKDiagVec));
+    img->setDOFs(calcDOF_x(AKDiagVec),calcDOF_y(AKDiagVec),calcDOF_src(AKDiagVec));
+
+    return img;
+}
+
+void TVectorSolver::plotAKDiagSRC(int plotindex, int pixelsize){
+    TRetrievalImage* srcmatrix = getAKDiagSRC_();
+    srcmatrix->plot(plotindex,pixelsize);
+    delete srcmatrix;
+}
+
+QScriptValue TVectorSolver::getAKDiagSRC(void){
+    TRetrievalImage* residuum = getAKDiagSRC_();
+    return engine()->newQObject(residuum);
+}
+
+QScriptValue TVectorSolver::getSAinvDiagSRC(void){
+    TRetrievalImage* img = getSAinvDiagSRC_();
+    return engine()->newQObject(img);
+}
+
+void TVectorSolver::plotSAinvDiagSRC(int plotindex, int pixelsize){
+    TRetrievalImage* srcmatrix = getSAinvDiagSRC_();
+    srcmatrix->plot(plotindex,pixelsize);
+    delete srcmatrix;
+}
+
+TRetrievalImage* TVectorSolver::getSAinvDiagSRC_(){
+    VectorXd SAInvDiag(SAinv.cols() / 3);
+    VectorXd SAInvDiag_(SAinv.cols() / 3);
+    MatrixXd SAInvSrc(Rows,Cols);
+    MatrixXd SAInvSrcT;
+    SparseMatrix<double,RowMajor> T = matrixW2H(Rows,Cols,false);
+    for(int i=2*Rows*Cols;i<SAinv.cols();i++){
+        SAInvDiag(i-2*Rows*Cols) = SAinv.coeff(i,i);
     }
+
+    //qDebug("SAInvDiagCols, SAInvDiagRows: %d , %d ", SAInvDiag.cols(),SAInvDiag.rows());
+    //qDebug("TCols, TcRows: %d , %d ", T.cols(),T.rows());
+
+    //SAInvDiag_ = T*SAInvDiag;
+
+    SAInvDiag_ = SAInvDiag;
+
+    TRetrievalImage* img = mapVector(SAInvDiag_,0,Rows,Cols,LastRetrieval);
+
+
+
+    return img;
 }

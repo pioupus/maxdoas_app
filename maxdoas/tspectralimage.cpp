@@ -290,6 +290,7 @@ bool TSpectralImage::calcIntensityImage(){
                 //double val = spectrumlist[index]->ScanPixelIndex;//for testing porpuses
                 double val = spectrumlist[index]->rms();
                 IntenseImg->valueBuffer[i][n]->val = val;
+                IntenseImg->valueBuffer[i][n]->origval = val;
             }
         }
         QHashIterator<QPair<int,int>,  QPair<TSpectrum*,double> > i(spectrumtable);

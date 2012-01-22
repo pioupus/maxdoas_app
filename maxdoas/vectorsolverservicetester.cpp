@@ -68,6 +68,26 @@ bool rvstScaleCorrmatrix(MatrixXd &Matrix){
 
     return true;
 }
+
+bool rvsdirectionAngle(){
+
+    //scaleCorrmatrix(Matrix,0.5);
+    std::cout << getVecAngle(QPointF(0,1)) << " " << getVecAngle(QPointF(1,0)) << " " <<  getVecAngle(QPointF(0,-1))<<  " " << getVecAngle(QPointF(-1,0)) << std::endl;
+    std::cout << getVecAngle(QPointF(0.5,0.5)) << " " << getVecAngle(QPointF(0.5,-0.5)) << " " <<  getVecAngle(QPointF(-0.5,-0.5))<<  " " << getVecAngle(QPointF(-0.1,0.5)) << std::endl;
+    return true;
+}
+
+bool rvsAngleMedian(){
+    //scaleCorrmatrix(Matrix,0.5);
+    QList<QPointF> Apriori;
+    QPointF p;
+    Apriori.append(QPointF(0,0.4));
+    Apriori.append(QPointF(0,0.5));
+    Apriori.append(QPointF(0,0.1));
+    p=getMedianPoint(Apriori);
+    std::cout << p.x() << " " << p.y() << std::endl;
+}
+
 void runVecSolverTest(){
     QTime timer;
     timer.start();
@@ -78,7 +98,9 @@ void runVecSolverTest(){
         //rvstMatrixSmooth();
         //rvstMatrixW2H();
         //rvstConstraintBlockTikhonov();
-        rvstXYTikhonov();
+        //rvstXYTikhonov();
+        rvsdirectionAngle();
+        //rvsAngleMedian();
         //rvstL1Blocktranspose();
         //rvstL1Block();
     //}

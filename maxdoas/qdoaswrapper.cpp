@@ -479,6 +479,7 @@ TRetrievalImage* QDoasWrapper::getRetrievalImage_(QString symbol){
                     else{
                         double val = values[index];
                         lastposImage->valueBuffer[y][x]->val = val;
+                        lastposImage->valueBuffer[y][x]->origval = val;
                     }
                 }
             }

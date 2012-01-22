@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QPointF>
+#include <QRectF>
 #include "tmirrorcoordinate.h"
 #include <QScriptEngine>
 #include <QScriptContext>
@@ -59,6 +60,7 @@ public:
     QPointF getOffset();
     QPointF getDiffVec();
     float GetDistanceToPoint(QPointF Point);
+    QPointF getRectCollisionPoint(QRectF rect, bool reverse);
 
 private:
     QPointF d;

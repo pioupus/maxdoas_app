@@ -20,6 +20,8 @@ public:
     void setMirrorCoordinate(TMirrorCoordinate *mc);
 
     double val;
+    double weight;
+    double origval;
     TMirrorCoordinate *mirrorCoordinate;
     QPointF getWindVector();
     void setWindVector(QPointF v);

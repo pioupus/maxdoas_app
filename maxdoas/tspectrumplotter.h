@@ -15,6 +15,7 @@
 #include "tretrievalimage.h"
 #include "tspectralimage.h"
 #include "qwtmarkerarrow.h"
+#include "temissionrate.h"
 
 using namespace Eigen;
 
@@ -69,7 +70,12 @@ public:
     void plotRetrievalImage(TRetrievalImage *img,int plotIndex, int Pixelsize=10);
     void plotSpectralImage(TSpectralImage *img,int plotIndex, int Pixelsize=10);
     void plotDenseMatrix(const MatrixXd& values,int plotIndex, int Pixelsize=10);
-
+    void oplotEmissionRaster(TEmissionrate *emissionrate,int plotIndex);
+    void plotEmission(TEmissionrate *emissionrate,int plotindex);
+    void  oplotEmission(TEmissionrate *emissionrate,int plotindex);
+    void  plotEmission_(TEmissionrate *emissionrate,int plotindex,int curveindex);
+    void  plotCorrelation(TEmissionrate *emissionrate,int plotindex);
+    void oplotLine(QPointF p1, QPointF p2,int plotIndex);
     static TSpectrumPlotter* instance(QObject *parent)
     {
         static QMutex mutex;
@@ -111,7 +117,7 @@ public slots:
     void plotVMarker(double x,QString title,int plotindex);
     void plotHMarker(double y,QString title,int plotindex);
     void plotXYMarker(double x,double y,QString title,int plotindex);
-
+    void plotXYMarkerNoLine(double x,double y,QString title,int plotindex);
     void plotAutoIntegrationtimeParameters(bool enabled);
 
     void plotToFile(QString format, QString Directory , QString BaseName, int SequenceNo , int plotindex,int width,int height, int resolution );
