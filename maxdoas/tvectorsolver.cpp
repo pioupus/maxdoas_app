@@ -118,6 +118,10 @@ void TVectorSolver::loadThermalImage(TRetrievalImage* thermImage){
     ThermalImage = new TRetrievalImage(thermImage);
 }
 
+void TVectorSolver::loadAprioriByMean(TRetrievalImage* RetImage){
+    APrioriVec = RetImage->getMeanVec();
+}
+
 void TVectorSolver::solve(TRetrievalImage* imgOldCd,TRetrievalImage* imgNewCd){
     if (AKDiagVec.rows()>0)
         AKDiagVec(0) = -1;

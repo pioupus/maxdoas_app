@@ -42,7 +42,7 @@ while(1){
 	plot.setTitle("DarkSpectrum");
 	darkcurrent.plot(0);
 	darkcurrent.SaveSpectrumDefName('spektren/','darkspectrum',Index);
-	free(darkcurrent);
+	
 
 	SetShutterOpen(true);
 	sleep(500);
@@ -69,12 +69,48 @@ while(1){
   	}
 	SpecImg.save('spektren/','Image',Index)
 
+
+/////////////////////////////////////////////////////
+/////////////////////QDOAS///////////////////////////
+/////////////////////START///////////////////////////
+/////////////////////////////////////////////////////
+
+
+
+		darkcurrent.interpolatePixel(412)//compensate Pixelerror at 307nm
+		darkcurrent.interpolatePixel(559)//compensate Pixelerror at 319nm
+		SpecImg.interpolatePixel(412)
+		SpecImg.interpolatePixel(559)
+
+		qc = new TQDoasConfigFile("/home/arne/diplom/software/application/qdoas/projects/Evaluation_SO2_NO2.xml");
+		qc.setOffset(Offset);
+		qc.saveWorkingCopy("spektren/spektren20111021/qdoas","20111021.xml","spektren/spektren20111021");
+		qdoas.retrieve(SpecImg,qc);
+		retImg = qdoas.getRetrievalImage("SO2.SlCol(SO2)");
+		//retImg.save("testrt"+Index.toString());
+		plot.setColorbarMinMax(1e16,3e78);
+		retImg.plot(1,40);
+
+		free(qc);
+		free(retImg)
+
+
+/////////////////////////////////////////////////////
+/////////////////////QDOAS///////////////////////////
+//////////////////////FIN////////////////////////////
+/////////////////////////////////////////////////////
+
+
+
+
+
+
 	SpecImg.plot(1)
 	plot.setTitle("Intensity",1);
 	plot.setXAxisTitle("fixed motor",1)
 	plot.setYAxisTitle("mirror motor",1)
 
 	free(SpecImg);
-
+	free(darkcurrent);
   
 }

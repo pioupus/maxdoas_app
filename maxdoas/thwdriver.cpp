@@ -57,8 +57,8 @@
 #define CMD_TRNSMIT_OK			0xAA
 #define CMD_TRNSMIT_FAIL		0x55
 
-#define OMNI_ENABLED 0
-#define MOT_ENABLED 0
+#define OMNI_ENABLED 1
+#define MOT_ENABLED 1
 const uint TimeOutData  =  3000; //ms
 const uint TimeOutMotion  =  5000; //ms
 

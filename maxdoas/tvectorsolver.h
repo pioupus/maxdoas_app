@@ -38,6 +38,7 @@ public slots:
     float getDOF_SRC();
     void dontUseThisResultForApriori();
     void setAprioriVelocity(float velocity);
+    void loadAprioriByMean(TRetrievalImage* RetImage);
     void setThermalTheshold(float thres);
     void solve(TRetrievalImage* imgOldCd,TRetrievalImage* imgNewCd);
 
