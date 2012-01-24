@@ -120,6 +120,9 @@ void TVectorSolver::loadThermalImage(TRetrievalImage* thermImage){
 
 void TVectorSolver::loadAprioriByMean(TRetrievalImage* RetImage){
     APrioriVec = RetImage->getMeanVec();
+    APrioriVec /= get2Norm(APrioriVec);
+    float MaxVel = RetImage->getMaxVelocity();
+    APrioriVec *= MaxVel;
 }
 
 void TVectorSolver::solve(TRetrievalImage* imgOldCd,TRetrievalImage* imgNewCd){
