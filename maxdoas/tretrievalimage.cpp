@@ -156,7 +156,13 @@ QPointF TRetrievalImage::getCoordinateInMeters(int col,int row){
 }
 
 
-
+void TRetrievalImage::loadWeightsMatrix(Eigen::MatrixXd& weights){
+    for (int i = 0; i < height; i++){
+        for(int n = 0; n<width;n++){
+            valueBuffer[i][n]->weight = weights(i,n);
+        }
+    }
+}
 
 void TRetrievalImage::loadWeights(TRetrievalImage* weights){
     for (int i = 0; i < height; i++){

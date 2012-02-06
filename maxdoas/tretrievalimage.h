@@ -34,6 +34,7 @@ public:
     QPointF getMaxVec();
     QPoint getClosesPoint(QPointF coor);
     void subMatrix( Eigen::MatrixXd& sub,bool sign);
+    void loadWeightsMatrix(Eigen::MatrixXd& weights);
     QPointF getCoordinateInMeters(int col,int row);
     void setTimeDiff(float sec);
     void mapWindVektors(TRetrievalImage* windvektor);

@@ -1,10 +1,16 @@
 #include "tvectorsolver.h"
 #include "vectorsolverservice.h"
 #include <QDateTime>
+#include <math.h>
 #include "tspectrumplotter.h"
 #include "tscanpath.h"
 #include "temissionrate.h"
 
+#include <iostream>
+#include <fstream>
+
+#define FILENUM "1"
+#define PRINTMATRIXES 0
 TVectorSolver* TVectorSolver::m_Instance = 0;
 
 TVectorSolver::TVectorSolver()
@@ -122,6 +128,8 @@ void TVectorSolver::loadAprioriByMean(TRetrievalImage* RetImage){
     APrioriVec = RetImage->getMeanVec();
     APrioriVec /= get2Norm(APrioriVec);
     float MaxVel = RetImage->getMaxVelocity();
+    if (isnan(MaxVel) || isinf(MaxVel))
+        MaxVel = 1;
     APrioriVec *= MaxVel;
 }
 
@@ -167,11 +175,34 @@ void TVectorSolver::solve(TRetrievalImage* imgOldCd,TRetrievalImage* imgNewCd){
     SAinv       = getSAInv( ConstraintVec, ConstraintSrcOET, ConstraintSrcTikhonov, SaDiag, Rows,Cols, Rv ,SrcPoints);
 
     CorrelationMatrix = weightsFromRetrImage(*imgNewCd);
+
+    CorrelationMatrix = conv2d(CorrelationMatrix,Smoothkernel);
+
+#if PRINTMATRIXES
+    std::ofstream filein;
+    filein.open ("matrixout"FILENUM"/CorrelationMatrix.txt");
+    filein << CorrelationMatrix;
+    filein.close();
+#endif
+    imgNewCd->loadWeightsMatrix(CorrelationMatrix);
+    imgOldCd->loadWeightsMatrix(CorrelationMatrix);
+
     scaleCorrmatrix(CorrelationMatrix,CorrThreshold);
     SEinv             = getSEinv(CorrelationMatrix);
 
+#if PRINTMATRIXES
+    filein.open ("matrixout"FILENUM"/SEinv.txt");
+    filein << SEinv;
+    filein.close();
+#endif
 
     K           = getK(CdsForGrad, *imgOldCd, dt, MeanDistance,UseDirectPixelsize,CorrelationMatrix);
+
+#if PRINTMATRIXES
+    filein.open ("matrixout"FILENUM"/K.txt");
+    filein << K;
+    filein.close();
+#endif
     if (UseMedianApririFilter)
         AprioriVecloc  = getMedianPoint(APrioriList);
 
@@ -180,17 +211,43 @@ void TVectorSolver::solve(TRetrievalImage* imgOldCd,TRetrievalImage* imgNewCd){
         AprioriVecloc = AprioriVecloc*fabs(AprioriVelocity);
     }
 
+    //qDebug("Apriori, x,y (%f, %f)",AprioriVecloc.x(),AprioriVecloc.y());
     AprioriSRC  = getAprioriSRC(Rows,Cols,SrcPosition.y(), SrcPosition.x(), SrcVal,smoothSrc);
     AprioriX    = getAprioriX(Rows, Cols,AprioriVecloc, AprioriSRC);
+
+#if PRINTMATRIXES
+    filein.open ("matrixout"FILENUM"/AprioriSRC.txt");
+    filein << AprioriSRC;
+    filein.close();
+#endif
+#if PRINTMATRIXES
+    filein.open ("matrixout"FILENUM"/AprioriX.txt");
+    filein << AprioriX;
+    filein.close();
+#endif
     DiffVector  = getDiffVector(OldCds,NewCds,1); // Diff = 1 second since grad and divergence already got multiplicated by dt -> bigger numbers, better precision
     deltay      = getDeltaY(DiffVector,AprioriX, K);
 
 
-
+#if PRINTMATRIXES
+    filein.open ("matrixout"FILENUM"/SAinv.txt");
+    filein << AprioriX;
+    filein.close();
+#endif
+#if PRINTMATRIXES
+    filein.open ("matrixout"FILENUM"/deltay.txt");
+    filein << AprioriX;
+    filein.close();
+#endif
 
 
     xVec = nextstepOET(AprioriX,SAinv, deltay,SEinv, K);
 
+#if PRINTMATRIXES
+    filein.open ("matrixout"FILENUM"/deltay.txt");
+    filein << AprioriX;
+    filein.close();
+#endif
     delete LastRetrieval;
     LastRetrieval = new TRetrievalImage(imgOldCd);
     LastRetrieval = mapDirectionVector(xVec,Rows,Cols,imgOldCd);

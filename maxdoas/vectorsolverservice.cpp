@@ -8,6 +8,8 @@
 #include <Eigen/SuperLUSupport>
 #include "tspectrumplotter.h"
 
+#include <iostream>
+#include <fstream>
 
 #include "log4qt/consoleappender.h"
 #include "log4qt/logger.h"
@@ -77,6 +79,7 @@ MatrixXd constrTest(){
     const int rows = 100;
     const int cols = 100;
     MatrixXd result(rows,cols);
+    result.setZero(rows,cols);
     for (int row = 0; row < rows;row++){
         for (int col = 0; col <cols;col++){
             //result(row,col) = (double)(col+1)/rows;
@@ -88,7 +91,6 @@ MatrixXd constrTest(){
 
 MatrixXd fromRetrImage(TRetrievalImage& RetImage){
     MatrixXd result(RetImage.getHeight(),RetImage.getWidth());
-
     for (int col = 0; col < RetImage.getWidth();col++){
         for (int row = 0; row < RetImage.getHeight();row++){
             result(row,col) = RetImage.valueBuffer[row][col]->val;
@@ -129,9 +131,10 @@ void thresholdmatrix(MatrixXd& M, MatrixXd& Corr, float Threshold){
 
 MatrixXd conv2d( MatrixXd& I,  MatrixXd &kernel )
 {
+
     MatrixXd result(I.rows(),I.cols());
 
-    if (even(kernel.rows()) || even(kernel.rows())){
+    if (even(kernel.rows()) || even(kernel.cols())){
         qDebug() << "Smoothing kernel has even dimensions";
         //return Derived::Zero(1,1);
     }
@@ -151,11 +154,20 @@ MatrixXd conv2d( MatrixXd& I,  MatrixXd &kernel )
     int krows =  kernel.rows();
     int kcols =  kernel.cols();
 
+//    std::ofstream filein;
+//    filein.open ("conv_in.txt");
+//    filein << I;
+//    filein.close();
+
+
     double norm = kernel.sum();
     for (int col = 0; col < I.cols(); col++ ){
         for (int row = 0; row < I.rows(); row++ ){
             if ((row >= kernelRow) && (row < limitRow) && (col >= kernelCol) && (col < limitCol)){
+
                 double b=(static_cast<MatrixXd>( I.block(row-kernelRow,col-kernelCol,krows,kcols ) ).cwiseProduct(kernel)).sum();
+                //double b=(static_cast<MatrixXd>( I.block(row-kernelRow,col-kernelCol,krows,kcols ) )).sum();
+                //std::cout << "kernel bei " << row <<","<< col << ": start (" << row-kernelRow << "," << col-kernelCol << "," << krows << "," << kcols<<")" << std::endl;
                 result.coeffRef(row,col) = b/norm;
             }else{
                 int rowoffsetu = kernelRow - row;
@@ -185,7 +197,13 @@ MatrixXd conv2d( MatrixXd& I,  MatrixXd &kernel )
             }
         }
     }
-   return result;
+
+//    std::ofstream fileout;
+//    fileout.open ("conv_out.txt");
+//    fileout << result;
+//    fileout.close();
+
+    return result;
 }
 
 TRetrievalImage* mapDirectionVector(const  VectorXd& XVec, int Rows, int Cols,TRetrievalImage *pixelpositions){
@@ -252,6 +270,7 @@ void mapMatrixValues(const  MatrixXd& Values,  TRetrievalImage* RetImage){
 MatrixXd getSourceMatrix(const  VectorXd& XVec, int rows, int cols){
     //rows/cols from image
     MatrixXd result(rows,cols);
+    result.setZero(rows,cols);
     for(int row=0;row<rows;row++){
         for (int col = 0; col<cols;col++){
             int i = indexMatrixToVec(rows, cols, row, col);
@@ -355,6 +374,15 @@ SparseMatrix<double,RowMajor> getK(const MatrixXd& values, TRetrievalImage& RetI
 //    (00x|00y|SRC)         (001)   y = grad_y + divergenceY
 
 //    result.reserve(RetImage.getWidth()*RetImage.getHeight()*3);
+
+//        std::ofstream filein;
+//        filein.open ("matrixout1/divergenceX.txt");
+//        filein << divergenceX;
+//        filein.close();
+//
+//        filein.open ("matrixout1/divergenceY.txt");
+//        filein << divergenceY;
+//        filein.close();
     for (int retcol = 0;retcol<RetImage.getWidth();retcol++){
         for (int retrow = 0;retrow<RetImage.getHeight();retrow++){
 
@@ -367,8 +395,9 @@ SparseMatrix<double,RowMajor> getK(const MatrixXd& values, TRetrievalImage& RetI
                 while(IteratorX){ //lets fill up first port before diagonal
                    //CHECKME: does it really work?
                     int itcol=IteratorX.col();
-                    if (row<itcol){
-                      result.insertBack(row,itcol) = IteratorX.value();
+                    if (row>itcol){
+                        double val = IteratorX.value();
+                        result.insertBack(row,itcol) = val;
                     }else{
                         break;
                     }
@@ -426,7 +455,7 @@ SparseMatrix<double,RowMajor> getK(const MatrixXd& values, TRetrievalImage& RetI
 
                 while(IteratorY){ //lets fill up first port before diagonal
                     int itcol=IteratorY.col();
-                    if (row<itcol){
+                    if (row>itcol){
                       result.insertBack(row,itcol+RetImage.getWidth()*RetImage.getHeight()) = IteratorY.value();
                     }else{
                         break;
@@ -540,6 +569,7 @@ MatrixXd getAprioriSRC(int Rows,int Cols,int srcRow, int srcCol, double srcVal,i
     //Rows,cols are image rows,cols
     //if srcCol or srcRow == -1 then this point is ignored
     MatrixXd Apriori_SourceMatrix(Rows,Cols);
+    Apriori_SourceMatrix.setZero(Rows,Cols);
     if (srcRow >= 0 && srcCol >= 0 )
         Apriori_SourceMatrix(srcRow,srcCol) = srcVal;
 
@@ -555,7 +585,7 @@ MatrixXd getAprioriSRC(int Rows,int Cols,int srcRow, int srcCol, double srcVal,i
 VectorXd getAprioriX(int Rows,int Cols,QPointF &APrioriVec,MatrixXd &AprioriSRC){
     //nicht getestet
     VectorXd result(Rows*Cols*3);//Rows,cols are image rows,cols
-
+    result.setZero(Rows*Cols*3);
     for(int blocksel=0;blocksel<2;blocksel++){
         for(int row=0;row<Rows;row++){
             for(int col=0;col<Cols;col++){
