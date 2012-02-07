@@ -211,7 +211,7 @@ void TVectorSolver::solve(TRetrievalImage* imgOldCd,TRetrievalImage* imgNewCd){
         AprioriVecloc = AprioriVecloc*fabs(AprioriVelocity);
     }
 
-    //qDebug("Apriori, x,y (%f, %f)",AprioriVecloc.x(),AprioriVecloc.y());
+    qDebug("Apriori, x,y (%f, %f)",AprioriVecloc.x(),AprioriVecloc.y());
     AprioriSRC  = getAprioriSRC(Rows,Cols,SrcPosition.y(), SrcPosition.x(), SrcVal,smoothSrc);
     AprioriX    = getAprioriX(Rows, Cols,AprioriVecloc, AprioriSRC);
 
