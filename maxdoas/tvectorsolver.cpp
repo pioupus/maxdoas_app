@@ -184,8 +184,8 @@ void TVectorSolver::solve(TRetrievalImage* imgOldCd,TRetrievalImage* imgNewCd){
     filein << CorrelationMatrix;
     filein.close();
 #endif
-    imgNewCd->loadWeightsMatrix(CorrelationMatrix);
-    imgOldCd->loadWeightsMatrix(CorrelationMatrix);
+   // imgNewCd->loadWeightsMatrix(CorrelationMatrix);
+   // imgOldCd->loadWeightsMatrix(CorrelationMatrix);
 
     scaleCorrmatrix(CorrelationMatrix,CorrThreshold);
     SEinv             = getSEinv(CorrelationMatrix);

@@ -364,6 +364,14 @@ SparseMatrix<double,RowMajor> getK(const MatrixXd& values, TRetrievalImage& RetI
         cotient = dt/meanPixelSizeY;
         divergenceY = divergenceY*cotient;
 
+//        std::ofstream filein;
+//                filein.open ("matrixout1/divergenceX.txt");
+//                filein << divergenceX;
+//                filein.close();
+//
+//        filein.open ("matrixout1/divergenceY.txt");
+//        filein << divergenceY;
+//        filein.close();
 
         divergenceX = coloumDensitiesDiag*divergenceX.transpose();
         divergenceY = coloumDensitiesDiag*divergenceY.transpose();
