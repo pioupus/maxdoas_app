@@ -185,7 +185,7 @@ bool TPatternType::load(QFile &meta){
             }
             if (t.startsWith("div")){
                 line >> divx;
-                line >> divy;
+                divy = 1;
                 fields++;
             }
         }

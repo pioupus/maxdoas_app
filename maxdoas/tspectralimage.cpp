@@ -234,6 +234,10 @@ bool TSpectralImage::getPositionArrayLine(TPatternType *pt,  TRetrieval* **buffe
             result = false;
         }
     }
+    if(Line.count() != spectrumlist.count()){
+        logger()->warn("Sprectrumpositions look odd "+fn);
+        result = false;
+    }
     QMapIterator<float, TMirrorCoordinate*> i_l(Line);
     int n = 0;
     if(cntY > 0){
@@ -301,8 +305,10 @@ bool TSpectralImage::calcIntensityImage(){
             val.second = val.first->getHash();
             spectrumtable[i.key()] = val;
         }
+        IntenseImg->datetime = FirstDate;
         return result;
     }
+    return false;
 
 }
 
@@ -455,6 +461,7 @@ bool TSpectralImage::Load(QString fn){
         return false;
     QFile dataf(fn);
     QFile metaf(fnToMetafn(fn));
+    //qDebug()<<fn;
     if ((dataf.open(QIODevice::ReadOnly | QIODevice::Text))&&(metaf.open(QIODevice::ReadOnly | QIODevice::Text))){
         bool ok;
         TSpectrum *spec;

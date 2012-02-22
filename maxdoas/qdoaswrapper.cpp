@@ -473,7 +473,7 @@ TRetrievalImage* QDoasWrapper::getRetrievalImage_(QString symbol){
             for(int y = 0;y<lastposImage->getHeight();y++ ){
                 for(int x = 0;x<lastposImage->getWidth();x++ ){
                     TRetrieval *tr = lastposImage->valueBuffer[y][x];
-                    int index = tr->mirrorCoordinate->pixelIndex;
+                    int index = tr->mirrorCoordinate->pixelIndex+1;
                     if (index > values.count())
                         ok = false;
                     else{

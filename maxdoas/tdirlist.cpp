@@ -1,9 +1,83 @@
 #include "tdirlist.h"
 #include <QDir>
 #include <QMap>
+#include <QTextStream>
+#include <QFileInfo>
+
+TScriptStringList::TScriptStringList(){
+
+}
+
+TScriptStringList::~TScriptStringList(){
+
+}
+
+
+bool TScriptStringList::saveToFile(QString filename){
+    QFile textFile(filename);
+    if (!textFile.open(QIODevice::WriteOnly | QIODevice::Text))
+        return false;
+
+    QTextStream textStream(&textFile);
+    for (int i=0;i<text.count();i++){
+        textStream << text[i]<<'\n';
+    }
+
+    return true;
+}
+
+bool TScriptStringList::loadFromFile(QString filename){
+
+
+    QFile textFile(filename);
+    if (!textFile.open(QIODevice::ReadOnly | QIODevice::Text))
+        return false;
+
+    QTextStream textStream(&textFile);
+    while (true)
+    {
+        QString line = textStream.readLine();
+        if (line.isNull())
+            break;
+        else
+            text.append(line);
+    }
+    return true;
+}
+
+void TScriptStringList::add(QString t){
+    text.append(t);
+}
+
+QString TScriptStringList::at(int index){
+    return text[index];
+}
+
+void TScriptStringList::clear(){
+    text.clear();
+}
+
+int TScriptStringList::count(){
+    return text.count();
+}
+
 
 QString getHash(int gi,int seq){
     return QString::number(gi).rightJustified(4, '0')+QString::number(seq).rightJustified(4, '0');
+}
+
+QString getDateString(QString s,QString format){
+    if (format == "CCARetImage"){
+        return s.left(19);
+    }
+    if (format == "CCA"){
+        return s.mid(s.indexOf("_")+1,20);
+    }
+    if (format == "SIGIS"){
+        s = s.section("(",1,1);
+        return s.left(s.indexOf(")"));
+    }
+    return "";
 }
 
 TFileentry::TFileentry(){
@@ -16,6 +90,18 @@ TFileentry::TFileentry(){
 bool TFileentry::loadFileName(QString fn,QString format){
     FileName = fn;
     bool result=false;
+    if (format == "CCARetImage"){
+        QStringList parts = fn.split("_");
+        Basename = parts[8];
+        if (parts.count()>9)
+            Basename = Basename+"_"+parts[9];
+        Basename = Basename.left(Basename.lastIndexOf("."));
+        QString s = getDateString(fn,format);
+        DateTime =  QDateTime::fromString(s,"yyyy_MM_dd_hh_mm_ss");
+        s = parts[7];
+        SequenceNr = s.toInt();
+        result = true;
+    }
     if (format == "CCA"){
         Basename = fn.left(fn.indexOf("_"));
         QString s = fn.mid(fn.indexOf("_")+1,20);
@@ -26,9 +112,10 @@ bool TFileentry::loadFileName(QString fn,QString format){
         result = true;
     }
     if (format == "SIGIS"){
-                                                                        //Haz_(2006_03_17_12_16_16_968)_step10_image003.bmp_ppm.txt
+        QString s = getDateString(fn,format);
+                            //Haz_(2006_03_17_12_16_16_968)_step10_image003.bmp_ppm.txt
         fn = fn.section("(",1,1);                               //2006_03_17_12_16_16_968)_step10_image003.bmp_ppm.txt
-        QString s = fn.left(fn.indexOf(")"));                             //2006_03_17_12_16_16_968
+        //QString s = fn.left(fn.indexOf(")"));                             //2006_03_17_12_16_16_968
 
         DateTime =  QDateTime::fromString(s,"yyyy_MM_dd_hh_mm_ss_zzz");
         s = fn.mid(fn.indexOf("image")+5);                  //003.bmp_ppm.txt
@@ -42,70 +129,33 @@ bool TFileentry::loadFileName(QString fn,QString format){
     return result;
 }
 
+QString TFileentry::getGroupName(){
+    return DateTime.toString("yyyy_MM_dd_hh_mm_ss_seq")+QString::number(SequenceNr).rightJustified(5, '0');;
+}
+
 QString TFileentry::getHashString(){
     return getHash(groupindex,SequenceNr);
 }
 
-QString getDateString(QString s,QString format){
-    if (format == "CCA"){
-        return s.mid(s.indexOf("_")+1,20);
-    }
-    if (format == "SIGIS"){
-        s = s.section("(",1,1);
-        return s.left(s.indexOf(")"));
-    }
-    return "";
+QString TFileentry::getDirectory(){
+//    QFileInfo fi(FileName);
+//    QString dr = fi.absolutePath();
+    return directory;
+}
+
+
+
+
+tdirlist::tdirlist(TScriptStringList *directories,int startindex,QString format){
+    ini(directories,startindex,format);
 }
 
 tdirlist::tdirlist(QString dir,int startindex,QString format)
 {
-    this->StartSequenceNr = startindex;
-    QString datfmt = "yyyy_MM_dd__hh_mm_ss";
-    QString filtermask = "*s.spe";
-
-    gotoStart();
-    QDir dr(dir);
-    Directory = dr.absolutePath();
-    if (format == "CCA"){
-        datfmt = "yyyy_MM_dd__hh_mm_ss";
-        filtermask = "*s.spe";
-    }
-    if (format == "SIGIS"){
-        datfmt = "yyyy_MM_dd_hh_mm_ss_zzz";
-        filtermask = "*.txt";
-    }
-    QStringList filter;
-    filter.append(filtermask);
-    QStringList dl = dr.entryList(filter);
-    QMap<QDateTime,QString> filelist;
-    for (int i=0;i<dl.count();i++){
-        QString s = dl[i];
-        s = getDateString(s,format);
-        QDateTime dt =  QDateTime::fromString(s,datfmt);
-        filelist.insertMulti(dt,dl[i]);
-    }
-    QMapIterator<QDateTime,QString> mi(filelist);
-    int groupindex = 0;
-    int oldseq = startindex;
-    QStringList BaseNames;
-    while (mi.hasNext()) {
-        mi.next();
-        TFileentry* fe = new TFileentry();
-        fe->loadFileName(mi.value(),format);
-        bool samegroup = (oldseq == fe->SequenceNr) && (BaseNames.indexOf(fe->Basename) == -1);
-        if (oldseq+1 == fe->SequenceNr){
-            BaseNames.clear();
-            samegroup = true;
-        }
-        if (!samegroup){
-            groupindex++;
-            BaseNames.clear();
-        }
-        BaseNames.append(fe->Basename);
-        oldseq = fe->SequenceNr;
-        fe->groupindex = groupindex;
-        FileTable.insertMulti(fe->getHashString(),fe);
-    }
+    TScriptStringList *directories = new TScriptStringList();
+    directories->add(dir);
+    ini(directories,startindex,format);
+    delete directories;
 }
 
 tdirlist::~tdirlist(){
@@ -117,6 +167,72 @@ tdirlist::~tdirlist(){
         delete fe;
     }
     FileTable.clear();
+}
+
+void tdirlist::ini(TScriptStringList *directories,int startindex,QString format){
+    this->StartSequenceNr = startindex;
+    QString datfmt = "yyyy_MM_dd__hh_mm_ss";
+    QString filtermask = "*s.spe";
+
+    TScriptStringList sl;
+
+    gotoStart();
+    int groupindex = 0;
+
+    for (int dirindex = 0;dirindex<directories->count();dirindex++){
+        QDir dr(directories->at(dirindex));
+        Directory = dr.absolutePath();
+        if (format == "CCARetImage"){
+            datfmt = "yyyy_MM_dd_hh_mm_ss";
+            filtermask = "*.txt";
+        }
+        if (format == "CCA"){
+            datfmt = "yyyy_MM_dd__hh_mm_ss";
+            filtermask = "*s.spe";
+        }
+        if (format == "SIGIS"){
+            datfmt = "yyyy_MM_dd_hh_mm_ss_zzz";
+            filtermask = "*.txt";
+        }
+        QStringList filter;
+        filter.append(filtermask);
+        QStringList dl = dr.entryList(filter);
+        QMap<QDateTime,QString> filelist;
+        for (int i=0;i<dl.count();i++){
+            QString s = dl[i];
+            s = getDateString(s,format);
+            QDateTime dt =  QDateTime::fromString(s,datfmt);
+            if (!dt.isNull())
+                filelist.insertMulti(dt,dl[i]);
+        }
+        QMapIterator<QDateTime,QString> mi(filelist);
+        int oldseq = startindex;
+        QStringList BaseNames;
+        while (mi.hasNext()) {
+            mi.next();
+            TFileentry* fe = new TFileentry();
+            fe->loadFileName(mi.value(),format);
+            fe->directory = Directory;
+
+            bool samegroup = (oldseq == fe->SequenceNr) && (BaseNames.indexOf(fe->Basename) == -1);
+            if (oldseq+1 == fe->SequenceNr){
+                BaseNames.clear();
+                samegroup = true;
+                sl.add(Directory+"/"+mi.value()+'\t'+QString::number(groupindex)+'\t'+QString::number(fe->SequenceNr));
+            }
+            if (!samegroup){
+                groupindex++;
+                BaseNames.clear();
+                sl.add(Directory+"/"+mi.value()+'\t'+QString::number(groupindex)+'\t'+QString::number(fe->SequenceNr));
+            }
+            BaseNames.append(fe->Basename);
+            oldseq = fe->SequenceNr;
+            fe->groupindex = groupindex;
+            FileTable.insertMulti(fe->getHashString(),fe);
+        }
+        groupindex++;
+    }
+    sl.saveToFile("test.txt");
 }
 
 bool tdirlist::gotoNextCompleteGroup(int BaseNameCounts){
@@ -171,6 +287,24 @@ void tdirlist::gotoStart(){
     this->groupindex=-1;
 }
 
+QString tdirlist::getGroupName(){
+    QString hash = getHash(groupindex,SequenceNr);
+    QList<TFileentry*> subgroup = FileTable.values(hash);
+    QString result;
+    if (subgroup.length() > 0)
+        result = subgroup[0]->getGroupName();
+    return result;
+}
+
+QString tdirlist::getDir(){
+    QString hash = getHash(groupindex,SequenceNr);
+    QList<TFileentry*> subgroup = FileTable.values(hash);
+    QString result = subgroup[0]->getDirectory();
+
+
+    return result;
+}
+
 QString tdirlist::getFileName(QString BaseName){
     return getFileName(BaseName,groupindex,SequenceNr);
 }
@@ -181,7 +315,7 @@ QString tdirlist::getFileName(QString BaseName, int groupindex, int sequencenr){
     QString result;
     for(int i = 0;i<subgroup.count();i++){
         if (subgroup[i]->Basename == BaseName){
-            result = Directory+"/"+subgroup[i]->FileName;
+            result = subgroup[i]->directory+"/"+subgroup[i]->FileName;
             break;
         }
     }

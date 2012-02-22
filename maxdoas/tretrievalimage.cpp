@@ -33,49 +33,140 @@ TRetrievalImage::TRetrievalImage(QString fn,QString fmt,float PixelWidthAngle,fl
     dof_x = -1;
     dof_y = -1;
     dof_src = -1;
-    bool result = true;
-    QFile data(fn);
-    QString s = fn.left(fn.indexOf(")"));
-    int StartCol=0;
-    if (fmt == "SIGIS")
-        StartCol = 1;
+    if (fmt == "CCA"){
+        load(fn);
+    }else{
 
-    s = s.section("(",1,1);
-    datetime = QDateTime::fromString(s,"yyyy_MM_dd_hh_mm_ss_zzz");
-    if (data.open(QFile::ReadOnly)) {
-        QTextStream datastream(&data);
-        int rows = 0;
-        int cols = 0;
-        int oldcols = 0;
-        while(!datastream.atEnd()){
-            QString line = datastream.readLine();
-            QStringList colstrings = line.split(QRegExp("\\s+"),QString::SkipEmptyParts);//match with spaces and tabs
-            rows++;
-            cols = colstrings.count();
-            if ((oldcols !=  cols)&&(rows != 1)){
-                result = false;
-                logger()->warn(QString("SIGIS Image %1 has different colsizes").arg(fn));
-                break;
+        bool result = true;
+        QFile data(fn);
+        QString s = fn.left(fn.indexOf(")"));
+        int StartCol=0;
+        if (fmt == "SIGIS")
+            StartCol = 1;
+
+        s = s.section("(",1,1);
+        datetime = QDateTime::fromString(s,"yyyy_MM_dd_hh_mm_ss_zzz");
+        if (data.open(QFile::ReadOnly)) {
+            QTextStream datastream(&data);
+            int rows = 0;
+            int cols = 0;
+            int oldcols = 0;
+            while(!datastream.atEnd()){
+                QString line = datastream.readLine();
+                QStringList colstrings = line.split(QRegExp("\\s+"),QString::SkipEmptyParts);//match with spaces and tabs
+                rows++;
+                cols = colstrings.count();
+                if ((oldcols !=  cols)&&(rows != 1)){
+                    result = false;
+                    logger()->warn(QString("SIGIS Image %1 has different colsizes").arg(fn));
+                    break;
+                }
+                oldcols = cols;
             }
-            oldcols = cols;
+            inibuffer(cols-StartCol,rows,(TRetrievalImage*)NULL);
+            datastream.seek(0);
+            float yPos=0;
+            for (int row=0; row < rows; row++){
+                float xPos=0;
+                if(!result)
+                    break;
+                QString line = datastream.readLine();
+                QStringList colstrings = line.split(QRegExp("\\s+"),QString::SkipEmptyParts);//match with spaces and tabs
+                for(int col = StartCol; col< cols; col++){
+
+                    QPointF ac(xPos,((float)(rows-1)*PixelHeightAngle)- yPos);
+                    if(row == rows-1)
+                        ac.setY(0);
+                    TMirrorCoordinate *mc = new TMirrorCoordinate(ac);
+                    xPos += PixelWidthAngle;
+                    QString word = colstrings[col];
+                    double val;
+                    bool ok;
+                    val = word.toDouble(&ok);
+                    if (!ok){
+                        logger()->warn(QString("SIGIS Image %1 cant convert string to double(%2)").arg(fn).arg(word));
+                        result = false;
+                        break;
+                    }
+                    valueBuffer[rows-row-1][col-StartCol]->val = val;
+                    valueBuffer[rows-row-1][col-StartCol]->origval = val;
+                    valueBuffer[rows-row-1][col-StartCol]->setMirrorCoordinate(mc);
+                    delete mc;
+                }
+                yPos += PixelHeightAngle;
+            }
+            data.close();
+        }else{
+            logger()->warn(QString("SIGIS Image %1 doesnt exist").arg(fn));
+            result = false;
         }
-        inibuffer(cols-StartCol,rows,(TRetrievalImage*)NULL);
-        datastream.seek(0);
+    }
+}
+
+void TRetrievalImage::load(QString fn){
+    QFile data(fn);
+    if (data.open(QFile::ReadOnly)) {
+        bool result = true;
+        QTextStream datastream(&data);
+        QString line = datastream.readLine();//PosDegX;PosDegY;value
+        bool posenabled = false;
+        bool windenabled = false;
+        if (line.contains("wind"))
+            windenabled = true;
+        if (line.contains("Pos"))
+            posenabled = true;
+        line = datastream.readLine();//distance:
+        line = datastream.readLine();//6488165
+        meanDistance = line.toInt();
+        line = datastream.readLine();//dof x y src:
+        line = datastream.readLine();//-1;-1;-1
+        QStringList colstrings = line.split(";");
+        dof_x = colstrings[0].toFloat();
+        dof_y = colstrings[1].toFloat();
+        dof_src = colstrings[2].toFloat();
+        line = datastream.readLine();//date
+        line = datastream.readLine();//2011.11.09 12:06:27:000
+        datetime = QDateTime::fromString(line,"yyyy.MM.dd hh:mm:ss:zzz");
+        line = datastream.readLine();//fields(width,height):
+        line = datastream.readLine();
+        int cols = line.toInt();  //7
+        line = datastream.readLine();
+        int rows = line.toInt(); //77
+
+        inibuffer(cols,rows,(TRetrievalImage*)NULL);
+
         float yPos=0;
         for (int row=0; row < rows; row++){
             float xPos=0;
             if(!result)
                 break;
-            QString line = datastream.readLine();
-            QStringList colstrings = line.split(QRegExp("\\s+"),QString::SkipEmptyParts);//match with spaces and tabs
-            for(int col = StartCol; col< cols; col++){
+            line = datastream.readLine();
+            colstrings = line.split(QRegExp("\\s+"),QString::SkipEmptyParts);//match with spaces and tabs
 
-                QPointF ac(xPos,((float)(rows-1)*PixelHeightAngle)- yPos);
-                if(row == rows-1)
-                    ac.setY(0);
+
+            for(int col = 0; col< cols; col++){
+                int innerfieldindex=0;
+                QPointF ac;
+                QPointF windvector(0,0);
+                QString colstring = colstrings[col];
+                QStringList fieldvalues = colstring.split(";");
+                if(posenabled){
+                    ac = QPointF(fieldvalues[0].toFloat(),fieldvalues[1].toFloat());
+                    innerfieldindex = 2;
+                }else{
+                    ac = QPointF(xPos,((float)(rows-1)*1)- yPos);
+                    if(row == rows-1)
+                        ac.setY(0);
+                    xPos += 1;
+                }
                 TMirrorCoordinate *mc = new TMirrorCoordinate(ac);
-                xPos += PixelWidthAngle;
-                QString word = colstrings[col];
+
+                if(windenabled){
+                    windvector = QPointF(fieldvalues[innerfieldindex].toFloat(),fieldvalues[innerfieldindex+1].toFloat());
+                    innerfieldindex += 2;
+                }
+
+                QString word = fieldvalues[innerfieldindex];
                 double val;
                 bool ok;
                 val = word.toDouble(&ok);
@@ -84,19 +175,19 @@ TRetrievalImage::TRetrievalImage(QString fn,QString fmt,float PixelWidthAngle,fl
                     result = false;
                     break;
                 }
-                valueBuffer[rows-row-1][col-StartCol]->val = val;
-                valueBuffer[rows-row-1][col-StartCol]->origval = val;
-                valueBuffer[rows-row-1][col-StartCol]->setMirrorCoordinate(mc);
+                valueBuffer[row][col]->val = val;
+                valueBuffer[row][col]->origval = val;
+                valueBuffer[row][col]->weight = 1;
+                valueBuffer[row][col]->setMirrorCoordinate(mc);
+                valueBuffer[row][col]->setWindVector(windvector);
                 delete mc;
             }
-            yPos += PixelHeightAngle;
+            yPos += 1;
         }
         data.close();
-    }else{
-        logger()->warn(QString("SIGIS Image %1 doesnt exist").arg(fn));
-        result = false;
     }
 }
+
 
 TRetrievalImage::~TRetrievalImage()
 {
@@ -235,6 +326,7 @@ void TRetrievalImage::save(QString fn,bool PosInfo, bool windvector){
         }
     }
 }
+
 
 float TRetrievalImage::getMinVal(){
     float result = 0;

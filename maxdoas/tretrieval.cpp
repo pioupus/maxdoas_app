@@ -4,6 +4,7 @@
 TRetrieval::TRetrieval()
 {
     mirrorCoordinate = NULL;
+    WindVector = QPointF(0,0);
 }
 
 TRetrieval::TRetrieval(TRetrieval * other){

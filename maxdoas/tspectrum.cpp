@@ -546,6 +546,7 @@ int TSpectrum::LoadSpectraldata(QFile &data,bool &versionWithDateInLineWithoutSZ
     //decimalpoint = *(localeconv()->decimal_point);
     while(!newline){
         lineLength = data.readLine(&buffer[0],sizeof(buffer));
+        bufferindex = 0;
         if (lineLength < 0)
             newline = true;
         do{

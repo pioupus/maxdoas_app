@@ -42,6 +42,7 @@ public:
     void setDOFs(float dof_x,float dof_y,float dof_src);
 public slots:
     void save(QString fn,bool PosInfo, bool windvector);
+    void load(QString fn);
     void plot(int plotIndex, int Pixelsize=10);
     void oplotWindField(int plotIndex, int Average=1, bool normalize=true,bool excludezero=true);
     float getMinVal();

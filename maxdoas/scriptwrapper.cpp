@@ -144,11 +144,43 @@ QScriptValue QDoasConfigFileConstructor(QScriptContext *context, QScriptEngine *
     return engine->newQObject(object, QScriptEngine::ScriptOwnership);
 }
 
+QScriptValue TScriptStringListConstructor(QScriptContext *context, QScriptEngine *engine)
+{
+    QObject *object = new TScriptStringList();
+    return engine->newQObject(object, QScriptEngine::ScriptOwnership);
+}
+
 QScriptValue TDirListConstructor(QScriptContext *context, QScriptEngine *engine)
 {
-    QString sp = context->argument(0).toString();
+    QObject *slo = context->argument(0).toQObject();
+    TScriptStringList *sl = dynamic_cast<TScriptStringList*>(slo);
     int startindex = context->argument(1).toInteger();
-    QObject *object = new tdirlist(sp,startindex,"CCA");
+    QString sp;
+    QObject *object;
+    if (sl == NULL){
+        sp = context->argument(0).toString();
+        object = new tdirlist(sp,startindex,"CCA");
+    }else{
+        object = new tdirlist(sl,startindex,"CCA");
+    }
+
+    return engine->newQObject(object, QScriptEngine::ScriptOwnership);
+}
+
+QScriptValue TDirListConstructorCCARetImage(QScriptContext *context, QScriptEngine *engine)
+{
+    QObject *slo = context->argument(0).toQObject();
+    TScriptStringList *sl = dynamic_cast<TScriptStringList*>(slo);
+    int startindex = context->argument(1).toInteger();
+    QString sp;
+    QObject *object;
+    if (sl == NULL){
+        sp = context->argument(0).toString();
+        object = new tdirlist(sp,startindex,"CCARetImage");
+    }else{
+        object = new tdirlist(sl,startindex,"CCARetImage");
+    }
+
     return engine->newQObject(object, QScriptEngine::ScriptOwnership);
 }
 
@@ -167,6 +199,14 @@ QScriptValue TRetrievalImageConstructorSIGIS(QScriptContext *context, QScriptEng
     QObject *object = new TRetrievalImage(FileName,"SIGIS",PixSizeWidth,PixSizeHeigtht);
     return engine->newQObject(object, QScriptEngine::ScriptOwnership);
 }
+
+QScriptValue TRetrievalImageConstructorCCA(QScriptContext *context, QScriptEngine *engine)
+{
+    QString FileName = context->argument(0).toString();
+    QObject *object = new TRetrievalImage(FileName,"CCA",0,0);
+    return engine->newQObject(object, QScriptEngine::ScriptOwnership);
+}
+
 
 QScriptValue TRetrievalImageConstructorCopy(QScriptContext *context, QScriptEngine *engine)
 {
@@ -253,6 +293,11 @@ QScriptValue FreeObject(QScriptContext *context, QScriptEngine *engine)
                        TEmissionrate *er = dynamic_cast<TEmissionrate*>(obj);
                        if(er != NULL){
                            delete er;
+                       }else{
+                           TScriptStringList *sl = dynamic_cast<TScriptStringList*>(obj);
+                           if(sl != NULL){
+                                delete sl;
+                           }
                        }
                    }
                }
@@ -580,9 +625,21 @@ TScriptWrapper::TScriptWrapper(THWDriver* hwdriver)
     QScriptValue metactordlsi = ScriptEngine->newQMetaObject(&QObject::staticMetaObject, ctordlsi);
     ScriptEngine->globalObject().setProperty("TDirlistSIGIS", metactordlsi);
 
+    QScriptValue ctordlcri = ScriptEngine->newFunction(TDirListConstructorCCARetImage);
+    QScriptValue metactordcri = ScriptEngine->newQMetaObject(&QObject::staticMetaObject, ctordlcri);
+    ScriptEngine->globalObject().setProperty("TDirlistCCARetImg", metactordcri);
+
+
+
     QScriptValue ctordretimg = ScriptEngine->newFunction(TRetrievalImageConstructorSIGIS);
     QScriptValue metactordretimg = ScriptEngine->newQMetaObject(&QObject::staticMetaObject, ctordretimg);
     ScriptEngine->globalObject().setProperty("TRetrievalImageSIGIS", metactordretimg);
+
+    QScriptValue ctordretimgcca = ScriptEngine->newFunction(TRetrievalImageConstructorCCA);
+    QScriptValue metactordretimgcca = ScriptEngine->newQMetaObject(&QObject::staticMetaObject, ctordretimgcca);
+    ScriptEngine->globalObject().setProperty("TRetrievalImageCCA", metactordretimgcca);
+
+
 
     QScriptValue ctordretimgc = ScriptEngine->newFunction(TRetrievalImageConstructorCopy);
     QScriptValue metactordretimgc = ScriptEngine->newQMetaObject(&QObject::staticMetaObject, ctordretimgc);
@@ -609,6 +666,10 @@ TScriptWrapper::TScriptWrapper(THWDriver* hwdriver)
     QScriptValue metaqdconf = ScriptEngine->newQMetaObject(&QObject::staticMetaObject, qdconf);
     ScriptEngine->globalObject().setProperty("TQDoasConfigFile", metaqdconf);
 
+    QScriptValue qdsl = ScriptEngine->newFunction(TScriptStringListConstructor);
+    QScriptValue metasl = ScriptEngine->newQMetaObject(&QObject::staticMetaObject, qdsl);
+    ScriptEngine->globalObject().setProperty("TStringList", metasl);
+
     QScriptValue plotobj = ScriptEngine->newQObject(TSpectrumPlotter::instance(0),QScriptEngine::ScriptOwnership);
     ScriptEngine->globalObject().setProperty("plot", plotobj);
 
@@ -618,6 +679,7 @@ TScriptWrapper::TScriptWrapper(THWDriver* hwdriver)
 
     QScriptValue qdoasobj = ScriptEngine->newQObject(QDoasWrapper::instance(),QScriptEngine::ScriptOwnership);
     ScriptEngine->globalObject().setProperty("qdoas", qdoasobj);
+
 }
 
 
