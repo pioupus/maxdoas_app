@@ -31,6 +31,7 @@ TVectorSolver::TVectorSolver()
     PrevImageSubavg = NULL;
     NextImageSubavg = NULL;
     UseMedianApririFilter = false;
+    UseAvgApririFilter = false;
     EmissionFactor = 1;
     AprioriVelocity = 0;
     useNextResultForApriori = true;
@@ -90,6 +91,9 @@ void TVectorSolver::setAprioriVelocity(float velocity){
     AprioriVelocity = velocity;
 }
 
+
+
+
 void TVectorSolver::setCorrThreshold(float CorrThreshold){
     this->CorrThreshold = CorrThreshold;
 }
@@ -110,7 +114,14 @@ void TVectorSolver::setUseDirectPixelsize(bool    UseDirectPixelsize){
 
 void TVectorSolver::setUseMedianAprioriFilter(bool MedianAprioriFilter){
     UseMedianApririFilter = MedianAprioriFilter;
+    UseAvgApririFilter = false;
 }
+
+void TVectorSolver::setUseAvgAprioriFilter(bool AvgAprioriFilter){
+    UseAvgApririFilter = AvgAprioriFilter;
+    UseMedianApririFilter = false;
+}
+
 
 void TVectorSolver::setEmissionFactor(float emissionfactor){
     EmissionFactor = emissionfactor;
@@ -205,7 +216,8 @@ void TVectorSolver::solve(TRetrievalImage* imgOldCd,TRetrievalImage* imgNewCd){
 #endif
     if (UseMedianApririFilter)
         AprioriVecloc  = getMedianPoint(APrioriList);
-
+    if (UseAvgApririFilter)
+        AprioriVecloc = getAvgPoint(APrioriList);
     if (AprioriVelocity != 0){
         AprioriVecloc = AprioriVecloc/get2Norm(AprioriVecloc);
         AprioriVecloc = AprioriVecloc*fabs(AprioriVelocity);

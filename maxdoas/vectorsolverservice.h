@@ -62,7 +62,8 @@ void                            mapMatrixValues(const  MatrixXd& Values,  TRetri
 
 float getVecAngle(QPointF Vector);
 float get2Norm(QPointF p);
-QPointF getMedianPoint(QList<QPointF> Apriori);
+QPointF     getMedianPoint(QList<QPointF> Apriori);
+QPointF     getAvgPoint(QList<QPointF> Apriori);
 float selectAndIntegrateCorridor(TRetrievalImage* retimg, TParamLine &corridor, QPointF MeanFluxDirection, float CorridorWidth,int index,float distance);
 
 #endif // VECTORSOLVERSERVICE_H

@@ -28,6 +28,7 @@ public slots:
     void setMeanDistance(float Distance);//in meter
     void setUseDirectPixelsize(bool    UseDirectPixelsize);
     void setUseMedianAprioriFilter(bool MedianAprioriFilter);
+    void setUseAvgAprioriFilter(bool AvgAprioriFilter);
     void plotSrcMatrix(int plotindex, int pixelsize=10);
     void plotdcoldt_observed(int plotindex, int pixelsize=10);
     void plotdcoldt_retrieved(int plotindex, int pixelsize=10);
@@ -126,6 +127,7 @@ private:
     float   MeanDistance;
     bool    UseDirectPixelsize;
     bool    UseMedianApririFilter;
+    bool    UseAvgApririFilter;
     float   CorrThreshold;
     float   EmissionFactor;
     QPointF APrioriVec;

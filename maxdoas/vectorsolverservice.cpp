@@ -1135,6 +1135,15 @@ QPointF getMedianPoint(QList<QPointF> Apriori){
     return result;
 }
 
+QPointF getAvgPoint(QList<QPointF> Apriori){
+    QPointF  result;
+    for(int i=0;i<Apriori.count()-1;i++){
+        result += Apriori[i];
+    }
+    result /= Apriori.count();
+    return result;
+}
+
 float selectAndIntegrateCorridor(TRetrievalImage* retimg, TParamLine &corridor, QPointF MeanFluxDirection, float CorridorWidth,int index,float distance){
     float result=0;
     int points=0;
