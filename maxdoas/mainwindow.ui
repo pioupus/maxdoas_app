@@ -17,7 +17,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>Windfield DOAS</string>
   </property>
   <widget class="QWidget" name="centralWidget">
    <property name="sizePolicy">

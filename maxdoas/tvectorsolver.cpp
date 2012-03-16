@@ -115,11 +115,13 @@ void TVectorSolver::setUseDirectPixelsize(bool    UseDirectPixelsize){
 void TVectorSolver::setUseMedianAprioriFilter(bool MedianAprioriFilter){
     UseMedianApririFilter = MedianAprioriFilter;
     UseAvgApririFilter = false;
+    APrioriList.clear();
 }
 
 void TVectorSolver::setUseAvgAprioriFilter(bool AvgAprioriFilter){
     UseAvgApririFilter = AvgAprioriFilter;
     UseMedianApririFilter = false;
+    APrioriList.clear();
 }
 
 
@@ -178,8 +180,9 @@ void TVectorSolver::solve(TRetrievalImage* imgOldCd,TRetrievalImage* imgNewCd){
     OldCds = conv2d(OldCds,Smoothkernel);
     NewCds = conv2d(NewCds,Smoothkernel);
 
-    CdsForGrad        = 0.5*(OldCds+NewCds);
+    //CdsForGrad        = 0.5*(OldCds+NewCds);
 
+    CdsForGrad = OldCds;
     SrcPoints   = getSrcPoints(Rows,Cols,ThermalImage,ThermalThreshold);
 
     Rv          = xy_tikhonov(Rows, Cols);

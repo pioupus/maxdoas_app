@@ -1136,11 +1136,16 @@ QPointF getMedianPoint(QList<QPointF> Apriori){
 }
 
 QPointF getAvgPoint(QList<QPointF> Apriori){
-    QPointF  result;
-    for(int i=0;i<Apriori.count()-1;i++){
-        result += Apriori[i];
+    QPointF  result(0,0);
+    int n=0;
+    for(int i=0;i<Apriori.count();i++){
+        if (!isnan(Apriori[i].x())){
+            result += Apriori[i];
+            n++;
+        }
     }
-    result /= Apriori.count();
+    if (n>0)
+        result /= n;
     return result;
 }
 
@@ -1164,7 +1169,7 @@ float selectAndIntegrateCorridor(TRetrievalImage* retimg, TParamLine &corridor, 
                 //windspeedprojection = 1;
                 result += retimg->valueBuffer[row][col]->val*windspeedprojection;//FIXME! We shouldnt use the scalebycorr image for integrating
                 if (index == 1){
-                    sp->plotXYMarkerNoLine(p.x(),p.y(),"",0);
+                 //   sp->plotXYMarkerNoLine(p.x(),p.y(),"",0);
                 }
                 if ((p.x() < corridorframe.left()) ||(points==0)){
                     corridorframe.setLeft(p.x());
