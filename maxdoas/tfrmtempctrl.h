@@ -47,7 +47,17 @@ private:
     TMaxdoasSettings *ms;
     TCOMPortConf ComPortSettings;
     TBubbleWidget *bubblewidget;
+    bool tiltcalibration;
 private slots:
+    void on_btnSetZenithPos_clicked();
+    void on_btnSetShutterClosePos_clicked();
+    void on_btnTiltSetAsZenith_clicked();
+    void on_btnTiltCalibration_clicked();
+    void on_btnZenithMotDown_clicked();
+    void on_btnZenithMotUp_clicked();
+    void on_btnShutterPosDown_clicked();
+    void on_btnShutterPosUp_clicked();
+    void on_btnSetSerialNumber_clicked();
     void on_btnSetTiltToZero_clicked();
     void on_chbComBySysPath_stateChanged(int );
     void on_buttonBox_accepted();
@@ -56,6 +66,15 @@ private slots:
     void SloGotTemperature(float TemperaturePeltier, float TemperatureSpectr, float TemperatureHeatsink);
     void slotCOMPorts(const QStringList &list);
     void SlotGotTilt(float x,float y,int Gain,int Resolution,float ResolutionBorder,float MaxTilt);
+    void SlotGotDeviceInfo(int GitHash,int guid, int deviceType);
+    void SlotGotMotorSetup(int MaxDoasZenithPosition,int ShutterClosePosition, int MaxDoasMicrosteps, int ShutterMicrosteps, int ShutterType);
+    void SlotGotScannerStatus(float ScannerTemperature,bool ShutterOpenedBySwitch, bool EndSwitchError);
+    void SlotGotTiltDirection(float TiltDirection);
+
+    void SlotGotTiltMinVal(int TiltX, int TiltY, int Gain, int Resolution);
+    void SlotGotTiltMaxVal(int TiltX, int TiltY, int Gain, int Resolution);
+    void on_btnMotHome_clicked();
+
 protected:
     virtual void timerEvent(QTimerEvent *e);
 };

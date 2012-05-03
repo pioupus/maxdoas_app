@@ -170,7 +170,12 @@ MainWindow::MainWindow(QWidget *parent) :
 void MainWindow::StartMeasure(){
     TSPectrWLCoefficients wlcoef;
     TAutoIntegConf ac;
-    HWDriver->hwdSetTiltOffset(ms->getTiltOffset());
+
+
+
+    HWDriver->hwdSetTiltMinMaxCalib(ms->getTiltMinValue(),ms->getTiltMaxValue());
+
+
     HWDriver->hwdSetComPort(ms->getComPortConfiguration());
     HWDriver->hwdSetTargetTemperature(ms->getTargetTemperature());
     HWDriver->hwdOpenSpectrometer(ms->getPreferredSpecSerial());
@@ -179,10 +184,12 @@ void MainWindow::StartMeasure(){
     ac = ms->getAutoIntegrationRetrievalConf();
     HWDriver->setIntegrationConfiguration(&ac);
     HWDriver->hwdMeasureSpectrum(1,0,scNone);
+
 }
 
 void MainWindow::on_GotSpectrum(){
     TAutoIntegConf ac = ms->getAutoIntegrationRetrievalConf();
+    (void)ac;
    // HWDriver->hwdGetSpectrum(&spectrum);
 
 //    HWDriver->hwdMeasureSpectrum(2,0,scNone);
@@ -190,9 +197,14 @@ void MainWindow::on_GotSpectrum(){
 
 void MainWindow::COMPortChanged(QString name, bool opened, bool error){
     QString s;
-    if (opened)
+    if (opened){
         s = " opened";
-    else
+        HWDriver->hwdAskDeviceInfo();
+        HWDriver->hwdAskMotorSetup();
+        HWDriver->hwdAskTiltMaxValue();
+        HWDriver->hwdAskTiltMinValue();
+        HWDriver->hwdAskTiltZenithValue();
+    }else
         s = " closed";
     if (error)
         s = s + " (error)";

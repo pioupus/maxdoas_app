@@ -3,6 +3,7 @@
 #include <QScriptEngine>
 #include <QScriptContext>
 #include <QScriptValue>
+#include "maxdoassettings.h"
 
 TPatternType::TPatternType(){
     this->Patternstyle = psNone;
@@ -427,14 +428,20 @@ int TScanPath::AddRect(QPointF p1,QPointF p2, QPointF p3, QPointF p4, QPoint Div
 int TScanPath::AddRect(){
     int res=0;
     int c = argumentCount();
-    if (c==10){
+    TMaxdoasSettings *ms;
+    ms = TMaxdoasSettings::instance();
+    if ((ms->getAttachedScanningDevice()==sdtWindField)||(ms->getAttachedScanningDevice()==sdtUnknown)){
+        if (c==10){
 
-        QPointF p1(argument(0).toNumber(),argument(1).toNumber());
-        QPointF p2(argument(2).toNumber(),argument(3).toNumber());
-        QPointF p3(argument(4).toNumber(),argument(5).toNumber());
-        QPointF p4(argument(6).toNumber(),argument(7).toNumber());
-        QPoint Divisions(argument(8).toNumber(),argument(9).toNumber());
-        res = AddRect(p1,p2,p3,p4,Divisions);
+            QPointF p1(argument(0).toNumber(),argument(1).toNumber());
+            QPointF p2(argument(2).toNumber(),argument(3).toNumber());
+            QPointF p3(argument(4).toNumber(),argument(5).toNumber());
+            QPointF p4(argument(6).toNumber(),argument(7).toNumber());
+            QPoint Divisions(argument(8).toNumber(),argument(9).toNumber());
+            res = AddRect(p1,p2,p3,p4,Divisions);
+        }
+    }else if (ms->getAttachedScanningDevice()==sdtMAXDOAS){
+        logger()->error("try to create a Rectpattern even though its in MAXDOAS mode");
     }
     return res;
 }
@@ -459,12 +466,23 @@ int TScanPath::AddLine(QPointF p1,QPointF p2, uint Divisions){
 int TScanPath::AddLine(){
     int res=0;
     int c = argumentCount();
-    if (c==5){
+    TMaxdoasSettings *ms = TMaxdoasSettings::instance();
+    if ((ms->getAttachedScanningDevice()==sdtWindField)||(ms->getAttachedScanningDevice()==sdtUnknown)){
+        if (c==5){
 
-        QPointF p1(argument(0).toNumber(),argument(1).toNumber());
-        QPointF p2(argument(2).toNumber(),argument(3).toNumber());
-        int Divisions = argument(4).toNumber();
-        res = AddLine(p1,p2,Divisions);
+            QPointF p1(argument(0).toNumber(),argument(1).toNumber());
+            QPointF p2(argument(2).toNumber(),argument(3).toNumber());
+            int Divisions = argument(4).toNumber();
+            res = AddLine(p1,p2,Divisions);
+        }
+    }else if (ms->getAttachedScanningDevice()==sdtMAXDOAS){
+        if (c==3){
+
+            QPointF p1(argument(0).toNumber(),0);
+            QPointF p2(argument(1).toNumber(),0);
+            int Divisions = argument(2).toNumber();
+            res = AddLine(p1,p2,Divisions);
+        }
     }
     return res;
 }
@@ -504,14 +522,20 @@ int TScanPath::AddEllipseOutline(QPointF center,float MinorAxis, float MajorAxis
 int TScanPath::AddEllipseOutline(){
     int res=0;
     int c = argumentCount();
-    if (c==6){
+    TMaxdoasSettings *ms = TMaxdoasSettings::instance();
+    if ((ms->getAttachedScanningDevice()==sdtWindField)||(ms->getAttachedScanningDevice()==sdtUnknown)){
 
-        QPointF center(argument(0).toNumber(),argument(1).toNumber());
-        float  MinorAxis = argument(2).toNumber();
-        float MajorAxis = argument(3).toNumber();
-        float angle = argument(4).toNumber();
-        int Divisions = argument(5).toNumber();
-        res = AddEllipseOutline(center,MinorAxis,MajorAxis,angle,Divisions);
+        if (c==6){
+
+            QPointF center(argument(0).toNumber(),argument(1).toNumber());
+            float  MinorAxis = argument(2).toNumber();
+            float MajorAxis = argument(3).toNumber();
+            float angle = argument(4).toNumber();
+            int Divisions = argument(5).toNumber();
+            res = AddEllipseOutline(center,MinorAxis,MajorAxis,angle,Divisions);
+        }
+    }else if (ms->getAttachedScanningDevice()==sdtMAXDOAS){
+        logger()->error("try to create a Ellipsepattern even though its in MAXDOAS mode ");
     }
     return res;
 }

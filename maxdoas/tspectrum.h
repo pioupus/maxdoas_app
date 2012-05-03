@@ -64,6 +64,10 @@ public:
     QDateTime datetime;
     void setZero();
     uint ScanPixelIndex;
+    QString SiteName;
+    float ScannerOrientation;
+    float SiteLatitude;
+    float SiteLongitude;
 public slots:
     void plot(int index);
 

@@ -44,7 +44,7 @@ public:
     }
 private slots:
     void on_GotSpectrum();
-    void on_MotMoved();
+    void on_MotMoved(int, int);
     void on_MotFailed();
     void on_MotTimeOut(THWTransferState TransferState, uint ErrorParameter);
 private:

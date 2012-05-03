@@ -26,8 +26,8 @@ TScanner::TScanner(){
 void TScanner::setHWDriver(THWDriver* hwdriver){
     this->hwdriver = hwdriver;
     connect(hwdriver,SIGNAL(hwdSigGotSpectrum()),this,SLOT(on_GotSpectrum()));
-    connect(hwdriver,SIGNAL(hwdSigMotMoved()),this,SLOT(on_MotMoved()));
-    connect(hwdriver,SIGNAL(hwdSigMotorIsHome()),this,SLOT(on_MotMoved()));
+    connect(hwdriver,SIGNAL(hwdSigMotMoved(int, int)),this,SLOT(on_MotMoved(int, int)));
+    connect(hwdriver,SIGNAL(hwdSigMotorIsHome(int, int)),this,SLOT(on_MotMoved(int, int)));
     connect(hwdriver,SIGNAL(hwdSigMotFailed()),this,SLOT(on_MotFailed()));
 
     connect(hwdriver,SIGNAL(hwdSigTransferDone(THWTransferState,uint)),this,SLOT(on_MotTimeOut(THWTransferState,uint)));
@@ -77,7 +77,7 @@ void TScanner::on_MotFailed(){
     MotMoved = true;
 }
 
-void TScanner::on_MotMoved(){
+void TScanner::on_MotMoved(int, int){
     MotMoved = true;
 }
 
@@ -146,6 +146,7 @@ QScriptValue QDoasConfigFileConstructor(QScriptContext *context, QScriptEngine *
 
 QScriptValue TScriptStringListConstructor(QScriptContext *context, QScriptEngine *engine)
 {
+    (void)context;
     QObject *object = new TScriptStringList();
     return engine->newQObject(object, QScriptEngine::ScriptOwnership);
 }
@@ -416,6 +417,30 @@ QScriptValue MotHome(QScriptContext *context, QScriptEngine *engine)
     }
 }
 
+QScriptValue isMaxDOAS(QScriptContext *context, QScriptEngine *engine)
+{
+    (void)engine;
+    (void)context;
+    bool result = false;
+    TMaxdoasSettings *ms = TMaxdoasSettings::instance();
+    if (ms->askAttachedScanningDevice()==sdtWindField){
+        result = true;
+    }
+    return result;
+}
+
+QScriptValue isWindfield(QScriptContext *context, QScriptEngine *engine)
+{
+    (void)engine;
+    (void)context;
+    bool result = false;
+    TMaxdoasSettings *ms = TMaxdoasSettings::instance();
+    if (ms->askAttachedScanningDevice()==sdtMAXDOAS){
+        result = true;
+    }
+    return result;
+}
+
 QScriptValue MKDir(QScriptContext *context, QScriptEngine *engine)
 {
     (void)engine;
@@ -594,6 +619,12 @@ TScriptWrapper::TScriptWrapper(THWDriver* hwdriver)
 
     QScriptValue GetMinimumIntegrationTimeFun = ScriptEngine->newFunction(GetMinimumIntegrationTime);
     ScriptEngine->globalObject().setProperty("GetMinimumIntegrationTime", GetMinimumIntegrationTimeFun);
+
+    QScriptValue isMaxdoasFun = ScriptEngine->newFunction(isMaxDOAS);
+    ScriptEngine->globalObject().setProperty("isMaxDOAS", isMaxdoasFun);
+
+    QScriptValue isWindfieldFun = ScriptEngine->newFunction(isWindfield);
+    ScriptEngine->globalObject().setProperty("isWindfield", isWindfieldFun);
 
     QScriptValue TimePassedFun = ScriptEngine->newFunction(TimePassed);
     ScriptEngine->globalObject().setProperty("TimePassed", TimePassedFun);

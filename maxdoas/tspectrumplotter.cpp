@@ -521,8 +521,8 @@ void  TSpectrumPlotter::plotCorrelation(TEmissionrate *emissionrate,int plotinde
     TPlot *plot = getPlot(plotindex);
     double xbuf[emissionrate->countCorrelation()];
     double ybuf[emissionrate->countCorrelation()];
-    float maxval=0;
-    float minval=0;
+    //float maxval=0;
+    //float minval=0;
     int dp = 0;
     for(int i=0;i<emissionrate->countCorrelation();i++){
         QPointF p = emissionrate->CorrelationAt(i);

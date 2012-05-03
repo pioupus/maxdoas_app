@@ -34,6 +34,7 @@ bool even (int a)
 }
 
 double getKXStart(double KRows){
+    (void)KRows;
     return 0;
 }
 
@@ -327,7 +328,7 @@ SparseMatrix<double,RowMajor> matrixToDiag(const MatrixXd& M){
 SparseMatrix<double,RowMajor> getK(const MatrixXd& values, TRetrievalImage& RetImage,double dt,float PlumeDistance,bool UseDirectPixelsize, MatrixXd CorrelationMatrix){
     //nicht getestet
     //Coloum densities are taken von values, while its coordinates are taken from RetImage
-
+    (void)CorrelationMatrix;
     SparseMatrix<double,RowMajor> result(RetImage.getWidth()*RetImage.getHeight(),RetImage.getWidth()*RetImage.getHeight()*3);
     #if PLOTGRADIENT
         TRetrievalImage* grad = new TRetrievalImage(&RetImage);
@@ -1152,7 +1153,7 @@ QPointF getAvgPoint(QList<QPointF> Apriori){
 float selectAndIntegrateCorridor(TRetrievalImage* retimg, TParamLine &corridor, QPointF MeanFluxDirection, float CorridorWidth,int index,float distance){
     float result=0;
     int points=0;
-    TSpectrumPlotter* sp = TSpectrumPlotter::instance(0);
+    //TSpectrumPlotter* sp = TSpectrumPlotter::instance(0);
     QRectF corridorframe;
     QPointF unitydirectionvector = MeanFluxDirection;
     result = sqrt(unitydirectionvector.x()*unitydirectionvector.x()+unitydirectionvector.y()*unitydirectionvector.y());

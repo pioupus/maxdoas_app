@@ -38,8 +38,38 @@
 
 #define CMD_MOT_CLOSESHUTTER		0x60
 #define CMD_MOT_OPENSHUTTER		0x61
+#define CMD_SHUTTERPOS			0x62
 
 #define CMD_MOT_HEATERPWM		0x68
+
+#define CMD_GET_DECL_MIN_U		0x83
+
+#define CMD_GET_DECL_MAX_U		0x84
+
+#define CMD_GET_DECL_ZENITH_U                   	0x85
+
+#define CMD_START_DECL_CALIBRATION              	0xB6
+//ok
+
+#define CMD_STOP_DECL_CALIBRATION               	0xB7
+//ok
+
+#define CMD_SET_DECL_ZENITH				0xB8
+//ok
+
+#define CMD_GET_TEMPERATURE_SHUTTER_ERROR		0x73
+
+#define CMD_GET_MOT_SETUP				0x74
+
+#define CMD_GET_INFO					0x75
+
+#define CMD_SET_GUID					0x76
+//20 bit guid
+
+#define CMD_SET_MAXDOAS_ZENITH_POS                      0x77
+//ok
+#define CMD_SET_SHUTTER_CLOSE_POS                       0x78
+//ok
 
 #define CMD_MOT_INCLIN_SET_INIT		0x80
 #define CMD_MOT_INCLIN_READ		0x81
@@ -57,7 +87,7 @@
 #define CMD_TRNSMIT_OK			0xAA
 #define CMD_TRNSMIT_FAIL		0x55
 
-#define OMNI_ENABLED 1
+#define OMNI_ENABLED 0
 #define MOT_ENABLED 1
 const uint TimeOutData  =  3000; //ms
 const uint TimeOutMotion  =  5000; //ms
@@ -567,9 +597,468 @@ QPoint THWDriverThread::hwdtGetLastRawTilt(){
     return result;
 }
 
-void THWDriverThread::hwdtSloSetTiltOffset(int x, int y){
-    TiltRawOffset.setX(x);
-    TiltRawOffset.setY(y);
+void THWDriverThread::hwdtSloSetTiltMinMaxCalibration(int min_x, int min_y,int max_x, int max_y){
+    TiltRawMaxValue.setX(max_x);
+    TiltRawMaxValue.setY(max_y);
+    TiltRawMinValue.setX(min_x);
+    TiltRawMinValue.setY(min_y);
+
+}
+void THWDriverThread::hwdtSloTiltStartCal(){
+    const uint Bufferlength = 10;
+    char txBuffer[Bufferlength];
+    char rxBuffer[Bufferlength];
+    for (uint i = 0; i < Bufferlength;i++){
+        txBuffer[i] =  0;
+        rxBuffer[i] =  0;
+    }
+    txBuffer[0] =  0;
+    txBuffer[1] =  CMD_START_DECL_CALIBRATION;
+
+    logger()->debug(QString("Starting Tilt Min Max Calibration Mode"));
+    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false,true)){
+
+    }
+}
+
+void THWDriverThread::hwdtSloTiltStopCal(){
+    const uint Bufferlength = 10;
+    char txBuffer[Bufferlength];
+    char rxBuffer[Bufferlength];
+    for (uint i = 0; i < Bufferlength;i++){
+        txBuffer[i] =  0;
+        rxBuffer[i] =  0;
+    }
+    txBuffer[0] =  0;
+    txBuffer[1] =  CMD_STOP_DECL_CALIBRATION;
+
+    logger()->debug(QString("Stopping Tilt Min Max Calibration Mode"));
+    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false,true)){
+
+    }
+}
+
+void THWDriverThread::hwdtSloTiltSetZenith(){
+    const uint Bufferlength = 10;
+    char txBuffer[Bufferlength];
+    char rxBuffer[Bufferlength];
+    for (uint i = 0; i < Bufferlength;i++){
+        txBuffer[i] =  0;
+        rxBuffer[i] =  0;
+    }
+    txBuffer[0] =  0;
+    txBuffer[1] =  CMD_SET_DECL_ZENITH;
+
+    logger()->debug(QString("Setting Tilt Zenith angle"));
+    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false,true)){
+
+    }
+}
+
+// CMD_GET_DECL_MIN_U		0x83
+
+void THWDriverThread::hwdtSloAskTiltMinValue(){
+    const uint Bufferlength = 10;
+    char txBuffer[Bufferlength];
+    char rxBuffer[Bufferlength];
+    for (uint i = 0; i < Bufferlength;i++){
+        txBuffer[i] =  0;
+        rxBuffer[i] =  0;
+    }
+    txBuffer[0] =  0;
+    txBuffer[1] =  CMD_GET_DECL_MIN_U;
+
+    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false,true)){
+      //  float XCalOffset,YCalOffset;
+      //  float XCalGain,YCalGain;
+        int32_t liTiltX,liTiltY;
+        uint32_t uliTiltX,uliTiltY;
+        //canal 0
+        uliTiltX = 0;
+        uliTiltX |= (uint8_t)rxBuffer[P1];
+        uliTiltX |= (uint8_t)rxBuffer[P2] << 8;
+        uliTiltX |= (uint8_t)rxBuffer[P3] << 16;
+        if(uliTiltX & 0x00800000)//sign bit set
+            uliTiltX |= 0xFF000000;
+        //canal 1
+        uliTiltY = 0;
+        uliTiltY |= (uint8_t)rxBuffer[P4];
+        uliTiltY |= (uint8_t)rxBuffer[P5] << 8;
+        uliTiltY |= (uint8_t)rxBuffer[P6] << 16;
+        if(uliTiltY & 0x00800000)//sign bit set
+            uliTiltY |= 0xFF000000;
+        liTiltX = uliTiltX;
+        liTiltY = uliTiltY;
+        MutexRawTiltPoint.lockForWrite();
+        {
+            TiltRawMin_byDevice.setX(liTiltX);
+            TiltRawMin_byDevice.setY(liTiltY);
+        }MutexRawTiltPoint.unlock();
+        logger()->debug(QString("Tilt Sensor min val X: %1 Y: %2").arg(liTiltX).arg(liTiltY));
+        emit hwdtSigGotTiltMinVal(liTiltX,liTiltY,TiltADC_Steps,TiltADC_Gain);
+    }
+}
+// CMD_GET_DECL_MAX_U		0x84
+void THWDriverThread::hwdtSloAskTiltMaxValue(){
+    const uint Bufferlength = 10;
+    char txBuffer[Bufferlength];
+    char rxBuffer[Bufferlength];
+    for (uint i = 0; i < Bufferlength;i++){
+        txBuffer[i] =  0;
+        rxBuffer[i] =  0;
+    }
+    txBuffer[0] =  0;
+    txBuffer[1] =  CMD_GET_DECL_MAX_U;
+
+    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false,true)){
+      //  float XCalOffset,YCalOffset;
+      //  float XCalGain,YCalGain;
+        int32_t liTiltX,liTiltY;
+        uint32_t uliTiltX,uliTiltY;
+        //canal 0
+        uliTiltX = 0;
+        uliTiltX |= (uint8_t)rxBuffer[P1];
+        uliTiltX |= (uint8_t)rxBuffer[P2] << 8;
+        uliTiltX |= (uint8_t)rxBuffer[P3] << 16;
+        if(uliTiltX & 0x00800000)//sign bit set
+            uliTiltX |= 0xFF000000;
+        //canal 1
+        uliTiltY = 0;
+        uliTiltY |= (uint8_t)rxBuffer[P4];
+        uliTiltY |= (uint8_t)rxBuffer[P5] << 8;
+        uliTiltY |= (uint8_t)rxBuffer[P6] << 16;
+        if(uliTiltY & 0x00800000)//sign bit set
+            uliTiltY |= 0xFF000000;
+        liTiltX = uliTiltX;
+        liTiltY = uliTiltY;
+        MutexRawTiltPoint.lockForWrite();
+        {
+            TiltRawMax_byDevice.setX(liTiltX);
+            TiltRawMax_byDevice.setY(liTiltY);
+        }MutexRawTiltPoint.unlock();
+        logger()->debug(QString("Tilt Sensor max val X: %1 Y: %2").arg(liTiltX).arg(liTiltY));
+        emit hwdtSigGotTiltMaxVal(liTiltX,liTiltY,TiltADC_Steps,TiltADC_Gain);
+    }
+}
+
+// CMD_GET_DECL_ZENITH_U                   	0x85
+void THWDriverThread::hwdtSloAskTiltZenithValue(){
+    const uint Bufferlength = 10;
+    char txBuffer[Bufferlength];
+    char rxBuffer[Bufferlength];
+    for (uint i = 0; i < Bufferlength;i++){
+        txBuffer[i] =  0;
+        rxBuffer[i] =  0;
+    }
+    txBuffer[0] =  0;
+    txBuffer[1] =  CMD_GET_DECL_ZENITH_U;
+
+    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false,true)){
+      //  float XCalOffset,YCalOffset;
+      //  float XCalGain,YCalGain;
+        int32_t liTiltX,liTiltY;
+        uint32_t uliTiltX,uliTiltY;
+        //canal 0
+        uliTiltX = 0;
+        uliTiltX |= (uint8_t)rxBuffer[P1];
+        uliTiltX |= (uint8_t)rxBuffer[P2] << 8;
+        uliTiltX |= (uint8_t)rxBuffer[P3] << 16;
+        if(uliTiltX & 0x00800000)//sign bit set
+            uliTiltX |= 0xFF000000;
+        //canal 1
+        uliTiltY = 0;
+        uliTiltY |= (uint8_t)rxBuffer[P4];
+        uliTiltY |= (uint8_t)rxBuffer[P5] << 8;
+        uliTiltY |= (uint8_t)rxBuffer[P6] << 16;
+        if(uliTiltY & 0x00800000)//sign bit set
+            uliTiltY |= 0xFF000000;
+        liTiltX = uliTiltX;
+        liTiltY = uliTiltY;
+        MutexRawTiltPoint.lockForWrite();
+        {
+            TiltRawZenith_byDevice.setX(liTiltX);
+            TiltRawZenith_byDevice.setY(liTiltY);
+        }MutexRawTiltPoint.unlock();
+        logger()->debug(QString("Tilt Sensor zenith val X: %1 Y: %2").arg(liTiltX).arg(liTiltY));
+        emit hwdtSigGotTiltZenith(liTiltX,liTiltY,TiltADC_Steps,TiltADC_Gain);
+    }
+}
+
+
+
+// CMD_GET_TEMPERATURE_SHUTTER_ERROR		0x73
+
+void THWDriverThread::hwdtSloAskScannerStatus(){
+    const uint Bufferlength = 10;
+    char txBuffer[Bufferlength];
+    char rxBuffer[Bufferlength];
+    for (uint i = 0; i < Bufferlength;i++){
+        txBuffer[i] =  0;
+        rxBuffer[i] =  0;
+    }
+    txBuffer[0] =  0;
+    txBuffer[1] =  CMD_GET_TEMPERATURE_SHUTTER_ERROR;
+
+    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false,true)){
+
+        uint16_t usiTemperature;
+        int16_t siTemperature;
+        float ScannerTemperature;
+
+        usiTemperature = 0;
+        usiTemperature |= (uint8_t)rxBuffer[P1];
+        usiTemperature |= (uint8_t)rxBuffer[P2]<<8;
+        siTemperature = usiTemperature;
+        ScannerTemperature =  sensorTempToCelsius(siTemperature);
+
+
+        QString s="Closed",e="OK";
+        if (rxBuffer[P3] & 0x01){
+            ShutterIsOpenBySwitch = sssClosed;
+            s = "Opened";
+        }else
+            ShutterIsOpenBySwitch = sssOpened;
+
+        if (rxBuffer[P3] & 0x02){
+            EndSwitchErrorState = eseERROR;
+            e = "ERROR";
+        }else
+            EndSwitchErrorState = eseOK;
+
+        logger()->debug(QString("Got Scannerstatus: Temperature: %1 C, ShutterSwitch: %2, EndPosSwitch: %3").arg(ScannerTemperature).arg(s).arg(e));
+        emit hwdtSigGotScannerStatus(ScannerTemperature,ShutterIsOpenBySwitch==sssOpened,EndSwitchErrorState==eseERROR);
+    }
+}
+
+// CMD_GET_MOT_SETUP				0x74
+
+void THWDriverThread::hwdtSloAskMotorSetup(){
+    const uint Bufferlength = 10;
+    char txBuffer[Bufferlength];
+    char rxBuffer[Bufferlength];
+    for (uint i = 0; i < Bufferlength;i++){
+        txBuffer[i] =  0;
+        rxBuffer[i] =  0;
+    }
+    txBuffer[0] =  0;
+    txBuffer[1] =  CMD_GET_MOT_SETUP;
+
+    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false,true)){
+#if 0
+uint32_t maxdoaszenith=ee_getMaxdoasZenithPos();
+        data->ProtocolBuffer[P0] = maxdoaszenith;
+        data->ProtocolBuffer[P1] = (maxdoaszenith >> 8);
+        data->ProtocolBuffer[P2] = (maxdoaszenith >> 16);
+
+        uint16_t shutterclose=ee_getShutterClosePos();
+        data->ProtocolBuffer[P3] = shutterclose;
+        data->ProtocolBuffer[P4] = (shutterclose >> 8);
+
+        data->ProtocolBuffer[P5] = (MAXDOAS_MICROSTEP << 4)|SHUTTER_MICROSTEP;
+        data->ProtocolBuffer[P6] = SHUTTER_TYPE;
+        task_sendanswer(data->ProtocolBuffer);
+#endif
+
+        uint32_t MaxDoasZenithPos;
+        uint16_t ShutterClosePos;
+
+        MaxDoasZenithPos = 0;
+        MaxDoasZenithPos |= (uint8_t)rxBuffer[P0];
+        MaxDoasZenithPos |= (uint8_t)rxBuffer[P1]<<8;
+        MaxDoasZenithPos |= (uint8_t)rxBuffer[P2]<<16;
+
+        ShutterClosePos = 0;
+        ShutterClosePos |= (uint8_t)rxBuffer[P3];
+        ShutterClosePos |= (uint8_t)rxBuffer[P4]<<8;
+
+        int ShutterMicrosteps,MaxDoasMicrosteps;
+        if (rxBuffer[P5]>>4 == 0)
+            MaxDoasMicrosteps = 1;
+        else if (rxBuffer[P5]>>4 == 1)
+            MaxDoasMicrosteps = 2;
+        else if (rxBuffer[P5]>>4 == 2)
+            MaxDoasMicrosteps = 4;
+        else if (rxBuffer[P5]>>4 == 3)
+            MaxDoasMicrosteps = 8;
+        else if (rxBuffer[P5]>>4 == 7)
+            MaxDoasMicrosteps = 16;
+        else
+            MaxDoasMicrosteps = 1;
+
+        if ((rxBuffer[P5] & 0x0F) == 0)
+            ShutterMicrosteps = 1;
+        else if ((rxBuffer[P5] & 0x0F) == 1)
+            ShutterMicrosteps = 2;
+        else if ((rxBuffer[P5] & 0x0F) == 2)
+            ShutterMicrosteps = 4;
+        else if ((rxBuffer[P5] & 0x0F) == 3)
+            ShutterMicrosteps = 8;
+        else if ((rxBuffer[P5] & 0x0F) == 7)
+            ShutterMicrosteps = 16;
+        else
+            ShutterMicrosteps = 1;
+
+        logger()->debug(QString("Got Scannermotorsetup: ZenithPos: %1 , ShutterClosePos: %2, MaxDoasMicrosteps: %3, ShutterMicrosteps: %4, Shuttertype: %5").arg(MaxDoasZenithPos).arg(ShutterClosePos).arg(MaxDoasMicrosteps).arg(ShutterMicrosteps).arg(rxBuffer[P6]));
+        emit hwdtSigGotMotorSetup(MaxDoasZenithPos,ShutterClosePos,MaxDoasMicrosteps,ShutterMicrosteps,rxBuffer[P6]);
+    }
+}
+
+// CMD_GET_INFO					0x75
+
+    void THWDriverThread::hwdtSloAskDeviceInfo(){
+        const uint Bufferlength = 10;
+        char txBuffer[Bufferlength];
+        char rxBuffer[Bufferlength];
+        for (uint i = 0; i < Bufferlength;i++){
+            txBuffer[i] =  0;
+            rxBuffer[i] =  0;
+        }
+        txBuffer[0] =  0;
+        txBuffer[1] =  CMD_GET_INFO;
+
+        if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false,true)){
+#if 0
+    //git rev (4Byte)
+    //serialnum (3Byte)	//20 bit=guid + 4 bit=type
+    data->ProtocolBuffer[P0] = (uint8_t)(0xFF & (GITHASH));
+    data->ProtocolBuffer[P1] = (uint8_t)(0xFF & (GITHASH >> 8));
+    data->ProtocolBuffer[P2] = (uint8_t)(0xFF & (GITHASH >> 16));
+    data->ProtocolBuffer[P3] = (uint8_t)(0xFF & (GITHASH >> 24));
+
+
+    uint32_t res = ee_getguid();
+
+    data->ProtocolBuffer[P4] = (uint8_t)(0xFF & (res));
+    data->ProtocolBuffer[P5] = (uint8_t)(0xFF & (res >> 8));
+    data->ProtocolBuffer[P6] = (uint8_t)(0xFF & (res >> 16));
+    data->ProtocolBuffer[P6] &= 0x0F;
+    data->ProtocolBuffer[P6] |= DEVICE_TYPE << 4;
+
+    task_sendanswer(data->ProtocolBuffer);
+#endif
+
+            uint32_t MaxdoasGitHash;
+            uint32_t guid;
+            uint8_t devicetype;
+
+            MaxdoasGitHash = 0;
+            MaxdoasGitHash |= (uint8_t)rxBuffer[P0];
+            MaxdoasGitHash |= (uint8_t)rxBuffer[P1]<<8;
+            MaxdoasGitHash |= (uint8_t)rxBuffer[P2]<<16;
+            MaxdoasGitHash |= (uint8_t)rxBuffer[P3]<<24;
+
+            guid = 0;
+            guid |= (uint8_t)rxBuffer[P4];
+            guid |= (uint8_t)rxBuffer[P5]<<8;
+            guid |= ((uint8_t)rxBuffer[P6] & 0x0F)<<16;
+
+            devicetype = (uint8_t)rxBuffer[P6] >> 4;
+
+            logger()->debug(QString("Got Scannerinfo: Versionshash: %1, DeviceSerialNum: %2, DeviceType: %3").arg(QString::number(MaxdoasGitHash,16)).arg(rawDataToSerialNumber(guid,devicetype)).arg(devicetype));
+            emit hwdtSigGotDeviceInfo(MaxdoasGitHash,guid, devicetype);
+        }
+    }
+
+// CMD_SET_GUID					0x76
+
+void THWDriverThread::hwdtSloSetGUID(int guid){
+    const uint Bufferlength = 10;
+    char txBuffer[Bufferlength];
+    char rxBuffer[Bufferlength];
+    uint32_t guid_ = guid;
+    for (uint i = 0; i < Bufferlength;i++){
+        txBuffer[i] =  0;
+        rxBuffer[i] =  0;
+    }
+    txBuffer[0] =  0;
+    txBuffer[1] =  CMD_SET_GUID;
+#if 0
+    guid = data->ProtocolBuffer[P3];
+    guid = guid << 8;
+    guid |= data->ProtocolBuffer[P2];
+    guid = guid << 8;
+    guid |= data->ProtocolBuffer[P1];
+    guid &= 0x000FFFFF;
+#endif
+    txBuffer[P1] = (uint8_t)(guid_ & 0xFF);
+    txBuffer[P2] = (uint8_t)(guid_ >> 8);
+    txBuffer[P3] = (uint8_t)(guid_ >> 16);
+
+    logger()->debug(QString("Write SerialNumbertoDevice: %1").arg(rawDataToSerialNumber(guid,-1)));
+    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false,true)){
+
+    }
+}
+
+void THWDriverThread::hwdtSloSetMaxdoasZenithPos(){
+    const uint Bufferlength = 10;
+    char txBuffer[Bufferlength];
+    char rxBuffer[Bufferlength];
+    for (uint i = 0; i < Bufferlength;i++){
+        txBuffer[i] =  0;
+        rxBuffer[i] =  0;
+    }
+    txBuffer[0] =  0;
+    txBuffer[1] =  CMD_SET_MAXDOAS_ZENITH_POS;
+
+    logger()->debug(QString("Definend Motor Zenith pos"));
+    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false,true)){
+
+    }
+}
+
+void THWDriverThread::hwdtSloSetStepperShutterClosePos(){
+    const uint Bufferlength = 10;
+    char txBuffer[Bufferlength];
+    char rxBuffer[Bufferlength];
+    for (uint i = 0; i < Bufferlength;i++){
+        txBuffer[i] =  0;
+        rxBuffer[i] =  0;
+    }
+    txBuffer[0] =  0;
+    txBuffer[1] =  CMD_SET_SHUTTER_CLOSE_POS;
+
+    logger()->debug(QString("Definend Stepper shutter close position"));
+    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false,true)){
+
+    }
+}
+
+
+bool THWDriverThread::hwdtSloShutterGoto(int Shutterposition){
+
+#if MOT_ENABLED
+    const uint Bufferlength = 10;
+    char txBuffer[Bufferlength];
+    char rxBuffer[Bufferlength];
+    int32_t PosShutter = Shutterposition;
+
+    for (uint i = 0; i < Bufferlength;i++){
+        txBuffer[i] =  0;
+        rxBuffer[i] =  0;
+    }
+    txBuffer[0] =  0;
+    txBuffer[1] =  CMD_SHUTTERPOS;
+
+    txBuffer[P4] = PosShutter & 0xFF;
+    txBuffer[P5] = (PosShutter >> 8) & 0xFF;
+    txBuffer[P6] = (PosShutter >> 16) & 0xFF;
+    logger()->debug(QString("Shutter go to: %1").arg(PosShutter));
+    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutMotion,false,true)){
+
+        return true;
+
+    }else{
+        logger()->error(QString("Moving Shutter failed"));
+        //emit hwdtSigMotFailed();
+        return false;
+    }
+#else
+    logger()->error(QString("Moving Motor failed"));
+    mc->setAngleCoordinate(ac);
+    emit hwdtSigMotFailed();
+    return false;
+#endif
 }
 
 void THWDriverThread::hwdtSloAskTilt()
@@ -610,8 +1099,11 @@ void THWDriverThread::hwdtSloAskTilt()
         liTiltY = uliTiltY;
         MutexRawTiltPoint.lockForWrite();
         {
+            QPoint TiltRawOffset = (TiltRawMinValue + TiltRawMaxValue)/2;
+
             TiltRaw.setX(liTiltX);
             TiltRaw.setY(liTiltY);
+
             liTiltX = liTiltX - TiltRawOffset.x();
             liTiltY = liTiltY - TiltRawOffset.y();
         }
@@ -641,8 +1133,7 @@ void THWDriverThread::hwdtSloAskTilt()
         if(TiltY < -1)
             TiltY = -1.0;
 
-        TiltX=asin((float)TiltX)*180/M_PI;
-        TiltY=asin((float)TiltY)*180/M_PI;
+
         logger()->debug(QString("Tilt Sensor X: %1 Y: %2").arg(TiltX).arg(TiltY));
         emit hwdtSigGotTilt(TiltX,TiltY,TiltADC_Steps,TiltADC_Gain);
     }
@@ -791,7 +1282,9 @@ void THWDriverThread::hwdtSloGoMotorHome(void)
 
     if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutMotion,false,true)){
         mc->setMotorCoordinate(0,0);
-        emit hwdtSigMotorIsHome();
+        ScannerStepPos.setX(0);
+        ScannerStepPos.setY(0);
+        emit hwdtSigMotorIsHome(0,0);
     }else{
         logger()->error(QString("Moving Motor failed"));
         emit hwdtSigMotFailed();
@@ -1017,20 +1510,16 @@ void THWDriverThread::TakeSpectrum(int avg, uint IntegrTime){
 #endif
 }
 
-//inAngle Coordinates!
-bool THWDriverThread::hwdtSloMotGoto(float PosX, float PosY){
-    TMirrorCoordinate mc_;
-    QPointF ac;
-    ac.setX(PosX);
-    ac.setY(PosY);
-    mc_.setAngleCoordinate(ac);
-
+//inStep Coordinates!
+bool THWDriverThread::hwdtSloMotGotoSteps(int PosX, int PosY){
 #if MOT_ENABLED
     const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
-    int32_t PosStationary = mc_.getMotorCoordinate().x();
-    int32_t PosMirror = mc_.getMotorCoordinate().y();
+    TMirrorCoordinate mc_;
+    mc_.setMotorCoordinate(PosX,PosY);
+    int32_t PosStationary = PosX;
+    int32_t PosMirror =PosY;
     for (uint i = 0; i < Bufferlength;i++){
         txBuffer[i] =  0;
         rxBuffer[i] =  0;
@@ -1045,10 +1534,12 @@ bool THWDriverThread::hwdtSloMotGoto(float PosX, float PosY){
     txBuffer[P4] = PosStationary & 0xFF;
     txBuffer[P5] = (PosStationary >> 8) & 0xFF;
     txBuffer[P6] = (PosStationary >> 16) & 0xFF;
-    logger()->debug(QString("Motors go to. Mirror: %1 Stationary: %2").arg(PosX).arg(PosY));
+    logger()->debug(QString("Motors go to. Mirror: %1 Stationary: %2").arg(mc_.getAngleCoordinate().x()).arg(mc_.getAngleCoordinate().y()));
     if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutMotion,false,true)){
-        mc->setAngleCoordinate(ac);
-        emit hwdtSigMotMoved();
+        mc->setAngleCoordinate(mc_.getAngleCoordinate());
+        ScannerStepPos.setX(PosStationary);
+        ScannerStepPos.setY(PosMirror);
+        emit hwdtSigMotMoved(PosStationary,PosMirror);
         return true;
 
     }else{
@@ -1062,6 +1553,21 @@ bool THWDriverThread::hwdtSloMotGoto(float PosX, float PosY){
     emit hwdtSigMotFailed();
     return false;
 #endif
+}
+
+//inAngle Coordinates!
+bool THWDriverThread::hwdtSloMotGoto(float PosX, float PosY){
+    TMirrorCoordinate mc_;
+    QPointF ac;
+    bool ok;
+    ac.setX(PosX);
+    ac.setY(PosY);
+    mc_.setAngleCoordinate(ac);
+    ok = hwdtSloMotGotoSteps(mc_.getMotorCoordinate().x(),mc_.getMotorCoordinate().y());
+    if (ok){
+        mc->setAngleCoordinate(ac);
+    }
+    return ok;
 }
 
 void THWDriverThread::hwdtSloMotIdleState(bool idle){
@@ -1266,6 +1772,26 @@ THWDriver::THWDriver()
     TemperatureTimer = new QTimer();
     TiltTimer  = new QTimer();
     ActualTilt = new QPointF(0,0);
+    TiltMin = new QPointF(0,0);
+    TiltMax = new QPointF(0,0);
+    TiltZenith = new QPointF(0,0);
+    ScannerStepPos = QPoint(0,0);
+
+    this->ScannerTemperature = 0.0;
+    this->ShutterOpenedBySwitch = sssUnknown;
+    this->EndSwitchError = eseUnknown;
+    ShutterClosePosition = -1;
+    ShutterPosition = 0;
+    MaxDoasZenithPosition = 0;
+    ShutterClosePosition = 0;
+    MaxDoasMicrosteps = 1;
+    ShutterMicrosteps = 1;
+    ShutterType = smtUnknown;
+
+    GitHash = "";
+    ScannerSerialNumber = "";
+    deviceType = sdtUnknown;
+
     HWDriverObject = new THWDriverThread();
     CompassState = csNone;
     CompassHeading = INVALID_COMPASS_HEADING;
@@ -1320,10 +1846,10 @@ THWDriver::THWDriver()
         connect(HWDriverObject,SIGNAL(hwdtSigGotLightSensorValue( float)),
                     this,SIGNAL (hwdSigGotLightSensorValue( float)),Qt::QueuedConnection);
 
-        connect(HWDriverObject,SIGNAL(hwdtSigMotorIsHome( )),
-                    this,SLOT (hwdSloMotorIsHome( )),Qt::QueuedConnection);
-        connect(HWDriverObject,SIGNAL(hwdtSigMotorIsHome( )),
-                    this,SIGNAL (hwdSigMotorIsHome( )),Qt::QueuedConnection);
+        connect(HWDriverObject,SIGNAL(hwdtSigMotorIsHome(int,int )),
+                    this,SLOT (hwdSloMotorIsHome(int, int )),Qt::QueuedConnection);
+        connect(HWDriverObject,SIGNAL(hwdtSigMotorIsHome(int,int )),
+                    this,SIGNAL (hwdSigMotorIsHome(int,int )),Qt::QueuedConnection);
 
         connect(HWDriverObject,SIGNAL(hwdtSigShutterStateChanged( THWShutterCMD )),
                     this,SLOT (hwdSloShutterStateChanged( THWShutterCMD )),Qt::QueuedConnection);
@@ -1340,8 +1866,10 @@ THWDriver::THWDriver()
         connect(HWDriverObject,SIGNAL(hwdtSigGotSpectrum( )),
                     this,SIGNAL (hwdSigGotSpectrum( )),Qt::QueuedConnection);
 
-        connect(HWDriverObject,SIGNAL(hwdtSigMotMoved( )),
-                    this,SIGNAL (hwdSigMotMoved( )),Qt::QueuedConnection);
+        connect(HWDriverObject,SIGNAL(hwdtSigMotMoved(int, int )),
+                    this,SLOT (hwdSloMotMoved(int,int )),Qt::QueuedConnection);
+        connect(HWDriverObject,SIGNAL(hwdtSigMotMoved(int, int )),
+                    this,SIGNAL (hwdSigMotMoved(int,int )),Qt::QueuedConnection);
 
         connect(HWDriverObject,SIGNAL(hwdtSigMotFailed( )),
                     this,SIGNAL (hwdSigMotFailed( )),Qt::QueuedConnection);
@@ -1365,6 +1893,36 @@ THWDriver::THWDriver()
         connect(HWDriverObject,SIGNAL(hwdtSigCOMPortChanged(QString, bool,bool )),
                     this,SIGNAL (hwdSigCOMPortChanged(QString, bool,bool )),Qt::QueuedConnection);
 
+        connect(HWDriverObject,SIGNAL(hwdtSigGotTiltMinVal(int, int,int,int )),
+                    this,SLOT (hwdSloGotTiltMinVal(int, int,int,int )),Qt::QueuedConnection);
+        connect(HWDriverObject,SIGNAL(hwdtSigGotTiltMinVal(int, int,int,int  )),
+                    this,SIGNAL (hwdSigGotTiltMinVal(int, int,int,int  )),Qt::QueuedConnection);
+
+        connect(HWDriverObject,SIGNAL(hwdtSigGotTiltMaxVal(int, int,int,int )),
+                    this,SLOT (hwdSloGotTiltMaxVal(int, int,int,int )),Qt::QueuedConnection);
+        connect(HWDriverObject,SIGNAL(hwdtSigGotTiltMaxVal(int, int,int,int  )),
+                    this,SIGNAL (hwdSigGotTiltMaxVal(int, int,int,int  )),Qt::QueuedConnection);
+
+        connect(HWDriverObject,SIGNAL(hwdtSigGotTiltZenith(int, int,int,int )),
+                    this,SLOT (hwdSloGotTiltZenith(int, int,int,int )),Qt::QueuedConnection);
+        connect(HWDriverObject,SIGNAL(hwdtSigGotTiltZenith(int, int,int,int  )),
+                    this,SIGNAL (hwdSigGotTiltZenith(int, int,int,int  )),Qt::QueuedConnection);
+
+        connect(HWDriverObject,SIGNAL(hwdtSigGotScannerStatus(float, bool,bool )),
+                    this,SLOT (hwdSloGotScannerStatus(float, bool,bool )),Qt::QueuedConnection);
+        connect(HWDriverObject,SIGNAL(hwdtSigGotScannerStatus(float, bool,bool  )),
+                    this,SIGNAL (hwdSigGotScannerStatus(float, bool,bool )),Qt::QueuedConnection);
+
+        connect(HWDriverObject,SIGNAL(hwdtSigGotMotorSetup(int, int,int,int,int )),
+                    this,SLOT (hwdSloGotMotorSetup(int, int,int,int,int )),Qt::QueuedConnection);
+        connect(HWDriverObject,SIGNAL(hwdtSigGotMotorSetup(int, int,int,int,int )),
+                    this,SIGNAL (hwdSigGotMotorSetup(int, int,int,int,int )),Qt::QueuedConnection);
+
+        connect(HWDriverObject,SIGNAL(hwdtSigGotDeviceInfo(int, int,int )),
+                    this,SLOT (hwdSloGotDeviceInfo(int, int,int  )),Qt::QueuedConnection);
+        connect(HWDriverObject,SIGNAL(hwdtSigGotDeviceInfo(int, int,int )),
+                    this,SIGNAL (hwdSigGotDeviceInfo( int, int,int)),Qt::QueuedConnection);
+
     }
     //for messages giong from this to thread..
     {
@@ -1386,8 +1944,11 @@ THWDriver::THWDriver()
         connect(this,SIGNAL(hwdtSigAskTilt( )),
                     HWDriverObject,SLOT (hwdtSloAskTilt( )),Qt::QueuedConnection);
 
-        connect(this,SIGNAL(hwdtSigSetTiltOffset(int,int)),
-                    HWDriverObject,SLOT (hwdtSloSetTiltOffset(int,int)),Qt::QueuedConnection);
+        connect(this,SIGNAL(hwdtSigSetTiltMinMaxCalibration(int,int,int,int)),
+                    HWDriverObject,SLOT (hwdtSloSetTiltMinMaxCalibration(int,int,int,int)),Qt::QueuedConnection);
+
+        connect(this,SIGNAL(hwdtSigShutterGoto(int)),
+                    HWDriverObject,SLOT (hwdtSloShutterGoto(int)),Qt::QueuedConnection);
 
         connect(this,SIGNAL(hwdtSigAskCompass( )),
                     HWDriverObject,SLOT (hwdtSloAskCompass( )),Qt::QueuedConnection);
@@ -1413,8 +1974,52 @@ THWDriver::THWDriver()
         connect(this,SIGNAL(hwdtMotGoto(float , float )),
                     HWDriverObject,SLOT (hwdtSloMotGoto(float , float  )),Qt::QueuedConnection);
 
+        connect(this,SIGNAL(hwdtMotGotoSteps(int , int )),
+                    HWDriverObject,SLOT (hwdtSloMotGotoSteps(int , int  )),Qt::QueuedConnection);
+
         connect(this,SIGNAL(hwdtMotIdleState(bool )),
                     HWDriverObject,SLOT (hwdtSloMotIdleState(bool)),Qt::QueuedConnection);
+
+
+
+
+        connect(this,SIGNAL(hwdtSigTiltStartCal( )),
+                    HWDriverObject,SLOT (hwdtSloTiltStartCal( )),Qt::QueuedConnection);
+
+        connect(this,SIGNAL(hwdtSigTiltStopCal( )),
+                    HWDriverObject,SLOT (hwdtSloTiltStopCal()),Qt::QueuedConnection);
+
+        connect(this,SIGNAL(hwdtSigAskTiltMinValue( )),
+                    HWDriverObject,SLOT (hwdtSloAskTiltMinValue()),Qt::QueuedConnection);
+
+        connect(this,SIGNAL(hwdtSigAskTiltMaxValue( )),
+                    HWDriverObject,SLOT (hwdtSloAskTiltMaxValue()),Qt::QueuedConnection);
+
+        connect(this,SIGNAL(hwdtSigAskTiltZenithValue( )),
+                    HWDriverObject,SLOT (hwdtSloAskTiltZenithValue()),Qt::QueuedConnection);
+
+        connect(this,SIGNAL(hwdtSigTiltSetZenith( )),
+                    HWDriverObject,SLOT (hwdtSloTiltSetZenith()),Qt::QueuedConnection);
+
+
+
+        connect(this,SIGNAL(hwdtSigSetMaxdoasZenithPos( )),
+                    HWDriverObject,SLOT (hwdtSloSetMaxdoasZenithPos()),Qt::QueuedConnection);
+
+        connect(this,SIGNAL(hwdtSigSetStepperShutterClosePos( )),
+                    HWDriverObject,SLOT (hwdtSloSetStepperShutterClosePos()),Qt::QueuedConnection);
+
+        connect(this,SIGNAL(hwdtSigAskScannerStatus( )),
+                    HWDriverObject,SLOT (hwdtSloAskScannerStatus()),Qt::QueuedConnection);
+
+        connect(this,SIGNAL(hwdtSigAskMotorSetup( )),
+                    HWDriverObject,SLOT (hwdtSloAskMotorSetup()),Qt::QueuedConnection);
+
+        connect(this,SIGNAL(hwdtSigAskDeviceInfo( )),
+                    HWDriverObject,SLOT (hwdtSloAskDeviceInfo()),Qt::QueuedConnection);
+
+        connect(this,SIGNAL(hwdtSigSetGUID(int )),
+                    HWDriverObject,SLOT (hwdtSloSetGUID(int)),Qt::QueuedConnection);
 
 
 
@@ -1458,6 +2063,9 @@ THWDriver::~THWDriver(){
     delete TiltTimer;
     delete TemperatureTimer;
     delete ActualTilt;
+    delete TiltMin;
+    delete TiltMax;
+    delete TiltZenith;
     HWDriverObject->deleteLater();
     HWDriverThread->deleteLater();
     delete m_sde;
@@ -1498,6 +2106,15 @@ void THWDriver::hwdSloCOMPortChanged(QString name, bool opened, bool error){
     (void)name;
     (void)error;
     COMPortOpened = opened;
+}
+
+void THWDriver::hwdSloMotMoved(int StepX, int StepY){
+    ScannerStepPos.setX(StepX);
+    ScannerStepPos.setY(StepY);
+}
+
+QPoint THWDriver::getStepperPos(){
+    return ScannerStepPos;
 }
 
 void THWDriver::slotCOMPorts(const QStringList &list){
@@ -1552,6 +2169,140 @@ float THWDriver::hwdGetTemperature(THWTempSensorID sensorID)
 
 void THWDriver::hwdSlotTemperatureTimer(){
     emit hwdtSigAskTemperature(tsPeltier,true);
+}
+
+
+void THWDriver::hwdTiltStartCal(){
+    emit  hwdtSigTiltStartCal();
+}
+
+void THWDriver::hwdTiltStopCal(){
+    emit hwdtSigTiltStopCal();
+}
+
+void THWDriver::hwdAskTiltMinValue(){
+    emit hwdtSigAskTiltMinValue();
+}
+
+void THWDriver::hwdAskTiltMaxValue(){
+    emit hwdtSigAskTiltMaxValue();
+}
+
+void THWDriver::hwdAskTiltZenithValue(){
+    emit hwdtSigAskTiltZenithValue();
+}
+
+void THWDriver::hwdTiltSetZenith(){
+    emit hwdtSigTiltSetZenith();
+}
+
+void THWDriver::hwdSetMaxdoasZenithPos(){
+    emit hwdtSigSetMaxdoasZenithPos();
+}
+
+void THWDriver::hwdSetStepperShutterClosePos(){
+    emit hwdtSigSetStepperShutterClosePos();
+}
+
+void THWDriver::hwdAskScannerStatus(){
+    emit hwdtSigAskScannerStatus();
+}
+
+void THWDriver::hwdAskMotorSetup(){
+    emit hwdtSigAskMotorSetup();
+}
+
+void THWDriver::hwdAskDeviceInfo(){
+    emit hwdtSigAskDeviceInfo();
+}
+
+void THWDriver::hwdSetGUID(int guid){
+    emit hwdtSigSetGUID(guid);
+}
+
+void THWDriver::hwdSloGotTiltMinVal(int TiltX, int TiltY, int Gain, int Resolution){
+    (void)Gain;
+    (void)Resolution;
+    TiltMin->setX(TiltX);
+    TiltMin->setY(TiltY);
+    TMaxdoasSettings *ms = TMaxdoasSettings::instance();
+    ms->setTiltMinValue(QPoint(TiltX,TiltY));
+}
+
+void THWDriver::hwdSloGotTiltMaxVal(int TiltX, int TiltY, int Gain, int Resolution){
+    (void)Gain;
+    (void)Resolution;
+    TiltMax->setX(TiltX);
+    TiltMax->setY(TiltY);
+    TMaxdoasSettings *ms = TMaxdoasSettings::instance();
+    ms->setTiltMaxValue(QPoint(TiltX,TiltY));
+}
+
+void THWDriver::hwdSloGotTiltZenith(int TiltX, int TiltY, int Gain, int Resolution){
+    (void)Gain;
+    (void)Resolution;
+    TiltZenith->setX(TiltX);
+    TiltZenith->setY(TiltY);
+    TMaxdoasSettings *ms = TMaxdoasSettings::instance();
+    ms->setTiltZenith(QPoint(TiltX,TiltY));
+}
+
+void THWDriver::hwdSloGotScannerStatus(float ScannerTemperature,bool ShutterOpenedBySwitch, bool EndSwitchError){
+    this->ScannerTemperature = ScannerTemperature;
+    if (ShutterOpenedBySwitch){
+        this->ShutterOpenedBySwitch = sssOpened;
+        ShutterPosition=0;
+    }else
+        this->ShutterOpenedBySwitch = sssClosed;
+    if (EndSwitchError)
+        this->EndSwitchError = eseERROR;
+    else
+        this->EndSwitchError = eseOK;
+}
+
+void THWDriver::hwdSloGotMotorSetup(int MaxDoasZenithPosition,int ShutterClosePosition, int MaxDoasMicrosteps, int ShutterMicrosteps, int ShutterType){
+    #define ST_DCMOTOR			0x00
+    #define ST_STEPPERMOTOR		0x01
+    #define ST_SERVOMOTOR		0x02
+    this->MaxDoasZenithPosition = MaxDoasZenithPosition;
+    this->ShutterClosePosition = ShutterClosePosition;
+    this->MaxDoasMicrosteps = MaxDoasMicrosteps;
+    this->ShutterMicrosteps = ShutterMicrosteps;
+
+    switch(ShutterType){
+        case ST_DCMOTOR:        this->ShutterType = smtDCMotor;
+            break;
+        case ST_STEPPERMOTOR:   this->ShutterType = smtStepper;
+            break;
+        case ST_SERVOMOTOR:     this->ShutterType = smtServo;
+            break;
+        default:                this->ShutterType = smtUnknown;
+    }
+    TMaxdoasSettings *ms = TMaxdoasSettings::instance();
+    ms->setZenithSteps(QPoint(this->MaxDoasZenithPosition,0));
+    ms->setShutterClosePos(this->ShutterClosePosition);
+    ms->setMicrostepping(QPoint(this->MaxDoasMicrosteps,this->ShutterMicrosteps));
+}
+
+void THWDriver::hwdSloGotDeviceInfo(int GitHash,int guid, int deviceType){
+    #define DT_2DSCANNER	0x01
+    #define DT_1DSCANNER	0x02
+    #define DT_SOLTRACKER	0x03
+
+    this->GitHash.number(GitHash,16);
+    this->ScannerSerialNumber = rawDataToSerialNumber(guid,deviceType);
+    switch(deviceType){
+        case DT_2DSCANNER:   this->deviceType = sdtWindField;
+            break;
+        case DT_1DSCANNER:   this->deviceType = sdtMAXDOAS;
+            break;
+        case DT_SOLTRACKER:  this->deviceType = sdtSolTracker;
+            break;
+        default:             this->deviceType = sdtUnknown;
+    }
+    TMaxdoasSettings *ms = TMaxdoasSettings::instance();
+    ms->workwiththisserial(ScannerSerialNumber);
+    ms->setAttachedScanningDevice(this->deviceType);
 }
 
 void THWDriver::hwdSloGotTemperature(THWTempSensorID sensorID, float TemperaturePeltier, float TemperatureSpectr,float TemperatureHeatsink,bool byTimer)
@@ -1655,8 +2406,11 @@ void THWDriver::hwdSloGotTilt(float TiltX, float TiltY, int Gain, int Resolution
 //            //switch gain to 4
 //        }
 //    }
+    TiltX=asin((float)TiltX)*180/M_PI;
+    TiltY=asin((float)TiltY)*180/M_PI;
     ActualTilt->setX(TiltX);
     ActualTilt->setY(TiltY);
+    emit hwdSigGotTiltDirection(50);
     emit hwdSigGotTilt(ActualTilt->x(),ActualTilt->y(),Gain,Resolution,Border,MaxTilt);
 }
 
@@ -1664,9 +2418,9 @@ QPoint THWDriver::hwdGetRawTilt(){
     return HWDriverObject->hwdtGetLastRawTilt();
 }
 
-void THWDriver::hwdSetTiltOffset(QPoint Offset)
+void THWDriver::hwdSetTiltMinMaxCalib(QPoint Min, QPoint Max)
 {
-    emit hwdtSigSetTiltOffset(Offset.x(),Offset.y());
+    emit hwdtSigSetTiltMinMaxCalibration(Min.x(),Min.y(),Max.x(),Max.y());
 }
 
 
@@ -1741,9 +2495,18 @@ void THWDriver::hwdGoMotorHome(void)
 
 void THWDriver::hwdSetShutter(THWShutterCMD ShutterCMD)
 {
+    if (ShutterCMD == scClose)
+        ShutterPosition = ShutterClosePosition;
+    if (ShutterCMD == scOpen)
+        ShutterPosition = 0;
+
     emit hwdtSigSetShutter(ShutterCMD);
 }
 
+void THWDriver::hwdSetShuttPos(int Shutterpos){
+    ShutterPosition = Shutterpos;
+    emit hwdtSigShutterGoto(Shutterpos);
+}
 
 void THWDriver::hwdMeasureScanPixel(QPointF AngleCoordinate,uint avg, uint integrTime)
 {
@@ -1860,9 +2623,9 @@ void THWDriver::hwdCloseSpectrometer()
 }
 
 
-void THWDriver::hwdSloMotorIsHome()
+void THWDriver::hwdSloMotorIsHome(int x, int y)
 {
-
+    ScannerStepPos = QPoint(x,y);
 }
 
 void THWDriver::hwdSloShutterStateChanged(THWShutterCMD LastShutterCMD)
@@ -1887,4 +2650,24 @@ void THWDriver::hwdSloSpectrumeterOpened()
 
 void THWDriver::hwdSloGotWLCoefficients(){
 
+}
+
+QString THWDriver::getFirmwarehash(){
+    return GitHash;
+}
+
+QPointF THWDriver::getRawTiltMin(){
+    return *TiltMin;
+}
+
+QPointF THWDriver::getRawTiltMax(){
+    return *TiltMax;
+}
+
+int THWDriver::hwdGetShuttPos(){
+    return ShutterPosition;
+}
+
+void THWDriver::hwdMotMoveBySteps(QPoint MotCoordinates){
+    emit hwdtMotGotoSteps(MotCoordinates.x(),MotCoordinates.y());
 }

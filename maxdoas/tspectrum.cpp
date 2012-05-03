@@ -6,6 +6,7 @@
 #include <QDateTime>
 #include <iostream>
 #include <locale>
+#include "maxdoassettings.h"
 
 QString DefaultFileNameFromSeqNumber(QString Directory, QString BaseName,int seqnumber,QDateTime datetime){
     QString seq = QString::number(seqnumber).rightJustified(5, '0');
@@ -40,7 +41,7 @@ QString GetSequenceFileName(QString Directory, QString BaseName, uint Sequence, 
     if (list.count() == 0)
         return "";
     QString firstBasname=list[0];
-    int currgroupindex = 0;
+    uint currgroupindex = 0;
     firstBasname = firstBasname.left(firstBasname.indexOf("_"));
     strnext = "";
     for (int i = 0;i < list.count();i++){
@@ -81,6 +82,7 @@ QString GetSequenceFileName(QString Directory, QString BaseName, uint Sequence, 
 }
 
 TSpectrum::TSpectrum(QObject* parent){
+    TMaxdoasSettings *ms = TMaxdoasSettings::instance();
     setParent(parent);
     Wavelength = TWavelengthbuffer::instance();
     type = stNone;
@@ -101,6 +103,11 @@ TSpectrum::TSpectrum(QObject* parent){
     BaseName = "";
     SpectrometerSerialNumber = "NULL";
     MirrorCoordinate = NULL;
+
+    SiteName = ms->getSiteName();
+    ScannerOrientation = ms->getScannerDirection();
+    SiteLatitude = ms->getSiteLatitude();
+    SiteLongitude = ms->getSiteLongitude();
 
 }
 
@@ -127,6 +134,11 @@ TSpectrum::TSpectrum(TSpectrum * other){
     SpectrometerSerialNumber = other->SpectrometerSerialNumber;
     memcpy(spectrum,other->spectrum,sizeof(double)*NumOfSpectrPixels);
     ScanPixelIndex = other->ScanPixelIndex;
+    SiteName = other->SiteName;
+    ScannerOrientation = other->ScannerOrientation;
+    SiteLatitude = other->SiteLatitude;
+    SiteLongitude = other->SiteLongitude;
+
 }
 
 TSpectrum::~TSpectrum(){
@@ -151,6 +163,7 @@ QString TSpectrum::getFileName(){
 }
 
 void TSpectrum::SaveSpectrum(QTextStream &file, QTextStream &meta, bool DarkSpectrum){
+    QLocale loc;
     if (DarkSpectrum)
         type = stDarkOrRef;
     file.setRealNumberPrecision(6);
@@ -172,7 +185,7 @@ void TSpectrum::SaveSpectrum(QTextStream &file, QTextStream &meta, bool DarkSpec
 
     file.setRealNumberPrecision(6);     //metadata
 
-    meta << datetime.toString("dd.MM.yyyy hh:mm:ss") << '\t';
+    meta << loc.toString(datetime,"dd.MM.yyyy hh:mm:ss_t") << '\t';
 
     if (MirrorCoordinate == NULL){
         meta << -1 << '\t';
@@ -214,6 +227,10 @@ void TSpectrum::SaveSpectrum(QTextStream &file, QTextStream &meta, bool DarkSpec
         meta << "1";
     else
         meta << "0";
+    meta << SiteName << '\t';
+    meta << SiteLatitude << '\t';
+    meta << SiteLongitude << '\t';
+    meta << ScannerOrientation << '\t';
     meta << '\n';
 }
 
@@ -316,7 +333,11 @@ void TSpectrum::SaveSpectrum_(QString fn,bool Dark,bool istmp){
         metastream << "TiltY\t";
         metastream << "PixelIndexX\t";
         metastream << "PixelIndexY\t";
-        metastream << "dark\n";
+        metastream << "dark\t";
+        metastream <<  "SiteName" << '\t';
+        metastream <<  "SiteLatitude" << '\t';
+        metastream <<  "SiteLongitude" << '\t';
+        metastream <<  "ScannerOrientation" << '\n';
         SaveSpectrum(datastream,metastream,Dark);
         data.close();
         meta.close();
@@ -471,13 +492,14 @@ bool TSpectrum::LoadMeta(QFile &meta,bool versionWithDateInLineWithoutSZA){
     QPointF ac;
     QString tm1;
     QString tm2;
-
+    QString t;
+    QLocale loc;
     //QString line_str = meta.readLine();
     //QTextStream line(&line_str);
     tm1 = getNextString(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
     tm2 = getNextString(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
     tm1 = tm1+" "+tm2;
-    datetime = QDateTime::fromString(tm1,"dd.MM.yyyy hh:mm:ss");
+    datetime = loc.toDateTime(tm1,"dd.MM.yyyy hh:mm:ss_t");
 
     x = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
     y = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
@@ -522,9 +544,13 @@ bool TSpectrum::LoadMeta(QFile &meta,bool versionWithDateInLineWithoutSZA){
     y = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
     Tilt.setY(y);
     Tilt.setX(x);
-    mc.pixelIndexX = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
-    mc.pixelIndexY = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
-
+    if (!newline) mc.pixelIndexX = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+    if (!newline) mc.pixelIndexY = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+    if (!newline) t = getNextString(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+    if (!newline) SiteName = getNextString(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+    if (!newline) SiteLatitude = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+    if (!newline) SiteLongitude = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+    if (!newline) ScannerOrientation = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
     hash = -1;
     return true;
 }
@@ -615,8 +641,7 @@ bool TSpectrum::LoadSpectrum(QFile &file, QFile &meta){
             }
             meta.seek(pos);
         }
-        bool ok;
-        ok = true;
+       // bool ok = true;
         index = LoadSpectraldata(file,versionWithDateInLineWithoutSZA,DarkSpectrum);
         hash = -1;
         if(index == 0)

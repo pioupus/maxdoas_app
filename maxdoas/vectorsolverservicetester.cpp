@@ -86,6 +86,7 @@ bool rvsAngleMedian(){
     Apriori.append(QPointF(0,0.1));
     p=getMedianPoint(Apriori);
     std::cout << p.x() << " " << p.y() << std::endl;
+    return true;
 }
 
 void runVecSolverTest(){

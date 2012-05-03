@@ -478,7 +478,7 @@ QScriptValue TRetrievalImage::emissionrate(float TimeStep){
     result->setMeanDistance(meanDistance);
     result->setEmissionFactor(emissionFactor);
     result->setPixelCounts(QPoint(width,height));
-    float ScanPixelsize;
+   // float ScanPixelsize;
     TSpectrumPlotter* sp = TSpectrumPlotter::instance(0);
     float maxVal;
     QPointF maxPoint;

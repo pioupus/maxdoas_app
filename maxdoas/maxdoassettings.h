@@ -24,9 +24,23 @@ struct TCOMPortConf{
     QString SysPath;
 };
 
+typedef enum{sdtUnknown,sdtWindField,sdtMAXDOAS,sdtSolTracker} TScannerDeviceType;
+typedef enum{smtUnknown,smtDCMotor,smtStepper,smtServo} TShutterMotorType;
+typedef enum{sssUnknown,sssOpened,sssClosed} TShutterBySwitchState;
+typedef enum{eseUnknown,eseOK,eseERROR} TEndSwitchErrorState;
+
+QString rawDataToSerialNumber(int guid, int devicetype);
+
+void serialNumberToRawData(QString serial, int* guid, int* devicetype);
+
 class TMaxdoasSettings
 {
 public:
+
+    void workwiththisserial(QString serial);
+    QString getLastScannerSerial();
+
+    bool isInConfigMode();
 
     QString getPreferredSpecSerial();
     void setPreferredSpecSerial(QString s);
@@ -51,6 +65,44 @@ public:
 
     QString getQDoasPath();
     void setQDoasPath(QString path);
+
+    QPoint getTiltMaxValue();
+    void setTiltMaxValue(QPoint MaxVal);
+
+    QPoint getTiltMinValue();
+    void setTiltMinValue(QPoint Minval);
+
+    QPoint getTiltZenith();
+    void setTiltZenith(QPoint TiltZenith);
+
+    TScannerDeviceType getAttachedScanningDevice(void);
+    void setAttachedScanningDevice(TScannerDeviceType sdt);
+
+    TScannerDeviceType askAttachedScanningDevice(void);
+
+    QPoint getZenithSteps();
+    void setZenithSteps(QPoint ZenithPosition);
+
+    QPoint getMicrostepping();
+    void setMicrostepping(QPoint Microsteps);
+
+    QPointF getMotorStepAngle();
+    void setMotorStepAngle(QPointF MotorStepAngle);
+
+    int getShutterClosePos();
+    void setShutterClosePos(int ClosePosition);
+
+    QString getSiteName();
+    void setSiteName(QString SiteName);
+
+    float getScannerDirection();
+    void setScannerDirection(float ScannerDirection);
+
+    float getSiteLatitude();
+    void setSiteLatitude(float SiteLatitude);
+
+    float getSiteLongitude();
+    void setSiteLongitude(float SiteLongitude);
 
     static TMaxdoasSettings* instance()
     {
@@ -87,6 +139,7 @@ private:
 
     static TMaxdoasSettings* m_Instance;
     QSettings *settings;
+    QString serialnum;
 };
 
 

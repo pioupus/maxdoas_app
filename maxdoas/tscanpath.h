@@ -11,6 +11,9 @@
 #include <QScriptable>
 #include <QTextStream>
 #include <QFile>
+#include "log4qt/consoleappender.h"
+#include "log4qt/logger.h"
+#include "log4qt/ttcclayout.h"
 
 enum TPatternStyle {psNone,psRect,psEllipse,psLine};
 
@@ -71,6 +74,7 @@ class TScanPath : public QObject,
     protected QScriptable
 {
      Q_OBJECT
+     LOG4QT_DECLARE_QCLASS_LOGGER
 public:
     TScanPath(QObject *parent);
     ~TScanPath();

@@ -10,23 +10,22 @@ INCLUDEPATH += . \
     ../diplom_maxdoas/libs/qserialdevice/src/qserialdeviceenumerator \
     ../diplom_maxdoas/libs/eigen-eigen-3c7638949b8c \
     /home/arne/opt/OmniDriverSPAM-1.66/include \
-    /usr/lib/jvm/default-java/include \
+    /usr/lib/jvm/java-1.6.0-openjdk-i386/include \
     /usr/include/superlu \
-    /usr/lib/jvm/default-java/include/linux \
+    /usr/lib/jvm/java-1.6.0-openjdk-i386/include/linux \
     /home/arne/opt/OmniDriverSPAM-1.66/include
-LIBS += -L/home/arne/opt/OmniDriverSPAM-1.66/_jvm/lib/i386/client \
-    -ljvm
-LIBS += -L/home/arne/opt/OmniDriverSPAM-1.66/OOI_HOME \
-    -lOmniDriver \
-    -lcommon \
-    -lsuperlu
 
-# LIBS += -L/home/arne/opt/OmniDriverSPAM-1.66/OOI_HOME -lOmniDriver -lcommon
-LIBS += -L../diplom_maxdoas/libs/qwt-6.0/lib \
-    -lqwt
+LIBS += -lsuperlu
+
+LIBS += -L/home/arne/opt/OmniDriverSPAM-1.66/OOI_HOME  -lOmniDriver  -lcommon
+
+LIBS += -L/home/arne/opt/OmniDriverSPAM-1.66/_jvm/lib/i386/client -ljvm
+
+LIBS += -L../diplom_maxdoas/libs/qwt-6.0/lib -lqwt
 
 # LIBS += -Llibs/qserialdevice/src/build/release -lqserialdevice
-LIBS += -ludev
+#LIBS += -L/lib/i386-linux-gnu -ludev
+LIBS += -L/home/arne/diplom/software/application/diplom_maxdoas/libs/qserialdevice/src/qserialdeviceenumerator/release -lqserialdeviceenumerator
 CONFIG(debug, debug|release) { 
     QMAKE_LIBDIR += ../diplom_maxdoas/libs/qserialdevice/src/build/debug
     LIBS += -lqserialdeviced
@@ -35,6 +34,7 @@ else {
     QMAKE_LIBDIR += ../diplom_maxdoas/libs/qserialdevice/src/build/release
     LIBS += -lqserialdevice
 }
+LIBS += -ludev
 CONFIG += qtestlib
 QT += script
 QT += scripttools
@@ -102,3 +102,4 @@ SOURCES += maxdoas/main.cpp \
     maxdoas/vectorsolverservice.cpp \
     maxdoas/vectorsolverservicetester.cpp \
     maxdoas/temissionrate.cpp
+

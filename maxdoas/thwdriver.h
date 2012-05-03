@@ -86,9 +86,22 @@ public slots:
     void hwdtSloSetTargetTemperature(float temperature);
 
     void hwdtSloAskTilt();
-    void hwdtSloSetTiltOffset(int x, int y);
+    void hwdtSloSetTiltMinMaxCalibration(int min_x, int min_y,int max_x, int max_y);
     void hwdtSloConfigTilt(TTiltConfigRes Resolution,TTiltConfigGain Gain);
-  //  void hwdtSloOffsetTilt(float TiltX, float TiltY);
+    void hwdtSloTiltStartCal();
+    void hwdtSloTiltStopCal();
+    void hwdtSloAskTiltMinValue();
+    void hwdtSloAskTiltMaxValue();
+    void hwdtSloAskTiltZenithValue();
+
+    bool hwdtSloShutterGoto(int Shutterposition);
+    void hwdtSloTiltSetZenith();
+    void hwdtSloSetMaxdoasZenithPos();
+    void hwdtSloSetStepperShutterClosePos();
+    void hwdtSloAskScannerStatus();
+    void hwdtSloAskMotorSetup();
+    void hwdtSloAskDeviceInfo();
+    void hwdtSloSetGUID(int guid);
 
     void hwdtSloAskCompass();
     void hwdtSloStartCompassCal();
@@ -104,6 +117,7 @@ public slots:
     void hwdtSloMeasureScanPixel(float PosX, float PosY ,uint avg, uint integrTime);
 
     bool hwdtSloMotGoto(float PosX, float PosY);
+    bool hwdtSloMotGotoSteps(int PosX, int PosY);
 
     void hwdtSloMeasureSpectrum(uint avg, uint integrTime,THWShutterCMD shutterCMD);
 
@@ -127,12 +141,21 @@ signals:
     void hwdtSigGotTemperature(THWTempSensorID sensorID, float TemperaturePeltier,float TemperatureSpectr,float TemperatureHeatsink, bool byTimer);
     void hwdtSigGotTilt(float TiltX, float TiltY, int Gain, int Resolution);
 
+    void hwdtSigGotTiltMinVal(int TiltX, int TiltY, int Gain, int Resolution);
+    void hwdtSigGotTiltMaxVal(int TiltX, int TiltY, int Gain, int Resolution);
+    void hwdtSigGotTiltZenith(int TiltX, int TiltY, int Gain, int Resolution);
+
+    void hwdtSigGotScannerStatus(float ScannerTemperature,bool ShutterOpenedBySwitch, bool EndSwitchError);
+
+    void hwdtSigGotMotorSetup(int MaxDoasZenithPosition,int ShutterClosePosition, int MaxDoasMicrosteps, int ShutterMicrosteps, int ShutterType);
+    void hwdtSigGotDeviceInfo(int GitHash,int guid, int deviceType);
+
     void hwdtSigGotCompassHeading(float Heading);
     void hwdtSigCompassStartedCalibrating();
     void hwdtSigCompassStoppedCalibrating();
 
     void hwdtSigGotLightSensorValue(float lightValue);
-    void hwdtSigMotorIsHome();
+    void hwdtSigMotorIsHome(int x, int y);
     void hwdtSigShutterStateChanged(THWShutterCMD LastShutterCMD);
     void hwdtSigScanPixelMeasured();
 
@@ -141,7 +164,7 @@ signals:
     void hwdtSigSpectrumeterOpened();
     void hwdtSigSpectrometersDicovered();
     void hwdtSigCOMPortChanged(QString name, bool opened, bool error);
-    void hwdtSigMotMoved();
+    void hwdtSigMotMoved(int x, int y);
     void hwdtSigMotFailed();
 private:
     bool sendBuffer(char *TXBuffer,char *RXBuffer,uint size,uint timeout , bool TempCtrler,bool RetransmitAllowed); //returns true if ok
@@ -162,7 +185,14 @@ private:
     uint TiltADC_Gain;
     float TiltADC_RefVoltage;
     QPoint TiltRaw;
-    QPoint TiltRawOffset;
+    QPoint TiltRawMin_byDevice;
+    QPoint TiltRawMax_byDevice;
+    QPoint TiltRawZenith_byDevice;
+    //QPoint TiltRawOffset;
+    QPoint TiltRawMaxValue;
+    QPoint TiltRawMinValue;
+    TShutterBySwitchState ShutterIsOpenBySwitch;
+    TEndSwitchErrorState EndSwitchErrorState;
 //    float TiltCalValNegGX;
 //    float TiltCalValPosGX;
 //    float TiltCalValNegGY;
@@ -194,6 +224,7 @@ private:
     QReadWriteLock MutexSpectrList;
     QList<QString> *SpectrometerList;
     TMirrorCoordinate *mc;
+    QPoint ScannerStepPos;
 
 
 };
@@ -219,7 +250,7 @@ public:
 
     QPointF hwdGetTilt();
     void hwdAskTilt();
-    void hwdSetTiltOffset(QPoint Offset);
+    void hwdSetTiltMinMaxCalib(QPoint Min, QPoint Max);
     QPoint hwdGetRawTilt();
     void hwdSetTiltInterval(int ms);
     float hwdGetCompassHeading();
@@ -232,6 +263,28 @@ public:
     void hwdAskLightSensor();
     float hwdGetLightsensorValue();
 
+    QString getFirmwarehash();
+
+    void hwdTiltStartCal();
+    void hwdTiltStopCal();
+    void hwdAskTiltMinValue();
+    void hwdAskTiltMaxValue();
+    void hwdAskTiltZenithValue();
+
+    QPointF getRawTiltMin();
+
+    QPointF getRawTiltMax();
+
+    void hwdTiltSetZenith();
+    void hwdSetMaxdoasZenithPos();
+    void hwdSetStepperShutterClosePos();
+    void hwdSetShuttPos(int Shutterpos);
+    int hwdGetShuttPos();
+    void hwdAskScannerStatus();
+    void hwdAskMotorSetup();
+    void hwdAskDeviceInfo();
+    void hwdSetGUID(int guid);
+
     void hwdGoMotorHome();
 
     void hwdSetShutter(THWShutterCMD ShutterCMD);
@@ -239,6 +292,7 @@ public:
 
     void hwdMeasureScanPixel(QPointF AngleCoordinate,uint avg, uint integrTime);
     void hwdMotMove(QPointF AngleCoordinate);
+    void hwdMotMoveBySteps(QPoint MotCoordinates);
     void hwdMotIdleState(bool idle);
     void hwdMeasureSpectrum(uint avg, uint integrTime,THWShutterCMD shutterCMD);
 
@@ -256,6 +310,7 @@ public:
     double TempBufferHeatSink[TEMPERATURE_BUFFER_COUNT];
     int TempBufferPointer;
     QString getSpectrSerial();
+    QPoint getStepperPos();
 private slots:  //coming from thread
     void hwdSloGotTemperature(THWTempSensorID sensorID, float TemperaturePeltier, float TemperatureSpectr,float TemperatureHeatsink,bool byTimer);
     void hwdSloGotTilt(float TiltX, float TiltY, int Gain, int Resolution);
@@ -263,7 +318,7 @@ private slots:  //coming from thread
     void hwdSloCompassStartedCalibrating();
     void hwdSloCompassStoppedCalibrating();
     void hwdSloGotLightSensorValue(float lightValue);
-    void hwdSloMotorIsHome();
+    void hwdSloMotorIsHome(int x, int y);
     void hwdSloShutterStateChanged(THWShutterCMD LastShutterCMD);
     void hwdSloScanPixelMeasured();
     void hwdSloGotSpectrum();
@@ -272,6 +327,15 @@ private slots:  //coming from thread
     void hwdSlothreadFinished();
     void hwdSloCOMPortChanged(QString name, bool opened, bool error);
 
+    void hwdSloMotMoved(int StepX, int StepY);
+    void hwdSloGotTiltMinVal(int TiltX, int TiltY, int Gain, int Resolution);
+    void hwdSloGotTiltMaxVal(int TiltX, int TiltY, int Gain, int Resolution);
+    void hwdSloGotTiltZenith(int TiltX, int TiltY, int Gain, int Resolution);
+
+    void hwdSloGotScannerStatus(float ScannerTemperature,bool ShutterOpenedBySwitch, bool EndSwitchError);
+
+    void hwdSloGotMotorSetup(int MaxDoasZenithPosition,int ShutterClosePosition, int MaxDoasMicrosteps, int ShutterMicrosteps, int ShutterType);
+    void hwdSloGotDeviceInfo(int GitHash,int guid, int deviceType);
 private slots:  //internal signals
     void hwdSlotTemperatureTimer();
     void hwdSlotTiltTimer();
@@ -280,15 +344,28 @@ signals: //thread -> outside
     void hwdSigHWThreadFinished();
     void hwdSigGotTemperatures(float TemperaturePeltier,float TemperatureSpectr,float TemperatureHeatsink);
     void hwdSigGotTilt(float TiltX,float TiltY,int Gain, int Resolution,float ResolutionBorder,float MaxTilt);
+
+    void hwdSigGotTiltDirection(float Direction);
+
+    void hwdSigGotTiltMinVal(int TiltX, int TiltY, int Gain, int Resolution);
+    void hwdSigGotTiltMaxVal(int TiltX, int TiltY, int Gain, int Resolution);
+    void hwdSigGotTiltZenith(int TiltX, int TiltY, int Gain, int Resolution);
+
+    void hwdSigGotScannerStatus(float ScannerTemperature,bool ShutterOpenedBySwitch, bool EndSwitchError);
+
+    void hwdSigGotMotorSetup(int MaxDoasZenithPosition,int ShutterClosePosition, int MaxDoasMicrosteps, int ShutterMicrosteps, int ShutterType);
+    void hwdSigGotDeviceInfo(int GitHash,int guid, int deviceType);
+
+
     void hwdSigGotCompassHeading(float Heading);
     void hwdSigCompassStartedCalibrating();
     void hwdSigCompassStoppedCalibrating();
     void hwdSigGotLightSensorValue(float lightValue);
-    void hwdSigMotorIsHome();
+    void hwdSigMotorIsHome(int x, int y);
     void hwdSigShutterStateChanged(THWShutterCMD LastShutterCMD);
     void hwdSigScanPixelMeasured();
     void hwdSigGotSpectrum();
-    void hwdSigMotMoved();
+    void hwdSigMotMoved(int StepX, int StepY);
     void hwdSigMotFailed();
     void hwdSigSpectrumeterOpened();
     void hwdSigTransferDone(THWTransferState TransferState, uint ErrorParameter);
@@ -303,8 +380,9 @@ signals: //thread -> outside
 
     void hwdtSigConfigTilt(TTiltConfigRes Resolution,TTiltConfigGain Gain);
     void hwdtSigAskTilt();
-    void hwdtSigSetTiltOffset(int TiltX, int TiltY);
+    void hwdtSigSetTiltMinMaxCalibration(int minX, int minY,int maxX, int maxY);
 
+    bool hwdtSigShutterGoto(int Shutterposition);
     void hwdtSigAskCompass();
     void hwdtSigStartCompassCal();
     void hwdtSigStopCompassCal();
@@ -312,10 +390,24 @@ signals: //thread -> outside
     void hwdtSigGoMotorHome();
     void hwdtSigMotoIdleState(bool idle);
 
+    void hwdtSigTiltStartCal();
+    void hwdtSigTiltStopCal();
+    void hwdtSigAskTiltMinValue();
+    void hwdtSigAskTiltMaxValue();
+    void hwdtSigAskTiltZenithValue();
+
+    void hwdtSigTiltSetZenith();
+    void hwdtSigSetMaxdoasZenithPos();
+    void hwdtSigSetStepperShutterClosePos();
+    void hwdtSigAskScannerStatus();
+    void hwdtSigAskMotorSetup();
+    void hwdtSigAskDeviceInfo();
+    void hwdtSigSetGUID(int guid);
+
     void hwdtSigSetShutter(THWShutterCMD ShutterCMD);
 
     bool hwdtMotGoto(float PosX, float PosY);
-
+    bool hwdtMotGotoSteps(int PosX, int PosY);
     bool hwdtMotIdleState(bool idle);
 
     void hwdtSigMeasureScanPixel(float PosX, float PosY ,uint avg, uint integrTime);
@@ -339,6 +431,27 @@ private:
     THWTempSensorID LastSensorID;
     float Temperatures[3];
     QPointF *ActualTilt;
+    QPointF *TiltMin;
+    QPointF *TiltMax;
+    QPointF *TiltZenith;
+
+    int ShutterPosition;
+    float ScannerTemperature;
+    TShutterBySwitchState ShutterOpenedBySwitch;
+    TEndSwitchErrorState EndSwitchError;
+
+
+    int MaxDoasZenithPosition;
+    int ShutterClosePosition;
+    int MaxDoasMicrosteps;
+    int ShutterMicrosteps;
+    TShutterMotorType ShutterType;
+
+
+    QString GitHash;
+    QString ScannerSerialNumber;
+    TScannerDeviceType deviceType;
+
     float CompassHeading;
     float CompassOffset;
     float TiltResolutionBorder;
@@ -347,6 +460,7 @@ private:
     SerialDeviceEnumerator *m_sde;
     float LightSensorVal;
     TAutoIntegConf IntegTimeConf;
+    QPoint ScannerStepPos;
 };
 
 #endif // THWDRIVER_H

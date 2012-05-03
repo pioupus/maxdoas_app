@@ -1,6 +1,8 @@
 #include "tmirrorcoordinate.h"
 #include <QDebug>
 #include <math.h>
+#include "maxdoassettings.h"
+
 //<QDebug>
 #define PRINTCONSTR_DESTR 0
 int constructioncounter=0;
@@ -13,6 +15,7 @@ int constructioncounter=0;
 
 TMirrorCoordinate::TMirrorCoordinate(QObject *parent)
 {
+    (void)parent;
     pixelIndexX = -1;
     pixelIndexY = -1;
     #if PRINTCONSTR_DESTR
@@ -51,10 +54,15 @@ TMirrorCoordinate::~TMirrorCoordinate(){
 
 QPoint TMirrorCoordinate::getMotorCoordinate(){
     QPoint result;
+    TMaxdoasSettings* ms = TMaxdoasSettings::instance();
     //result.setX(AngleCoordinate.x()*1000);
-    result.setX(STATIONARY_STEPS*(AngleCoordinate.x()+STATIONARY_OFFSET)/1.8);
+
+    result.setX(((float)ms->getMicrostepping().x()*AngleCoordinate.x()/ms->getMotorStepAngle().x())+(float)ms->getZenithSteps().x());
+
+    //result.setX(STATIONARY_STEPS*(AngleCoordinate.x()+STATIONARY_OFFSET)/1.8);
     //result.setY(AngleCoordinate.y()*1000);
-    result.setY((MIRROR_STEPS*MIRROR_OFFSET/1.8) - ((MIRROR_STEPS/2)*AngleCoordinate.y()/1.8));
+    result.setY((float)ms->getZenithSteps().y() - (((float)ms->getMicrostepping().y()/2)*AngleCoordinate.y()/ms->getMotorStepAngle().y()));
+    //result.setY((MIRROR_STEPS*MIRROR_OFFSET/1.8) - ((MIRROR_STEPS/2)*AngleCoordinate.y()/1.8));
     //result.setY(AngleCoordinate.y()*1);
     return result;
 }
@@ -95,12 +103,17 @@ void TMirrorCoordinate::setAngleCoordinate(QPointF ac){
 }
 
 void TMirrorCoordinate::setMotorCoordinate(int X, int Y){
-    AngleCoordinate.setX((1.8*X/STATIONARY_STEPS)-STATIONARY_OFFSET);
+//result.setX(((float)ms->getMicrostepping().x()*AngleCoordinate.x()/ms->getMotorStepAngle().x())+(float)ms->getZenithSteps().x());
+    TMaxdoasSettings* ms = TMaxdoasSettings::instance();
+    AngleCoordinate.setX(ms->getMotorStepAngle().x()*(X-ms->getZenithSteps().x())/(float)ms->getMicrostepping().x());
 
-    //result.setY((MIRROR_STEPS*MIRROR_OFFSET/1.8) - ((MIRROR_STEPS/2)*AngleCoordinate.y()/1.8));
-    Y -= (MIRROR_STEPS*MIRROR_OFFSET/1.8);
-    float y = (2*1.8*Y/MIRROR_STEPS);
-    AngleCoordinate.setY(-y);
+    //result.setY((float)ms->getZenithSteps().y() - (((float)ms->getMicrostepping().y()/2)*AngleCoordinate.y()/ms->getMotorStepAngle().y()));
+
+    AngleCoordinate.setY((2*ms->getMotorStepAngle().y()/ms->getMicrostepping().y())*(ms->getZenithSteps().y()-Y));
+
+    //Y -= (MIRROR_STEPS*MIRROR_OFFSET/1.8);
+    //float y = (2*1.8*Y/MIRROR_STEPS);
+    //AngleCoordinate.setY(-y);
    // AngleCoordinate.setY(Y);
 }
 
