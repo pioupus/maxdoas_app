@@ -68,6 +68,9 @@ public:
     float ScannerOrientation;
     float SiteLatitude;
     float SiteLongitude;
+    float TiltDirection;
+    TShutterBySwitchState ShutterState;
+    float ScannerTemperature;
 public slots:
     void plot(int index);
 

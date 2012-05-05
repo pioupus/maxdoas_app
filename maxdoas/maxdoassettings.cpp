@@ -142,6 +142,14 @@ void TMaxdoasSettings::setTiltOffset(QPoint TiltOffset){
     settings->setValue("TiltSensor/TiltOffset",TiltOffset);
 }
 
+//float TMaxdoasSettings::getTiltZenithDirection(){
+//     return settings->value(serialnum+"/TiltSensor/TiltZenithDirection",0).toFloat();
+//}
+
+//void TMaxdoasSettings::setTiltZenithDirection(float TiltZenithDirection){
+//    settings->setValue(serialnum+"/TiltSensor/TiltZenithDirection",TiltZenithDirection);
+//}
+
 QPoint TMaxdoasSettings::getTiltZenith(){
      return settings->value(serialnum+"/TiltSensor/TiltZenith",QPoint(0,0)).toPoint();
 }

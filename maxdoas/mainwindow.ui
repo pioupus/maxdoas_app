@@ -17,7 +17,10 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>Windfield DOAS</string>
+   <string>DOAS Operator</string>
+  </property>
+  <property name="windowOpacity">
+   <double>0.000000000000000</double>
   </property>
   <widget class="QWidget" name="centralWidget">
    <property name="sizePolicy">
@@ -180,7 +183,7 @@
      <x>0</x>
      <y>0</y>
      <width>919</width>
-     <height>23</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -204,12 +207,15 @@
   <widget class="QStatusBar" name="statusBar"/>
   <action name="actionTempctrler">
    <property name="text">
-    <string>Temperaturecontroller</string>
+    <string>Scanner</string>
    </property>
   </action>
   <action name="actionSensors">
    <property name="text">
     <string>Motion controll sensors</string>
+   </property>
+   <property name="visible">
+    <bool>false</bool>
    </property>
   </action>
   <action name="actionClose">

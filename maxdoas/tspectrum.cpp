@@ -109,6 +109,9 @@ TSpectrum::TSpectrum(QObject* parent){
     SiteLatitude = ms->getSiteLatitude();
     SiteLongitude = ms->getSiteLongitude();
 
+    TiltDirection = 0;
+    ShutterState = sssUnknown;
+    ScannerTemperature = -1000;
 }
 
 TSpectrum::TSpectrum(TSpectrum * other){
@@ -138,6 +141,10 @@ TSpectrum::TSpectrum(TSpectrum * other){
     ScannerOrientation = other->ScannerOrientation;
     SiteLatitude = other->SiteLatitude;
     SiteLongitude = other->SiteLongitude;
+
+    TiltDirection = other->TiltDirection;
+    ShutterState = other->ShutterState;
+    ScannerTemperature = other->ScannerTemperature;
 
 }
 
@@ -231,6 +238,17 @@ void TSpectrum::SaveSpectrum(QTextStream &file, QTextStream &meta, bool DarkSpec
     meta << SiteLatitude << '\t';
     meta << SiteLongitude << '\t';
     meta << ScannerOrientation << '\t';
+
+    meta << TiltDirection << '\t';
+    if (ShutterState==sssUnknown)
+        meta << "-\t";
+    else if (ShutterState==sssOpened)
+        meta << "Opened\t";
+    else if (ShutterState==sssClosed)
+        meta << "Closed\t";
+    meta << ScannerTemperature << '\t';
+
+
     meta << '\n';
 }
 
@@ -337,7 +355,10 @@ void TSpectrum::SaveSpectrum_(QString fn,bool Dark,bool istmp){
         metastream <<  "SiteName" << '\t';
         metastream <<  "SiteLatitude" << '\t';
         metastream <<  "SiteLongitude" << '\t';
-        metastream <<  "ScannerOrientation" << '\n';
+        metastream <<  "ScannerOrientation" << '\t';
+        metastream << "TiltDirection" << '\t';
+        metastream << "ShutterState" << '\t';
+        metastream << "ScannerTemperature" << '\n';
         SaveSpectrum(datastream,metastream,Dark);
         data.close();
         meta.close();
@@ -551,6 +572,18 @@ bool TSpectrum::LoadMeta(QFile &meta,bool versionWithDateInLineWithoutSZA){
     if (!newline) SiteLatitude = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
     if (!newline) SiteLongitude = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
     if (!newline) ScannerOrientation = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+
+    if (!newline) TiltDirection = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+    t = "-";
+    if (!newline) t = getNextString(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+    if (t=="-")
+        ShutterState=sssUnknown;
+    if (t=="Opened")
+        ShutterState=sssOpened;
+    if (t=="Closed")
+        ShutterState=sssClosed;
+    if (!newline) ScannerTemperature = getNextDouble(&meta,buffer,&lineLength,sizeof(buffer), wordbuffer, sizeof(wordbuffer), &bufferindex, &wordbufferindex, &newline);
+
     hash = -1;
     return true;
 }

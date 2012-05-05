@@ -199,11 +199,7 @@ void MainWindow::COMPortChanged(QString name, bool opened, bool error){
     QString s;
     if (opened){
         s = " opened";
-        HWDriver->hwdAskDeviceInfo();
-        HWDriver->hwdAskMotorSetup();
-        HWDriver->hwdAskTiltMaxValue();
-        HWDriver->hwdAskTiltMinValue();
-        HWDriver->hwdAskTiltZenithValue();
+
     }else
         s = " closed";
     if (error)

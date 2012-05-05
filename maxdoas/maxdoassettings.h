@@ -72,6 +72,9 @@ public:
     QPoint getTiltMinValue();
     void setTiltMinValue(QPoint Minval);
 
+//    float getTiltZenithDirection();
+//    void setTiltZenithDirection(float TiltZenithDirection);
+
     QPoint getTiltZenith();
     void setTiltZenith(QPoint TiltZenith);
 

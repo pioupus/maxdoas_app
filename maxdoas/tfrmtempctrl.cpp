@@ -13,6 +13,7 @@ TfrmTempctrl::TfrmTempctrl(THWDriver *hwdriver, QWidget *parent) :
     ui->setupUi(this);
     this->hwdriver=hwdriver;
     setAttribute(Qt::WA_DeleteOnClose, true);
+    ScannerConfigModified = false;
     plot = new QwtPlot(this);
     curvePeltier = new QwtPlotCurve("Peltier");
     curveHeatsink = new QwtPlotCurve("Heatsink");
@@ -72,6 +73,8 @@ TfrmTempctrl::TfrmTempctrl(THWDriver *hwdriver, QWidget *parent) :
         ui->loincrementby->setEnabled(true);
         ui->loEndswitch->setEnabled(true);
         ui->loEndswitch_dsfsdf->setEnabled(true);
+        ui->tabTilt->setVisible(false);
+        ui->tabCompass->setVisible(false);
     }else{
         ui->loScannerTemperature->setEnabled(false);
         ui->loShutterPosition->setEnabled(false);
@@ -82,6 +85,8 @@ TfrmTempctrl::TfrmTempctrl(THWDriver *hwdriver, QWidget *parent) :
         ui->loincrementby->setEnabled(false);
         ui->loEndswitch->setEnabled(false);
         ui->loEndswitch_dsfsdf->setEnabled(false);
+        ui->tabTilt->setVisible(true);
+        ui->tabCompass->setVisible(true);
     }
 
     startTimer(1000);
@@ -139,6 +144,7 @@ TfrmTempctrl::TfrmTempctrl(THWDriver *hwdriver, QWidget *parent) :
     show();
 
     hwdriver->hwdAskDeviceInfo();
+    hwdriver->hwdAskTiltMaxValue();
 }
 
 void TfrmTempctrl::showCurve(QwtPlotItem *item, bool on)
@@ -317,7 +323,8 @@ void TfrmTempctrl::on_buttonBox_accepted()
     ms->setSiteLatitude( ui->spbLatitude->value());
     ms->setScannerDirection( ui->spbScannerdirection->value());
 
-
+    if (ScannerConfigModified)
+        hwdriver->FetchScannerInfos();
 }
 
 
@@ -367,7 +374,6 @@ void TfrmTempctrl::on_chbComBySysPath_stateChanged(int )
 
 void TfrmTempctrl::on_btnSetTiltToZero_clicked()
 {
-
     ms->setTiltMaxValue(QPoint(hwdriver->hwdGetRawTilt()));
     ms->setTiltMinValue(QPoint(hwdriver->hwdGetRawTilt()));
     hwdriver->hwdSetTiltMinMaxCalib(hwdriver->hwdGetRawTilt(),hwdriver->hwdGetRawTilt());
@@ -387,6 +393,7 @@ void TfrmTempctrl::on_btnSetSerialNumber_clicked()
         serialNumberToRawData(text,&guid,&devicetype);
         hwdriver->hwdSetGUID(guid);
     }
+    ScannerConfigModified = true;
 }
 
 void TfrmTempctrl::on_btnShutterPosUp_clicked()
@@ -403,6 +410,7 @@ void TfrmTempctrl::on_btnSetShutterClosePos_clicked()
 {
     hwdriver->hwdSetStepperShutterClosePos();
     hwdriver->hwdAskMotorSetup();
+    ScannerConfigModified = true;
 }
 
 
@@ -421,6 +429,7 @@ void TfrmTempctrl::on_btnSetZenithPos_clicked()
 {
     hwdriver->hwdSetMaxdoasZenithPos();
     hwdriver->hwdAskMotorSetup();
+    ScannerConfigModified = true;
 }
 
 void TfrmTempctrl::on_btnTiltCalibration_clicked()
@@ -430,8 +439,10 @@ void TfrmTempctrl::on_btnTiltCalibration_clicked()
         hwdriver->hwdTiltStartCal();
         ui->btnTiltCalibration->setText("stop cal");
         hwdriver->hwdAskTiltMaxValue();
+        ScannerConfigModified = true;
     }else{
         hwdriver->hwdTiltStopCal();
+        ScannerConfigModified = true;
         ui->btnTiltCalibration->setText("start cal");
     }
 }
@@ -439,6 +450,8 @@ void TfrmTempctrl::on_btnTiltCalibration_clicked()
 void TfrmTempctrl::on_btnTiltSetAsZenith_clicked()
 {
     hwdriver->hwdTiltSetZenith();
+    hwdriver->hwdAskTiltZenithValue();
+    ScannerConfigModified = true;
 }
 
 

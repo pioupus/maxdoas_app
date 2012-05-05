@@ -16,6 +16,11 @@
 #define P5	7
 #define P6	8
 
+#define DT_2DSCANNER	0x01
+#define DT_1DSCANNER	0x02
+#define DT_SOLTRACKER	0x03
+
+#define TILT_REF_VOLT               2.048
 #define TILT_MAX_8G                 14.83
 #define TILT_MAX_4G                 30.79
 
@@ -72,7 +77,8 @@
 //ok
 
 #define CMD_MOT_INCLIN_SET_INIT		0x80
-#define CMD_MOT_INCLIN_READ		0x81
+#define CMD_MOT_INCLIN_READ         0x81
+#define CMD_MOT_INCLIN_GET_INIT		0x82
 
 #define CMD_MOT_COMPASS_READ		0x88
 #define CMD_MOT_COMPASS_CAL_ENTER	0x89
@@ -83,6 +89,7 @@
 
 #define CMD_MOT_LIGHT_INIT		0x98
 #define CMD_MOT_LIGHT_READ		0x99
+
 
 #define CMD_TRNSMIT_OK			0xAA
 #define CMD_TRNSMIT_FAIL		0x55
@@ -113,14 +120,11 @@ THWDriverThread::THWDriverThread()
 void THWDriverThread::init(){
     serial = new AbstractSerial(this);
 
-
+    ShutterIsOpenBySwitch = sssUnknown;
+    MotMovedThusNoTiltInfoAnymore = true;
     TiltADC_Steps = 1<<18;  //lets calculate with 12 bits;
     TiltADC_Gain = 8;  //1,2,4,8 Gains available
-    TiltADC_RefVoltage = 2.048;
-//    TiltCalValNegGX = -1;
-//    TiltCalValPosGX = 1;
-//    TiltCalValNegGY = -1;
-//    TiltCalValPosGY = 1;
+
 
     //HeadingOffset = 0;
     mc = new TMirrorCoordinate();
@@ -539,12 +543,24 @@ void THWDriverThread::hwdtSloSetTargetTemperature(float temperature)
 
 static int TiltResolutionToConfBit(TTiltConfigRes Resolution){
     switch(Resolution){
+    case tcrNone:   return 0;
     case tcr12Bit:  return 0;
     case tcr14Bit:  return 1;
     case tcr16Bit:  return 2;
     case tcr18Bit:  return 3;
     }
     return 0;
+}
+
+TTiltConfigRes ConfBitToTiltResolution(int Resolution){
+    switch(Resolution){
+    case 0:  return tcr12Bit;
+    case 1:  return tcr14Bit;
+    case 2:  return tcr16Bit;
+    case 3:  return tcr18Bit;
+    default: return tcrNone;
+    }
+    return tcrNone;
 }
 
 static int TiltGainToConfBit(TTiltConfigGain Gain){
@@ -585,6 +601,25 @@ void THWDriverThread::hwdtSloConfigTilt(TTiltConfigRes Resolution,TTiltConfigGai
     if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false,true)){
         TiltADC_Gain = (int) Gain;
         TiltADC_Steps = 1 << (int) Resolution;
+    }
+}
+
+void THWDriverThread::hwdtSloAskTiltConfig(){
+    const uint Bufferlength = 10;
+    char txBuffer[Bufferlength];
+    char rxBuffer[Bufferlength];
+    for (uint i = 0; i < Bufferlength;i++){
+        txBuffer[i] =  0;
+        rxBuffer[i] =  0;
+    }
+    txBuffer[0] =  0;
+    txBuffer[1] =  CMD_MOT_INCLIN_GET_INIT;
+
+    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false,true)){
+        TiltADC_Gain = 1 << (int) rxBuffer[P1];
+        TiltADC_Steps = 1 << (int) ConfBitToTiltResolution(rxBuffer[P2]);
+        logger()->debug(QString("Got Tilt Sensor Configuration. Resolution: %1 bits, Gain: %2").arg((int)TiltADC_Steps).arg((int)TiltADC_Gain));
+        emit hwdtSigGotTiltConfig();
     }
 }
 
@@ -657,132 +692,6 @@ void THWDriverThread::hwdtSloTiltSetZenith(){
 
 // CMD_GET_DECL_MIN_U		0x83
 
-void THWDriverThread::hwdtSloAskTiltMinValue(){
-    const uint Bufferlength = 10;
-    char txBuffer[Bufferlength];
-    char rxBuffer[Bufferlength];
-    for (uint i = 0; i < Bufferlength;i++){
-        txBuffer[i] =  0;
-        rxBuffer[i] =  0;
-    }
-    txBuffer[0] =  0;
-    txBuffer[1] =  CMD_GET_DECL_MIN_U;
-
-    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false,true)){
-      //  float XCalOffset,YCalOffset;
-      //  float XCalGain,YCalGain;
-        int32_t liTiltX,liTiltY;
-        uint32_t uliTiltX,uliTiltY;
-        //canal 0
-        uliTiltX = 0;
-        uliTiltX |= (uint8_t)rxBuffer[P1];
-        uliTiltX |= (uint8_t)rxBuffer[P2] << 8;
-        uliTiltX |= (uint8_t)rxBuffer[P3] << 16;
-        if(uliTiltX & 0x00800000)//sign bit set
-            uliTiltX |= 0xFF000000;
-        //canal 1
-        uliTiltY = 0;
-        uliTiltY |= (uint8_t)rxBuffer[P4];
-        uliTiltY |= (uint8_t)rxBuffer[P5] << 8;
-        uliTiltY |= (uint8_t)rxBuffer[P6] << 16;
-        if(uliTiltY & 0x00800000)//sign bit set
-            uliTiltY |= 0xFF000000;
-        liTiltX = uliTiltX;
-        liTiltY = uliTiltY;
-        MutexRawTiltPoint.lockForWrite();
-        {
-            TiltRawMin_byDevice.setX(liTiltX);
-            TiltRawMin_byDevice.setY(liTiltY);
-        }MutexRawTiltPoint.unlock();
-        logger()->debug(QString("Tilt Sensor min val X: %1 Y: %2").arg(liTiltX).arg(liTiltY));
-        emit hwdtSigGotTiltMinVal(liTiltX,liTiltY,TiltADC_Steps,TiltADC_Gain);
-    }
-}
-// CMD_GET_DECL_MAX_U		0x84
-void THWDriverThread::hwdtSloAskTiltMaxValue(){
-    const uint Bufferlength = 10;
-    char txBuffer[Bufferlength];
-    char rxBuffer[Bufferlength];
-    for (uint i = 0; i < Bufferlength;i++){
-        txBuffer[i] =  0;
-        rxBuffer[i] =  0;
-    }
-    txBuffer[0] =  0;
-    txBuffer[1] =  CMD_GET_DECL_MAX_U;
-
-    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false,true)){
-      //  float XCalOffset,YCalOffset;
-      //  float XCalGain,YCalGain;
-        int32_t liTiltX,liTiltY;
-        uint32_t uliTiltX,uliTiltY;
-        //canal 0
-        uliTiltX = 0;
-        uliTiltX |= (uint8_t)rxBuffer[P1];
-        uliTiltX |= (uint8_t)rxBuffer[P2] << 8;
-        uliTiltX |= (uint8_t)rxBuffer[P3] << 16;
-        if(uliTiltX & 0x00800000)//sign bit set
-            uliTiltX |= 0xFF000000;
-        //canal 1
-        uliTiltY = 0;
-        uliTiltY |= (uint8_t)rxBuffer[P4];
-        uliTiltY |= (uint8_t)rxBuffer[P5] << 8;
-        uliTiltY |= (uint8_t)rxBuffer[P6] << 16;
-        if(uliTiltY & 0x00800000)//sign bit set
-            uliTiltY |= 0xFF000000;
-        liTiltX = uliTiltX;
-        liTiltY = uliTiltY;
-        MutexRawTiltPoint.lockForWrite();
-        {
-            TiltRawMax_byDevice.setX(liTiltX);
-            TiltRawMax_byDevice.setY(liTiltY);
-        }MutexRawTiltPoint.unlock();
-        logger()->debug(QString("Tilt Sensor max val X: %1 Y: %2").arg(liTiltX).arg(liTiltY));
-        emit hwdtSigGotTiltMaxVal(liTiltX,liTiltY,TiltADC_Steps,TiltADC_Gain);
-    }
-}
-
-// CMD_GET_DECL_ZENITH_U                   	0x85
-void THWDriverThread::hwdtSloAskTiltZenithValue(){
-    const uint Bufferlength = 10;
-    char txBuffer[Bufferlength];
-    char rxBuffer[Bufferlength];
-    for (uint i = 0; i < Bufferlength;i++){
-        txBuffer[i] =  0;
-        rxBuffer[i] =  0;
-    }
-    txBuffer[0] =  0;
-    txBuffer[1] =  CMD_GET_DECL_ZENITH_U;
-
-    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false,true)){
-      //  float XCalOffset,YCalOffset;
-      //  float XCalGain,YCalGain;
-        int32_t liTiltX,liTiltY;
-        uint32_t uliTiltX,uliTiltY;
-        //canal 0
-        uliTiltX = 0;
-        uliTiltX |= (uint8_t)rxBuffer[P1];
-        uliTiltX |= (uint8_t)rxBuffer[P2] << 8;
-        uliTiltX |= (uint8_t)rxBuffer[P3] << 16;
-        if(uliTiltX & 0x00800000)//sign bit set
-            uliTiltX |= 0xFF000000;
-        //canal 1
-        uliTiltY = 0;
-        uliTiltY |= (uint8_t)rxBuffer[P4];
-        uliTiltY |= (uint8_t)rxBuffer[P5] << 8;
-        uliTiltY |= (uint8_t)rxBuffer[P6] << 16;
-        if(uliTiltY & 0x00800000)//sign bit set
-            uliTiltY |= 0xFF000000;
-        liTiltX = uliTiltX;
-        liTiltY = uliTiltY;
-        MutexRawTiltPoint.lockForWrite();
-        {
-            TiltRawZenith_byDevice.setX(liTiltX);
-            TiltRawZenith_byDevice.setY(liTiltY);
-        }MutexRawTiltPoint.unlock();
-        logger()->debug(QString("Tilt Sensor zenith val X: %1 Y: %2").arg(liTiltX).arg(liTiltY));
-        emit hwdtSigGotTiltZenith(liTiltX,liTiltY,TiltADC_Steps,TiltADC_Gain);
-    }
-}
 
 
 
@@ -803,28 +712,30 @@ void THWDriverThread::hwdtSloAskScannerStatus(){
 
         uint16_t usiTemperature;
         int16_t siTemperature;
-        float ScannerTemperature;
 
         usiTemperature = 0;
         usiTemperature |= (uint8_t)rxBuffer[P1];
         usiTemperature |= (uint8_t)rxBuffer[P2]<<8;
         siTemperature = usiTemperature;
-        ScannerTemperature =  sensorTempToCelsius(siTemperature);
-
-
         QString s="Closed",e="OK";
-        if (rxBuffer[P3] & 0x01){
-            ShutterIsOpenBySwitch = sssClosed;
-            s = "Opened";
-        }else
-            ShutterIsOpenBySwitch = sssOpened;
+        MutexSpectrBuffer.lockForWrite();
+        {
+            ScannerTemperature =  sensorTempToCelsius(siTemperature);
 
-        if (rxBuffer[P3] & 0x02){
-            EndSwitchErrorState = eseERROR;
-            e = "ERROR";
-        }else
-            EndSwitchErrorState = eseOK;
 
+
+            if (rxBuffer[P3] & 0x01){
+                ShutterIsOpenBySwitch = sssClosed;
+                s = "Opened";
+            }else
+                ShutterIsOpenBySwitch = sssOpened;
+
+            if (rxBuffer[P3] & 0x02){
+                EndSwitchErrorState = eseERROR;
+                e = "ERROR";
+            }else
+                EndSwitchErrorState = eseOK;
+        }MutexSpectrBuffer.unlock();
         logger()->debug(QString("Got Scannerstatus: Temperature: %1 C, ShutterSwitch: %2, EndPosSwitch: %3").arg(ScannerTemperature).arg(s).arg(e));
         emit hwdtSigGotScannerStatus(ScannerTemperature,ShutterIsOpenBySwitch==sssOpened,EndSwitchErrorState==eseERROR);
     }
@@ -952,8 +863,16 @@ uint32_t maxdoaszenith=ee_getMaxdoasZenithPos();
             guid |= (uint8_t)rxBuffer[P5]<<8;
             guid |= ((uint8_t)rxBuffer[P6] & 0x0F)<<16;
 
-            devicetype = (uint8_t)rxBuffer[P6] >> 4;
 
+
+            devicetype = (uint8_t)rxBuffer[P6] >> 4;
+            ScannerDeviceType = sdtUnknown;
+            if(devicetype == DT_2DSCANNER)
+                ScannerDeviceType = sdtWindField;
+            if(devicetype == DT_1DSCANNER)
+                ScannerDeviceType = sdtMAXDOAS;
+            if(devicetype == DT_SOLTRACKER)
+                ScannerDeviceType = sdtSolTracker;
             logger()->debug(QString("Got Scannerinfo: Versionshash: %1, DeviceSerialNum: %2, DeviceType: %3").arg(QString::number(MaxdoasGitHash,16)).arg(rawDataToSerialNumber(guid,devicetype)).arg(devicetype));
             emit hwdtSigGotDeviceInfo(MaxdoasGitHash,guid, devicetype);
         }
@@ -1061,9 +980,36 @@ bool THWDriverThread::hwdtSloShutterGoto(int Shutterposition){
 #endif
 }
 
-void THWDriverThread::hwdtSloAskTilt()
-{
-#if 1
+QPointF DoTiltMinMaxCalCalculation(QPoint TiltRaw, QPoint Minv,QPoint Maxv,int Gain,int Resolution,float RefV){
+    QPointF result;
+    QPoint TiltRawOffset = (Minv + Maxv)/2;
+    QPoint TiltRawRangeIs = Maxv - Minv;
+    QPointF TiltRawRangeShould = QPointF((float)Gain*Resolution/(RefV),(float)Gain*Resolution/(RefV));
+    QPointF RawTiltCorrectionfactor;
+    if ((TiltRawRangeIs.x()==0)||(TiltRawRangeIs.y()==0)){
+        RawTiltCorrectionfactor = QPointF(1,1);
+    }else{
+        RawTiltCorrectionfactor.setX((float)TiltRawRangeIs.x() / TiltRawRangeShould.x());
+        RawTiltCorrectionfactor.setY((float)TiltRawRangeIs.y() / TiltRawRangeShould.y());
+    }
+
+    result = TiltRaw - TiltRawOffset;
+
+    result.setX(result.x() / RawTiltCorrectionfactor.x());
+    result.setY(result.y() / RawTiltCorrectionfactor.y());
+
+    result = result*2*RefV/((float)Resolution*(float)Gain);
+
+    if(result.x() > 1)   result.setX(1.0);
+    if(result.x() < -1)  result.setX(-1.0);
+
+    if(result.y() > 1)   result.setY(1.0);
+    if(result.y() < -1)  result.setY(-1.0);
+    return result;
+}
+
+
+void THWDriverThread::hwdtSloAskTiltMinValue(){
     const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
@@ -1072,11 +1018,9 @@ void THWDriverThread::hwdtSloAskTilt()
         rxBuffer[i] =  0;
     }
     txBuffer[0] =  0;
-    txBuffer[1] =  CMD_MOT_INCLIN_READ;
-    logger()->debug("Asking Tilt Sensor");
-    logger()->trace(QString("Tilt sensor Resolution: %1 steps, Gain: %2").arg((int)TiltADC_Steps).arg((int)TiltADC_Gain));
-    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false,false)){
-        float TiltX,TiltY;
+    txBuffer[1] =  CMD_GET_DECL_MIN_U;
+
+    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false,true)){
       //  float XCalOffset,YCalOffset;
       //  float XCalGain,YCalGain;
         int32_t liTiltX,liTiltY;
@@ -1099,43 +1043,146 @@ void THWDriverThread::hwdtSloAskTilt()
         liTiltY = uliTiltY;
         MutexRawTiltPoint.lockForWrite();
         {
-            QPoint TiltRawOffset = (TiltRawMinValue + TiltRawMaxValue)/2;
+            TiltRawMin_byDevice.setX(liTiltX);
+            TiltRawMin_byDevice.setY(liTiltY);
+        }MutexRawTiltPoint.unlock();
+        logger()->debug(QString("Tilt Sensor min val X: %1 Y: %2").arg(liTiltX).arg(liTiltY));
+        emit hwdtSigGotTiltMinVal(liTiltX,liTiltY,TiltADC_Steps,TiltADC_Gain);
+    }
+}
+// CMD_GET_DECL_MAX_U		0x84
+void THWDriverThread::hwdtSloAskTiltMaxValue(){
+    const uint Bufferlength = 10;
+    char txBuffer[Bufferlength];
+    char rxBuffer[Bufferlength];
+    for (uint i = 0; i < Bufferlength;i++){
+        txBuffer[i] =  0;
+        rxBuffer[i] =  0;
+    }
+    txBuffer[0] =  0;
+    txBuffer[1] =  CMD_GET_DECL_MAX_U;
 
+    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false,true)){
+      //  float XCalOffset,YCalOffset;
+      //  float XCalGain,YCalGain;
+        int32_t liTiltX,liTiltY;
+        uint32_t uliTiltX,uliTiltY;
+        //canal 0
+        uliTiltX = 0;
+        uliTiltX |= (uint8_t)rxBuffer[P1];
+        uliTiltX |= (uint8_t)rxBuffer[P2] << 8;
+        uliTiltX |= (uint8_t)rxBuffer[P3] << 16;
+        if(uliTiltX & 0x00800000)//sign bit set
+            uliTiltX |= 0xFF000000;
+        //canal 1
+        uliTiltY = 0;
+        uliTiltY |= (uint8_t)rxBuffer[P4];
+        uliTiltY |= (uint8_t)rxBuffer[P5] << 8;
+        uliTiltY |= (uint8_t)rxBuffer[P6] << 16;
+        if(uliTiltY & 0x00800000)//sign bit set
+            uliTiltY |= 0xFF000000;
+        liTiltX = uliTiltX;
+        liTiltY = uliTiltY;
+        MutexRawTiltPoint.lockForWrite();
+        {
+            TiltRawMax_byDevice.setX(liTiltX);
+            TiltRawMax_byDevice.setY(liTiltY);
+        }MutexRawTiltPoint.unlock();
+        logger()->debug(QString("Tilt Sensor max val X: %1 Y: %2").arg(liTiltX).arg(liTiltY));
+        emit hwdtSigGotTiltMaxVal(liTiltX,liTiltY,TiltADC_Steps,TiltADC_Gain);
+    }
+}
+
+
+
+// CMD_GET_DECL_ZENITH_U                   	0x85
+void THWDriverThread::hwdtSloAskTiltZenithValue(){
+    const uint Bufferlength = 10;
+    char txBuffer[Bufferlength];
+    char rxBuffer[Bufferlength];
+    for (uint i = 0; i < Bufferlength;i++){
+        txBuffer[i] =  0;
+        rxBuffer[i] =  0;
+    }
+    txBuffer[0] =  0;
+    txBuffer[1] =  CMD_GET_DECL_ZENITH_U;
+
+    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false,true)){
+      //  float XCalOffset,YCalOffset;
+      //  float XCalGain,YCalGain;
+        int32_t liTiltX,liTiltY;
+        uint32_t uliTiltX,uliTiltY;
+        //canal 0
+        uliTiltX = 0;
+        uliTiltX |= (uint8_t)rxBuffer[P1];
+        uliTiltX |= (uint8_t)rxBuffer[P2] << 8;
+        uliTiltX |= (uint8_t)rxBuffer[P3] << 16;
+        if(uliTiltX & 0x00800000)//sign bit set
+            uliTiltX |= 0xFF000000;
+        //canal 1
+        uliTiltY = 0;
+        uliTiltY |= (uint8_t)rxBuffer[P4];
+        uliTiltY |= (uint8_t)rxBuffer[P5] << 8;
+        uliTiltY |= (uint8_t)rxBuffer[P6] << 16;
+        if(uliTiltY & 0x00800000)//sign bit set
+            uliTiltY |= 0xFF000000;
+        liTiltX = uliTiltX;
+        liTiltY = uliTiltY;
+        MutexRawTiltPoint.lockForWrite();
+        {
+            TiltRawZenith_byDevice.setX(liTiltX);
+            TiltRawZenith_byDevice.setY(liTiltY);
+        }MutexRawTiltPoint.unlock();
+        logger()->debug(QString("Tilt Sensor zenith val X: %1 Y: %2").arg(liTiltX).arg(liTiltY));
+        emit hwdtSigGotTiltZenith(liTiltX,liTiltY,TiltADC_Steps,TiltADC_Gain);
+    }
+}
+
+void THWDriverThread::hwdtSloAskTilt()
+{
+#if 1
+    const uint Bufferlength = 10;
+    char txBuffer[Bufferlength];
+    char rxBuffer[Bufferlength];
+    for (uint i = 0; i < Bufferlength;i++){
+        txBuffer[i] =  0;
+        rxBuffer[i] =  0;
+    }
+    txBuffer[0] =  0;
+    txBuffer[1] =  CMD_MOT_INCLIN_READ;
+    logger()->debug("Asking Tilt Sensor");
+    logger()->trace(QString("Tilt sensor Resolution: %1 steps, Gain: %2").arg((int)TiltADC_Steps).arg((int)TiltADC_Gain));
+    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false,false)){
+        MotMovedThusNoTiltInfoAnymore = false;
+        int32_t liTiltX,liTiltY;
+        QPointF TiltCalibrated;
+        uint32_t uliTiltX,uliTiltY;
+        //canal 0
+        uliTiltX = 0;
+        uliTiltX |= (uint8_t)rxBuffer[P1];
+        uliTiltX |= (uint8_t)rxBuffer[P2] << 8;
+        uliTiltX |= (uint8_t)rxBuffer[P3] << 16;
+        if(uliTiltX & 0x00800000)//sign bit set
+            uliTiltX |= 0xFF000000;
+        //canal 1
+        uliTiltY = 0;
+        uliTiltY |= (uint8_t)rxBuffer[P4];
+        uliTiltY |= (uint8_t)rxBuffer[P5] << 8;
+        uliTiltY |= (uint8_t)rxBuffer[P6] << 16;
+        if(uliTiltY & 0x00800000)//sign bit set
+            uliTiltY |= 0xFF000000;
+        liTiltX = uliTiltX;
+        liTiltY = uliTiltY;
+
+        MutexRawTiltPoint.lockForWrite();
             TiltRaw.setX(liTiltX);
             TiltRaw.setY(liTiltY);
+            TiltCalibrated = DoTiltMinMaxCalCalculation(TiltRaw, TiltRawMinValue,TiltRawMaxValue,TiltADC_Gain,TiltADC_Steps,TILT_REF_VOLT);
 
-            liTiltX = liTiltX - TiltRawOffset.x();
-            liTiltY = liTiltY - TiltRawOffset.y();
-        }
         MutexRawTiltPoint.unlock();
-        logger()->trace(QString("Tilt sensor rxed X: %1 Y: %2").arg(liTiltX).arg(liTiltY));
-        //steps are with including sign bit -> range is -refvolt till +refvolt -> factor 2
-        TiltX = 2*TiltADC_RefVoltage*(float)liTiltX/((float)TiltADC_Steps*(float)TiltADC_Gain);
-        TiltY = 2*TiltADC_RefVoltage*(float)liTiltY/((float)TiltADC_Steps*(float)TiltADC_Gain);
-        logger()->trace(QString("Tilt g calced X: %1 Y: %2" ).arg(TiltX).arg(TiltY));
 
-//        XCalOffset  = (TiltCalValPosGX + TiltCalValNegGX)/2;
-//        XCalGain    = (TiltCalValPosGX - TiltCalValNegGX)/2;
-//        YCalOffset  = (TiltCalValPosGY + TiltCalValNegGY)/2;
-//        YCalGain    = (TiltCalValPosGY - TiltCalValNegGY)/2;
-//        logger()->trace(QString("Tilt g OffsetError X: %1 Y: %2").arg(XCalOffset).arg(YCalOffset));
-//      //  logger()->trace(QString("Tilt g GainError X: %1 Y %2" ).arg(XCalGain).arg(YCalGain));
-//        TiltX = XCalGain*TiltX+XCalOffset;
-//        TiltY = YCalGain*TiltY+YCalOffset;
-
-        if(TiltX > 1)
-            TiltX = 1.0;
-        if(TiltX < -1)
-            TiltX = -1.0;
-
-        if(TiltY > 1)
-            TiltY = 1.0;
-        if(TiltY < -1)
-            TiltY = -1.0;
-
-
-        logger()->debug(QString("Tilt Sensor X: %1 Y: %2").arg(TiltX).arg(TiltY));
-        emit hwdtSigGotTilt(TiltX,TiltY,TiltADC_Steps,TiltADC_Gain);
+        logger()->debug(QString("Tilt Sensor X: %1 Y: %2").arg(TiltCalibrated.x()).arg(TiltCalibrated.y()));
+        emit hwdtSigGotTilt(TiltCalibrated.x(),TiltCalibrated.y(),TiltADC_Steps,TiltADC_Gain);
     }
 #else
 #endif
@@ -1268,6 +1315,7 @@ void THWDriverThread::hwdtSloAskLightSensor(){
 
 void THWDriverThread::hwdtSloGoMotorHome(void)
 {
+    MotMovedThusNoTiltInfoAnymore = true;
 #if MOT_ENABLED
     const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
@@ -1346,7 +1394,9 @@ void THWDriverThread::hwdtGetLastSpectrumBuffer(double *Spectrum,
                                                 uint *Integrationtime,
                                                 uint *avg,
                                                 TMirrorCoordinate *mc,
-                                                QString *SpectrSerial)
+                                                QString *SpectrSerial,
+                                                TShutterBySwitchState *shutterstate,
+                                                float *ScannerTemperature)
 {
     #if ! OMNI_ENABLED
         NumOfPixels = 2048;
@@ -1360,6 +1410,8 @@ void THWDriverThread::hwdtGetLastSpectrumBuffer(double *Spectrum,
         *NumberOfSpecPixels = NumOfPixels;
         memcpy(SpectrCoefficients,&(this->SpectrCoefficients),sizeof(TSPectrWLCoefficients));
         mc->setAngleCoordinate(this->mc->getAngleCoordinate());
+        *shutterstate = ShutterIsOpenBySwitch;
+        *ScannerTemperature = this->ScannerTemperature;
         #if ! OMNI_ENABLED
             for (uint n=0;n<i;n++){
                 Spectrum[n] = (float)(qrand() % 1000)/1000.0;
@@ -1507,12 +1559,20 @@ void THWDriverThread::TakeSpectrum(int avg, uint IntegrTime){
     }
 #else
     (void)IntegrTime;
+
 #endif
+    if (ScannerDeviceType == sdtMAXDOAS){
+        hwdtSloAskScannerStatus();
+        if (MotMovedThusNoTiltInfoAnymore){
+            hwdtSloAskTilt();
+        }
+    }
 }
 
 //inStep Coordinates!
 bool THWDriverThread::hwdtSloMotGotoSteps(int PosX, int PosY){
 #if MOT_ENABLED
+    MotMovedThusNoTiltInfoAnymore = true;
     const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
@@ -1574,7 +1634,7 @@ void THWDriverThread::hwdtSloMotIdleState(bool idle){
     const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
-
+    MotMovedThusNoTiltInfoAnymore = true;
     for (uint i = 0; i < Bufferlength;i++){
         txBuffer[i] =  0;
         rxBuffer[i] =  0;
@@ -1771,12 +1831,14 @@ THWDriver::THWDriver()
 {
     TemperatureTimer = new QTimer();
     TiltTimer  = new QTimer();
+    GetScannerConfigTimer = new QTimer();
     ActualTilt = new QPointF(0,0);
-    TiltMin = new QPointF(0,0);
-    TiltMax = new QPointF(0,0);
-    TiltZenith = new QPointF(0,0);
+    TiltMin = new QPoint(0,0);
+    TiltMax = new QPoint(0,0);
+    TiltZenith = new QPoint(0,0);
     ScannerStepPos = QPoint(0,0);
 
+    GotTiltConfig = false;
     this->ScannerTemperature = 0.0;
     this->ShutterOpenedBySwitch = sssUnknown;
     this->EndSwitchError = eseUnknown;
@@ -1823,6 +1885,11 @@ THWDriver::THWDriver()
 
         connect(HWDriverObject,SIGNAL(hwdtSigGotTilt(float,float,int,int)),
                     this,SLOT (hwdSloGotTilt(float,float,int,int)),Qt::QueuedConnection);
+
+        connect(HWDriverObject,SIGNAL(hwdtSigGotTiltConfig()),
+                    this,SLOT (hwdtSloGotTiltConfig()),Qt::QueuedConnection);
+
+
         //connect(HWDriverObject,SIGNAL(hwdtSigGotTilt(float,float,int,int)),
         //            this,SIGNAL (hwdSigGotTilt(float,float,int,int)),Qt::QueuedConnection);
 
@@ -1926,6 +1993,9 @@ THWDriver::THWDriver()
     }
     //for messages giong from this to thread..
     {
+        connect(this,SIGNAL(hwdtSigAskTiltConfig( )),
+                    HWDriverObject,SLOT (hwdtSloAskTiltConfig( )),Qt::QueuedConnection);
+
         connect(this,SIGNAL(hwdtSigSetComPort(QString )),
                     HWDriverObject,SLOT (hwdtSloSetComPort(QString )),Qt::QueuedConnection);
 
@@ -2041,6 +2111,9 @@ THWDriver::THWDriver()
         connect(TiltTimer,SIGNAL(timeout()),
                     this,SLOT (hwdSlotTiltTimer()));
 
+        connect(GetScannerConfigTimer,SIGNAL(timeout()),
+                    this,SLOT (hwdSlotScannerConfigTimer()));
+
         connect(this,SIGNAL(hwdtQuitThred()),
                             HWDriverObject,SLOT(CloseEverythingForLeaving()),Qt::QueuedConnection);
 
@@ -2051,8 +2124,12 @@ THWDriver::THWDriver()
     connect(HWDriverThread,SIGNAL(finished()),this,SLOT(hwdSlothreadFinished()));
     TemperatureTimer->start(5000);
     TiltTimer->start(5000);
+    FetchScannerInfos();
+    GetScannerConfigTimer->start(500);
    // hwdSetComPort("/dev/ttyUSB0");
     WavelengthBuffer = TWavelengthbuffer::instance();
+
+    TiltZenithDirection = 0;
    // memset(&SpectrCoefficients,0,sizeof(SpectrCoefficients));
 //    SpectrCoefficients.uninitialized = true;
 //    SpectrCoefficients.Coeff1 = 1;
@@ -2062,6 +2139,7 @@ THWDriver::~THWDriver(){
     //hopefully stop() was called for not deleting a running thread
     delete TiltTimer;
     delete TemperatureTimer;
+    delete GetScannerConfigTimer;
     delete ActualTilt;
     delete TiltMin;
     delete TiltMax;
@@ -2075,6 +2153,7 @@ THWDriver::~THWDriver(){
 void THWDriver::hwdSetTiltInterval(int ms){
     TiltTimer->setInterval(ms);
 }
+
 
 void THWDriver::hwdSetComPort(TCOMPortConf ComConf)
 {
@@ -2220,35 +2299,10 @@ void THWDriver::hwdSetGUID(int guid){
     emit hwdtSigSetGUID(guid);
 }
 
-void THWDriver::hwdSloGotTiltMinVal(int TiltX, int TiltY, int Gain, int Resolution){
-    (void)Gain;
-    (void)Resolution;
-    TiltMin->setX(TiltX);
-    TiltMin->setY(TiltY);
-    TMaxdoasSettings *ms = TMaxdoasSettings::instance();
-    ms->setTiltMinValue(QPoint(TiltX,TiltY));
-}
-
-void THWDriver::hwdSloGotTiltMaxVal(int TiltX, int TiltY, int Gain, int Resolution){
-    (void)Gain;
-    (void)Resolution;
-    TiltMax->setX(TiltX);
-    TiltMax->setY(TiltY);
-    TMaxdoasSettings *ms = TMaxdoasSettings::instance();
-    ms->setTiltMaxValue(QPoint(TiltX,TiltY));
-}
-
-void THWDriver::hwdSloGotTiltZenith(int TiltX, int TiltY, int Gain, int Resolution){
-    (void)Gain;
-    (void)Resolution;
-    TiltZenith->setX(TiltX);
-    TiltZenith->setY(TiltY);
-    TMaxdoasSettings *ms = TMaxdoasSettings::instance();
-    ms->setTiltZenith(QPoint(TiltX,TiltY));
-}
 
 void THWDriver::hwdSloGotScannerStatus(float ScannerTemperature,bool ShutterOpenedBySwitch, bool EndSwitchError){
     this->ScannerTemperature = ScannerTemperature;
+
     if (ShutterOpenedBySwitch){
         this->ShutterOpenedBySwitch = sssOpened;
         ShutterPosition=0;
@@ -2264,6 +2318,7 @@ void THWDriver::hwdSloGotMotorSetup(int MaxDoasZenithPosition,int ShutterClosePo
     #define ST_DCMOTOR			0x00
     #define ST_STEPPERMOTOR		0x01
     #define ST_SERVOMOTOR		0x02
+    GotMotorSetup = true;
     this->MaxDoasZenithPosition = MaxDoasZenithPosition;
     this->ShutterClosePosition = ShutterClosePosition;
     this->MaxDoasMicrosteps = MaxDoasMicrosteps;
@@ -2285,10 +2340,7 @@ void THWDriver::hwdSloGotMotorSetup(int MaxDoasZenithPosition,int ShutterClosePo
 }
 
 void THWDriver::hwdSloGotDeviceInfo(int GitHash,int guid, int deviceType){
-    #define DT_2DSCANNER	0x01
-    #define DT_1DSCANNER	0x02
-    #define DT_SOLTRACKER	0x03
-
+    GotDeviceInfo = true;
     this->GitHash.number(GitHash,16);
     this->ScannerSerialNumber = rawDataToSerialNumber(guid,deviceType);
     switch(deviceType){
@@ -2303,6 +2355,7 @@ void THWDriver::hwdSloGotDeviceInfo(int GitHash,int guid, int deviceType){
     TMaxdoasSettings *ms = TMaxdoasSettings::instance();
     ms->workwiththisserial(ScannerSerialNumber);
     ms->setAttachedScanningDevice(this->deviceType);
+
 }
 
 void THWDriver::hwdSloGotTemperature(THWTempSensorID sensorID, float TemperaturePeltier, float TemperatureSpectr,float TemperatureHeatsink,bool byTimer)
@@ -2360,29 +2413,72 @@ void THWDriver::hwdSetTargetTemperature(float temperature)
     emit hwdtSigSetTargetTemperature(temperature);
 }
 
+void THWDriver::FetchScannerInfos()
+{
+    GotDeviceInfo = false;
+    GotMotorSetup = false;
+    GotTiltMaxValue = false;
+    GotTiltMinValue = false;
+    GotTiltZenithValue = false;
+}
+
 
 QPointF THWDriver::hwdGetTilt(void)
 {
     return QPointF(*ActualTilt);
 }
 
+void THWDriver::hwdSlotScannerConfigTimer(){
+
+    if(!GotDeviceInfo)
+        hwdAskDeviceInfo();
+    if(!GotMotorSetup)
+        hwdAskMotorSetup();
+    if(!GotTiltMaxValue)
+        hwdAskTiltMaxValue();
+    if(!GotTiltMinValue)
+        hwdAskTiltMinValue();
+    if(!GotTiltZenithValue)
+        hwdAskTiltZenithValue();
+}
+
+void THWDriver::hwdtAskTiltConfig(){
+    emit hwdtSigAskTiltConfig();
+}
+
+
 void THWDriver::hwdAskTilt()
 {
+    if(!GotTiltConfig)
+        hwdtAskTiltConfig();
     emit hwdtSigAskTilt();
 }
 
 void THWDriver::hwdSlotTiltTimer(){
     hwdAskTilt();
+
 }
 
+float CalcTiltDirection(float TiltX, float TiltY){
+    float TiltDirection = atan(TiltX/TiltY)*180/M_PI;
+    if((TiltY < 0))
+        if(TiltX > 0)
+            TiltDirection += 180;
+        else
+            TiltDirection -= 180;
+    else
+        TiltDirection += 00;
+    return TiltDirection;
+}
 
-void THWDriver::hwdSloGotTilt(float TiltX, float TiltY, int Gain, int Resolution){
+void THWDriver::hwdSloGotTilt(float TiltX, float TiltY, int Resolution , int Gain ){
 //#define TILT_MAX_8G                 14.83
 //#define TILT_MAX_4G                 30.79
 
     (void)Resolution;
     float Border;
     float MaxTilt;
+
 //    if (Gain < 8){
 //        MaxTilt = TILT_MAX_4G; // for bubble spirit use
 //        Border = TILT_MAX_8G*0.75;
@@ -2406,12 +2502,74 @@ void THWDriver::hwdSloGotTilt(float TiltX, float TiltY, int Gain, int Resolution
 //            //switch gain to 4
 //        }
 //    }
+
+    QPointF TiltCalibrated = DoTiltMinMaxCalCalculation(*TiltZenith,*TiltMin,*TiltMax,Gain,Resolution,TILT_REF_VOLT);
+
+    TiltZenithDirection = CalcTiltDirection(TiltCalibrated.x(),TiltCalibrated.y());
+    //ms->setTiltZenithDirection(TiltZenithDirection);
+
+    TiltDirection = CalcTiltDirection(TiltX,TiltY)-TiltZenithDirection;
+    while(TiltDirection < -180.0)
+        TiltDirection+=360;
+
+    while(TiltDirection > 180.0)
+        TiltDirection-=360;
+
     TiltX=asin((float)TiltX)*180/M_PI;
     TiltY=asin((float)TiltY)*180/M_PI;
+
     ActualTilt->setX(TiltX);
     ActualTilt->setY(TiltY);
-    emit hwdSigGotTiltDirection(50);
+    emit hwdSigGotTiltDirection(TiltDirection);
     emit hwdSigGotTilt(ActualTilt->x(),ActualTilt->y(),Gain,Resolution,Border,MaxTilt);
+}
+
+
+void THWDriver::hwdSloGotTiltMinVal(int TiltX, int TiltY, int Resolution, int Gain){
+    (void)Gain;
+    (void)Resolution;
+    GotTiltMinValue = true;
+    TiltMin->setX(TiltX);
+    TiltMin->setY(TiltY);
+    TMaxdoasSettings *ms = TMaxdoasSettings::instance();
+    ms->setTiltMinValue(QPoint(TiltX,TiltY));
+    QPointF TiltCalibrated = DoTiltMinMaxCalCalculation(*TiltZenith,*TiltMin,*TiltMax,Gain,Resolution,TILT_REF_VOLT);
+
+    TiltZenithDirection = CalcTiltDirection(TiltCalibrated.x(),TiltCalibrated.y());
+    //ms->setTiltZenithDirection(TiltZenithDirection);
+}
+
+void THWDriver::hwdSloGotTiltMaxVal(int TiltX, int TiltY, int  Resolution , int Gain){
+    (void)Gain;
+    (void)Resolution;
+    GotTiltMaxValue = true;
+    TiltMax->setX(TiltX);
+    TiltMax->setY(TiltY);
+    TMaxdoasSettings *ms = TMaxdoasSettings::instance();
+    ms->setTiltMaxValue(QPoint(TiltX,TiltY));
+    QPointF TiltCalibrated = DoTiltMinMaxCalCalculation(*TiltZenith,*TiltMin,*TiltMax,Gain,Resolution,TILT_REF_VOLT);
+
+    TiltZenithDirection = CalcTiltDirection(TiltCalibrated.x(),TiltCalibrated.y());
+    //ms->setTiltZenithDirection(TiltZenithDirection);
+}
+
+void THWDriver::hwdSloGotTiltZenith(int TiltX, int TiltY, int Resolution , int Gain){
+    (void)Gain;
+    (void)Resolution;
+    GotTiltZenithValue = true;
+    TiltZenith->setX(TiltX);
+    TiltZenith->setY(TiltY);
+    TMaxdoasSettings *ms = TMaxdoasSettings::instance();
+    ms->setTiltZenith(QPoint(TiltX,TiltY));
+    QPointF TiltCalibrated = DoTiltMinMaxCalCalculation(*TiltZenith,*TiltMin,*TiltMax,Gain,Resolution,TILT_REF_VOLT);
+
+    TiltZenithDirection = CalcTiltDirection(TiltCalibrated.x(),TiltCalibrated.y());
+    //ms->setTiltZenithDirection(TiltZenithDirection);
+}
+
+void THWDriver::hwdtSloGotTiltConfig()
+{
+    GotTiltConfig = true;
 }
 
 QPoint THWDriver::hwdGetRawTilt(){
@@ -2565,13 +2723,17 @@ uint THWDriver::hwdGetSpectrum(TSpectrum *Spectrum)
                                               &Spectrum->IntegTime,
                                               &Spectrum->AvgCount,
                                               &mc,
-                                              &Spectrum->SpectrometerSerialNumber);
+                                              &Spectrum->SpectrometerSerialNumber,
+                                              &Spectrum->ShutterState,
+                                              &Spectrum->ScannerTemperature);
+
+
     Spectrum->setMirrorCoordinate(&mc);
     memcpy(&Spectrum->IntegConf,&IntegTimeConf,sizeof(TAutoIntegConf));
     memcpy(&Spectrum->WLCoefficients,&coef,sizeof(TSPectrWLCoefficients));
     Spectrum->Tilt = *ActualTilt;
     Spectrum->Temperature = (Temperatures[sensorIDtoInt(tsPeltier)]+Temperatures[sensorIDtoInt(tsSpectrometer)])/2;
-
+    Spectrum->TiltDirection = TiltDirection;
     WavelengthBuffer->setCoefficients(&coef);
 //    if (SpectrCoefficients.uninitialized){
 //        memcpy(&SpectrCoefficients,&coef,sizeof(TSPectrWLCoefficients));

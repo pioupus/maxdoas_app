@@ -48,6 +48,7 @@ private:
     TCOMPortConf ComPortSettings;
     TBubbleWidget *bubblewidget;
     bool tiltcalibration;
+    bool ScannerConfigModified;
 private slots:
     void on_btnSetZenithPos_clicked();
     void on_btnSetShutterClosePos_clicked();
