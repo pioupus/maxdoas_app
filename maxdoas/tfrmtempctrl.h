@@ -49,6 +49,7 @@ private:
     TBubbleWidget *bubblewidget;
     bool tiltcalibration;
     bool ScannerConfigModified;
+    bool get_position();
 private slots:
     void on_btnSetZenithPos_clicked();
     void on_btnSetShutterClosePos_clicked();
@@ -75,6 +76,8 @@ private slots:
     void SlotGotTiltMinVal(int TiltX, int TiltY, int Gain, int Resolution);
     void SlotGotTiltMaxVal(int TiltX, int TiltY, int Gain, int Resolution);
     void on_btnMotHome_clicked();
+
+    void on_btnPositionFromGPS_clicked();
 
 protected:
     virtual void timerEvent(QTimerEvent *e);

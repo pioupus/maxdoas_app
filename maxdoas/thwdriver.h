@@ -230,6 +230,7 @@ private:
     QList<QString> *SpectrometerList;
     TMirrorCoordinate *mc;
     QPoint ScannerStepPos;
+    QTime LastMotMovement;
 
 
 };

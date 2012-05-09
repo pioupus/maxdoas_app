@@ -2,7 +2,7 @@
 #include "ui_tfrmtempctrl.h"
 #include <QMessageBox>
 #include <QInputDialog>
-
+#include <gps.h>
 
 
 TfrmTempctrl::TfrmTempctrl(THWDriver *hwdriver, QWidget *parent) :
@@ -156,6 +156,47 @@ void TfrmTempctrl::showCurve(QwtPlotItem *item, bool on)
 
     plot->replot();
 }
+
+bool TfrmTempctrl::get_position()
+{
+
+
+
+    struct gps_data_t gps_data;
+    int ret;
+    ret = gps_open("localhost", DEFAULT_GPSD_PORT, &gps_data);
+    if (ret == 0){
+        (void) gps_stream(&gps_data, WATCH_ENABLE | WATCH_JSON, NULL);
+
+        /* Put this in a loop with a call to a high resolution sleep () in it. */
+        if (gps_waiting (&gps_data, 500)) {
+
+            if (gps_read (&gps_data) == -1) {
+
+            } else {
+                /* Display data from the GPS receiver. */
+                if (isnan(gps_data.fix.latitude) && isnan(gps_data.fix.longitude)) {
+                    ui->spbLatitude->setValue(0);
+                    ui->spbLatitude->setValue(0);
+                } else {
+                    ui->spbLatitude->setValue(gps_data.fix.latitude);
+                    ui->spbLatitude->setValue(gps_data.fix.longitude);
+                }
+            }
+        }
+
+        /* When you are done... */
+        //(void) gps_stream(&gps_data, WATCH_DISABLE, NULL);
+        (void) gps_close (&gps_data);
+
+    }
+
+
+
+    return TRUE;
+
+}
+
 
 void TfrmTempctrl::SloGotTemperature(float TemperaturePeltier, float TemperatureSpectr, float TemperatureHeatsink){
         (void)TemperaturePeltier;
@@ -461,4 +502,9 @@ void TfrmTempctrl::on_btnMotHome_clicked()
 {
     hwdriver->hwdMotIdleState(false);
     hwdriver->hwdGoMotorHome();
+}
+
+void TfrmTempctrl::on_btnPositionFromGPS_clicked()
+{
+    get_position();
 }

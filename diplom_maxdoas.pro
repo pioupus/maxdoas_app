@@ -16,6 +16,7 @@ INCLUDEPATH += . \
     /home/arne/opt/OmniDriverSPAM-1.66/include
 
 LIBS += -lsuperlu
+LIBS += -lgps
 
 LIBS += -L/home/arne/opt/OmniDriverSPAM-1.66/OOI_HOME  -lOmniDriver  -lcommon
 
