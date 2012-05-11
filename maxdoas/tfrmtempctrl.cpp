@@ -160,7 +160,7 @@ void TfrmTempctrl::showCurve(QwtPlotItem *item, bool on)
 bool TfrmTempctrl::get_position()
 {
 
-
+#if 0
 
     struct gps_data_t gps_data;
     int ret;
@@ -192,7 +192,7 @@ bool TfrmTempctrl::get_position()
     }
 
 
-
+#endif
     return TRUE;
 
 }
@@ -481,6 +481,7 @@ void TfrmTempctrl::on_btnTiltCalibration_clicked()
         ui->btnTiltCalibration->setText("stop cal");
         hwdriver->hwdAskTiltMaxValue();
         ScannerConfigModified = true;
+        hwdriver->hwdMotIdleState(true);
     }else{
         hwdriver->hwdTiltStopCal();
         ScannerConfigModified = true;

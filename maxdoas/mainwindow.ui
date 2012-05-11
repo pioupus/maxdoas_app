@@ -19,9 +19,7 @@
   <property name="windowTitle">
    <string>DOAS Operator</string>
   </property>
-  <property name="windowOpacity">
-   <double>0.000000000000000</double>
-  </property>
+
   <widget class="QWidget" name="centralWidget">
    <property name="sizePolicy">
     <sizepolicy hsizetype="Ignored" vsizetype="Ignored">
@@ -198,7 +196,6 @@
      <string>Configuration</string>
     </property>
     <addaction name="actionTempctrler"/>
-    <addaction name="actionSensors"/>
     <addaction name="actionConfigSpectrometer"/>
    </widget>
    <addaction name="menuFile"/>
@@ -209,23 +206,14 @@
    <property name="text">
     <string>Scanner</string>
    </property>
-  </action>
-  <action name="actionSensors">
-   <property name="text">
-    <string>Motion controll sensors</string>
-   </property>
    <property name="visible">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
   </action>
+
   <action name="actionClose">
    <property name="text">
     <string>Close</string>
-   </property>
-  </action>
-  <action name="actionHjkjhkj">
-   <property name="text">
-    <string>hjkjhkj</string>
    </property>
   </action>
   <action name="actionConfigSpectrometer">

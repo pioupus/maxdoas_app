@@ -82,6 +82,7 @@ public slots:
     void hwdtSloSetBaud(AbstractSerial::BaudRate baud);
     void hwdtSloSerOpenClose(bool open);
 
+    void hwdtSloSetMotAccVel(int MaxDoasAcc, int MaxDoasVel, int ShutterAcc, int ShutterVel);
     void hwdtSloAskTemperature(THWTempSensorID sensorID,bool byTimer);
     void hwdtSloSetTargetTemperature(float temperature);
 
@@ -382,6 +383,7 @@ signals: //thread -> outside
     void hwdSigSpectrometersDiscovered();
     void hwdSigCOMPortChanged(QString name,bool opened,bool error);
     //commands for controlling thread
+
     void hwdtSigSetComPort(QString name);
     void hwdtSigSetBaud(AbstractSerial::BaudRate baud);
 
@@ -420,6 +422,7 @@ signals: //thread -> outside
     bool hwdtMotGoto(float PosX, float PosY);
     bool hwdtMotGotoSteps(int PosX, int PosY);
     bool hwdtMotIdleState(bool idle);
+    void hwdtSigSetMotAccVel(int MaxDoasAcc, int MaxDoasVel, int ShutterAcc, int ShutterVel);
 
     void hwdtSigMeasureScanPixel(float PosX, float PosY ,uint avg, uint integrTime);
 

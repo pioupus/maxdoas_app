@@ -95,11 +95,11 @@
 #define CMD_TRNSMIT_OK			0xAA
 #define CMD_TRNSMIT_FAIL		0x55
 
-#define OMNI_ENABLED 0
+#define OMNI_ENABLED 1
 #define MOT_ENABLED 1
 #define TILT_AFTER_MOTMOVE_TIME_OUT 1000
 const uint TimeOutData  =  3000; //ms
-const uint TimeOutMotion  =  5000; //ms
+const uint TimeOutMotion  =  15000; //ms
 
 
 
@@ -332,20 +332,24 @@ bool THWDriverThread::sendBuffer(char *TXBuffer,char *RXBuffer,uint size,uint ti
     QTime rtstimer;
     if (serial){
         if (serial->isOpen()){
-           // serial->setRts(false);//for sending
-            TXBuffer[size-1] = crc8(TXBuffer,size-1);
-            trace = DoRS485Direction(TempCtrler,size);
-            serial->write(TXBuffer,size);
-            if (logger()->isTraceEnabled()){
-                for (uint i=0; i< size;i++){
-                    QString t;
-                    t.sprintf("[0x%02X], ",(unsigned char )TXBuffer[i]);
-                    trace = trace + t;
+            if ((!MOT_ENABLED && TempCtrler) || (MOT_ENABLED)){
+                // serial->setRts(false);//for sending
+                TXBuffer[size-1] = crc8(TXBuffer,size-1);
+
+                trace = DoRS485Direction(TempCtrler,size);
+                serial->write(TXBuffer,size);
+                if (logger()->isTraceEnabled()){
+                    for (uint i=0; i< size;i++){
+                        QString t;
+                        t.sprintf("[0x%02X], ",(unsigned char )TXBuffer[i]);
+                        trace = trace + t;
+                    }
+                    trace = "SentTX Buffer: " + trace;
+                    logger()->trace(trace);
                 }
-                trace = "SentTX Buffer: " + trace;
-                logger()->trace(trace);
+                return waitForAnswer(TXBuffer,RXBuffer,size,timeout,TempCtrler,RetransmitAllowed);
             }
-            return waitForAnswer(TXBuffer,RXBuffer,size,timeout,TempCtrler,RetransmitAllowed);
+            return false;
         }else{
             logger()->error("Try to use COM-Port, but it's closed");
             return false;
@@ -914,6 +918,47 @@ void THWDriverThread::hwdtSloSetGUID(int guid){
     }
 }
 
+void THWDriverThread::hwdtSloSetMotAccVel(int MaxDoasAcc, int MaxDoasVel, int ShutterAcc, int ShutterVel){
+    const uint Bufferlength = 10;
+    char txBuffer[Bufferlength];
+    char rxBuffer[Bufferlength];
+    for (uint i = 0; i < Bufferlength;i++){
+        txBuffer[i] =  0;
+        rxBuffer[i] =  0;
+    }
+    txBuffer[0] =  0;
+    txBuffer[1] =  CMD_MOT_SETACCELERATION_VEL;
+#if 0
+    acc = ((data->ProtocolBuffer[P1] & 0x0F) << 8) | data->ProtocolBuffer[P0];
+    vel = ((data->ProtocolBuffer[P1] & 0xF0) << 4) | data->ProtocolBuffer[P2];
+
+    MotorDatas.MotMaxdoas->confAcc = acc;
+    MotorDatas.MotMaxdoas->confDec = acc;
+    MotorDatas.MotMaxdoas->confVel = vel;
+
+    acc = ((data->ProtocolBuffer[P4] & 0x0F) << 8) | data->ProtocolBuffer[P3];
+    vel = ((data->ProtocolBuffer[P4] & 0xF0) << 4) | data->ProtocolBuffer[P5];
+    MotorDatas.MotShutter->confAcc = acc;
+    MotorDatas.MotShutter->confDec = acc;
+    MotorDatas.MotShutter->confVel = vel;
+#endif
+    txBuffer[P0] = (uint8_t)MaxDoasAcc;
+    txBuffer[P1] = (uint8_t)(MaxDoasAcc >> 8)&(0x0F);
+    txBuffer[P2] = (uint8_t)MaxDoasVel;
+    txBuffer[P1] |= (uint8_t)(MaxDoasVel >> 4)&(0xF0);
+
+    txBuffer[P3] = (uint8_t)ShutterAcc;
+    txBuffer[P4] = (uint8_t)(ShutterAcc >> 8)&(0x0F);
+    txBuffer[P5] = (uint8_t)ShutterVel;
+    txBuffer[P4] |= (uint8_t)(ShutterVel >> 4)&(0xF0);
+
+    logger()->debug(QString("Write MotorVelocity: maxdoas acc:%1, maxdoas vel:%2, shutter acc:%3, shutter vel:%4").arg(MaxDoasAcc).arg(MaxDoasVel).arg(ShutterAcc).arg(ShutterVel));
+    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false,true)){
+
+    }
+}
+
+
 void THWDriverThread::hwdtSloSetMaxdoasZenithPos(){
     const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
@@ -969,7 +1014,7 @@ bool THWDriverThread::hwdtSloShutterGoto(int Shutterposition){
     txBuffer[P6] = (PosShutter >> 16) & 0xFF;
     logger()->debug(QString("Shutter go to: %1").arg(PosShutter));
     if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutMotion,false,true)){
-
+        //emit hwdtSigShutterStateChanged()
         return true;
 
     }else{
@@ -979,7 +1024,6 @@ bool THWDriverThread::hwdtSloShutterGoto(int Shutterposition){
     }
 #else
     logger()->error(QString("Moving Motor failed"));
-    mc->setAngleCoordinate(ac);
     emit hwdtSigMotFailed();
     return false;
 #endif
@@ -1634,7 +1678,6 @@ bool THWDriverThread::hwdtSloMotGotoSteps(int PosX, int PosY){
     }
 #else
     logger()->error(QString("Moving Motor failed"));
-    mc->setAngleCoordinate(ac);
     emit hwdtSigMotFailed();
     return false;
 #endif
@@ -2075,6 +2118,9 @@ THWDriver::THWDriver()
         connect(this,SIGNAL(hwdtMotIdleState(bool )),
                     HWDriverObject,SLOT (hwdtSloMotIdleState(bool)),Qt::QueuedConnection);
 
+        connect(this,SIGNAL(hwdtSigSetMotAccVel(int , int, int, int )),
+                    HWDriverObject,SLOT (hwdtSloSetMotAccVel(int , int, int, int  )),Qt::QueuedConnection);
+
 
 
 
@@ -2455,8 +2501,10 @@ QPointF THWDriver::hwdGetTilt(void)
 
 void THWDriver::hwdSlotScannerConfigTimer(){
 
-    if(!GotDeviceInfo)
+    if(!GotDeviceInfo){
         hwdAskDeviceInfo();
+        emit hwdtSigSetMotAccVel(100 , 70, 30, 5 );
+    }
     if(!GotMotorSetup)
         hwdAskMotorSetup();
     if(!GotTiltMaxValue)

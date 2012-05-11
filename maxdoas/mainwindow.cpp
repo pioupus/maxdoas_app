@@ -184,6 +184,7 @@ void MainWindow::StartMeasure(){
     ac = ms->getAutoIntegrationRetrievalConf();
     HWDriver->setIntegrationConfiguration(&ac);
     HWDriver->hwdMeasureSpectrum(1,0,scNone);
+   // setVisible(true);
 
 }
 
@@ -205,6 +206,7 @@ void MainWindow::COMPortChanged(QString name, bool opened, bool error){
     if (error)
         s = s + " (error)";
     lblComPortStatus->setText("COM "+name+s);
+
 }
 
 void MainWindow::on_actionConfigSpectrometer_triggered(){
