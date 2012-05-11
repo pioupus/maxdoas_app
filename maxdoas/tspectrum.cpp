@@ -231,9 +231,9 @@ void TSpectrum::SaveSpectrum(QTextStream &file, QTextStream &meta, bool DarkSpec
         meta << MirrorCoordinate->pixelIndexY << '\t';
     }
     if (DarkSpectrum)
-        meta << "1";
+        meta << "1"<<'\t';
     else
-        meta << "0";
+        meta << "0"<<'\t';
     meta << SiteName << '\t';
     meta << SiteLatitude << '\t';
     meta << SiteLongitude << '\t';

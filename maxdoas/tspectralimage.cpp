@@ -408,7 +408,14 @@ void TSpectralImage::save(QString FileName){
         metastream << "TiltY\t";
         metastream << "PixelIndexX\t";
         metastream << "PixelIndexY\t";
-        metastream << "dark\n";
+        metastream << "dark\t";
+        metastream <<  "SiteName" << '\t';
+        metastream <<  "SiteLatitude" << '\t';
+        metastream <<  "SiteLongitude" << '\t';
+        metastream <<  "ScannerOrientation" << '\t';
+        metastream << "TiltDirection" << '\t';
+        metastream << "ShutterState" << '\t';
+        metastream << "ScannerTemperature" << '\n';
 
         for (int n = 0; n < spectrumlist.count();n++){
             spektrum = spectrumlist[n];
