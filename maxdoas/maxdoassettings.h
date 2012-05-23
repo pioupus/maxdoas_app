@@ -92,6 +92,15 @@ public:
     QPointF getMotorStepAngle();
     void setMotorStepAngle(QPointF MotorStepAngle);
 
+    int getShutterPWMHold();
+    int getShutterPWMClose();
+
+    int getMot1Velocity();
+    int getMot1Acceleration();
+
+    int getMot2Velocity();
+    int getMot2Acceleration();
+
     int getShutterClosePos();
     void setShutterClosePos(int ClosePosition);
 

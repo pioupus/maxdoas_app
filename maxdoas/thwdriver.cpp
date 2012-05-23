@@ -45,6 +45,7 @@
 #define CMD_MOT_CLOSESHUTTER		0x60
 #define CMD_MOT_OPENSHUTTER		0x61
 #define CMD_SHUTTERPOS			0x62
+#define CMD_SHUTTERPWM			0x63
 
 #define CMD_MOT_HEATERPWM		0x68
 
@@ -1012,13 +1013,50 @@ bool THWDriverThread::hwdtSloShutterGoto(int Shutterposition){
     txBuffer[P4] = PosShutter & 0xFF;
     txBuffer[P5] = (PosShutter >> 8) & 0xFF;
     txBuffer[P6] = (PosShutter >> 16) & 0xFF;
-    logger()->debug(QString("Shutter go to: %1").arg(PosShutter));
+
     if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutMotion,false,true)){
+        logger()->debug(QString("Shutter go to: %1").arg(PosShutter));
         //emit hwdtSigShutterStateChanged()
         return true;
 
     }else{
         logger()->error(QString("Moving Shutter failed"));
+        //emit hwdtSigMotFailed();
+        return false;
+    }
+#else
+    logger()->error(QString("Moving Motor failed"));
+    emit hwdtSigMotFailed();
+    return false;
+#endif
+}
+
+bool THWDriverThread::hwdtSloSetShutterPWM(int ShutterPWMClosing, int ShutterPWMHold){
+
+#if MOT_ENABLED
+    const uint Bufferlength = 10;
+    char txBuffer[Bufferlength];
+    char rxBuffer[Bufferlength];
+    int32_t PosShutter = Shutterposition;
+
+    for (uint i = 0; i < Bufferlength;i++){
+        txBuffer[i] =  0;
+        rxBuffer[i] =  0;
+    }
+    txBuffer[0] =  0;
+    txBuffer[1] =  CMD_SHUTTERPWM;
+
+    txBuffer[P1] = ShutterPWMClosing & 0xFF;
+    txBuffer[P2] = ShutterPWMHold & 0xFF;
+
+
+    if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutMotion,false,true)){
+        logger()->debug(QString("Shutter PWM Close to: %1 ShutterHold PWM: %2").arg(ShutterPWMClosing).arg(ShutterPWMHold));
+        //emit hwdtSigShutterStateChanged()
+        return true;
+
+    }else{
+        logger()->error(QString("Shutter PWM Config failed"));
         //emit hwdtSigMotFailed();
         return false;
     }
@@ -2076,6 +2114,11 @@ THWDriver::THWDriver()
         connect(this,SIGNAL(hwdtSigSetTargetTemperature(float )),
                     HWDriverObject,SLOT (hwdtSloSetTargetTemperature(float )),Qt::QueuedConnection);
 
+        connect(this,SIGNAL(hwdtSigSetShutterPWM(int, int )),
+                    HWDriverObject,SLOT (hwdtSloSetShutterPWM(int,int )),Qt::QueuedConnection);
+
+
+
         connect(this,SIGNAL(hwdtSigConfigTilt(TTiltConfigRes, TTiltConfigGain)),
                     HWDriverObject,SLOT (hwdtSloConfigTilt(TTiltConfigRes, TTiltConfigGain)),Qt::QueuedConnection);
 
@@ -2503,7 +2546,7 @@ void THWDriver::hwdSlotScannerConfigTimer(){
 
     if(!GotDeviceInfo){
         hwdAskDeviceInfo();
-        emit hwdtSigSetMotAccVel(100 , 70, 30, 5 );
+
     }
     if(!GotMotorSetup)
         hwdAskMotorSetup();
@@ -2727,6 +2770,7 @@ float THWDriver::hwdGetLightsensorValue(){
 
 void THWDriver::hwdGoMotorHome(void)
 {
+
     emit hwdtSigGoMotorHome();
 }
 
@@ -2757,7 +2801,11 @@ void THWDriver::hwdMotMove(QPointF AngleCoordinate)
 }
 
 void THWDriver:: hwdMotIdleState(bool idle){
+    TMaxdoasSettings *ms = TMaxdoasSettings::instance();
+
     emit hwdtMotIdleState(idle);
+    emit hwdtSigSetShutterPWM(ms->getShutterPWMClose(), ms-> getShutterPWMHold());
+    emit hwdtSigSetMotAccVel(ms->getMot1Acceleration() , ms->getMot1Velocity(), ms->getMot2Acceleration(), ms->getMot2Velocity() );
 }
 
 void THWDriver::hwdMeasureSpectrum(uint avg, uint integrTime,THWShutterCMD shutterCMD)

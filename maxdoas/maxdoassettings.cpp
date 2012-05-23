@@ -181,6 +181,36 @@ void TMaxdoasSettings::setMotorStepAngle(QPointF MotorStepAngle){
     settings->setValue(serialnum+"/Axis/MotorStepAngle",MotorStepAngle);
 }
 
+int TMaxdoasSettings::getShutterPWMHold()
+{
+     return settings->value(serialnum+"/Axis/ShutterPWMHold",6).toInt();
+}
+
+int TMaxdoasSettings::getShutterPWMClose()
+{
+    return settings->value(serialnum+"/Axis/ShutterPWMClose",8).toInt();
+}
+
+int TMaxdoasSettings::getMot1Velocity()
+{
+    return settings->value(serialnum+"/Axis/Mot1/Velocity",70).toInt();
+}
+
+int TMaxdoasSettings::getMot1Acceleration()
+{
+    return settings->value(serialnum+"/Axis/Mot1/Acceleration",100).toInt();
+}
+
+int TMaxdoasSettings::getMot2Velocity()
+{
+    return settings->value(serialnum+"/Axis/Mot2/Velocity",5).toInt();
+}
+
+int TMaxdoasSettings::getMot2Acceleration()
+{
+    return settings->value(serialnum+"/Axis/Mot2/Acceleration",30).toInt();
+}
+
 int TMaxdoasSettings::getShutterClosePos(){
      return settings->value(serialnum+"/Shutter/ClosePosition",0).toInt();
 }

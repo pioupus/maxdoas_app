@@ -97,6 +97,7 @@ public slots:
     void hwdtSloAskTiltZenithValue();
 
     bool hwdtSloShutterGoto(int Shutterposition);
+    bool hwdtSloSetShutterPWM(int ShutterPWMClosing, int ShutterPWMHold);
     void hwdtSloTiltSetZenith();
     void hwdtSloSetMaxdoasZenithPos();
     void hwdtSloSetStepperShutterClosePos();
@@ -368,6 +369,7 @@ signals: //thread -> outside
     void hwdSigGotDeviceInfo(int GitHash,int guid, int deviceType);
 
 
+    void hwdtSigSetShutterPWM(int ShutterPWMClosing, int ShutterPWMHold);
     void hwdSigGotCompassHeading(float Heading);
     void hwdSigCompassStartedCalibrating();
     void hwdSigCompassStoppedCalibrating();
