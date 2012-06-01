@@ -186,6 +186,22 @@ void MainWindow::StartMeasure(){
     HWDriver->hwdMeasureSpectrum(1,0,scNone);
    // setVisible(true);
 
+    if(QCoreApplication::arguments().count()>1){
+        QString scriptpath = QCoreApplication::arguments()[1];
+        QDir dir(scriptpath);
+        scriptpath =dir.canonicalPath();
+        QFileInfo fi(scriptpath);
+        if (fi.exists()){
+            logger()->debug("open script """+ scriptpath +""" by commandline");
+            startScript(scriptpath);
+
+        }else{
+           logger()->error("script """+ scriptpath +""" opened by commandline doesnt exist");
+        }
+
+
+    }
+
 }
 
 void MainWindow::on_GotSpectrum(){
@@ -236,20 +252,24 @@ void MainWindow::on_actionClose_triggered(){
         ScriptEngine->abortEvaluation();
 }
 
-void MainWindow::on_actionOpen_triggered(){
-    QString fn;
-    fn = QFileDialog::getOpenFileName(this,
-        tr("Open Script"), ".", tr("Script Files (*.js)"));
-    ScriptEditor->loadFromFile(fn);
+void MainWindow::startScript(QString filename)
+{
+    ScriptEditor->loadFromFile(filename);
     DebugToolbar->setVisible(true);
     ScriptEditor->setReadOnly(true);
     ui->BtnStart->setEnabled(false);
     ui->BtnStop->setEnabled(true);
-    scriptWrapper->startScriptFile(fn);
+    scriptWrapper->startScriptFile(filename);
     ScriptDebugger->action(QScriptEngineDebugger::InterruptAction)->trigger();
     ScriptDebugger->action(QScriptEngineDebugger::ContinueAction)->trigger();
 }
 
+void MainWindow::on_actionOpen_triggered(){
+    QString fn;
+    fn = QFileDialog::getOpenFileName(this,
+        tr("Open Script"), ".", tr("Script Files (*.js)"));
+    startScript(fn);
+}
 void MainWindow::on_BtnStop_clicked()
 {
 #if 1
@@ -323,6 +343,8 @@ void MainWindow::closeEvent(QCloseEvent *event){
 
 
 }
+
+
 
 
 MainWindow::~MainWindow()

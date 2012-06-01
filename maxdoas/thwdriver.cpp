@@ -123,6 +123,8 @@ THWDriverThread::THWDriverThread()
 void THWDriverThread::init(){
     serial = new AbstractSerial(this);
 
+    Watchdogtimer = new QTimer(this);
+    Watchdogtimer->start(1000);
     ShutterIsOpenBySwitch = sssUnknown;
     MotMovedThusNoTiltInfoAnymore = true;
     TiltADC_Steps = 1<<18;  //lets calculate with 12 bits;
@@ -132,12 +134,15 @@ void THWDriverThread::init(){
     //HeadingOffset = 0;
     mc = new TMirrorCoordinate();
     LastShutterCMD = scNone;
+    LastAction = "spectr new Wrapper";
     wrapper = new Wrapper();
     NumberOfSpectrometers = 0;
     SpectrometerIndex = -1;
     NumOfPixels = 0;
+    LastAction = "spectr init MutexSpectrBuffer.lockForWrite";
     MutexSpectrBuffer.lockForWrite();
     {
+        LastAction = "spectr init MutexMinIntegrationTime.lockForWrite";
         MutexMinIntegrationTime.lockForWrite();
         {
         SpectrMinIntegTime = -1;
@@ -149,6 +154,7 @@ void THWDriverThread::init(){
     SpectrometerList = new QList<QString>;
     IntegTimeConf.autoenabled = false;
     IntegTimeConf.fixedIntegtime = 10000;
+    LastAction = "spectr init MutexSpectrSerial.lockForWrite";
     MutexSpectrSerial.lockForWrite();
     {
         SpectrometerSerial = "closed";
@@ -157,6 +163,8 @@ void THWDriverThread::init(){
     #if !OMNI_ENABLED
         qsrand(time(NULL));
     #endif
+        connect(Watchdogtimer,SIGNAL(timeout()),
+                    this,SIGNAL (Watchdogsignal()));
 }
 
 void THWDriverThread::newOmniWrapper(){
@@ -165,11 +173,15 @@ void THWDriverThread::newOmniWrapper(){
 
 void THWDriverThread::CloseEverythingForLeaving(){
     #if OMNI_ENABLED
-    if (wrapper)
+    if (wrapper){
+        LastAction  = "Close all spectrometers";
         wrapper->closeAllSpectrometers();
+
+    }
     delete wrapper;
     wrapper = NULL;
     #endif
+    delete Watchdogtimer;
     delete SpectrometerList;
     SpectrometerList = NULL;
     if (serial)
@@ -209,6 +221,7 @@ void THWDriverThread::hwdtSloSetBaud(AbstractSerial::BaudRate baud)
 
 void THWDriverThread::hwdtSloSerOpenClose(bool open){
     bool err = false;
+    LastAction  = "SerOpenClose";
     if (serial){
 
         if (open){
@@ -279,10 +292,13 @@ void THWDriverThread::hwdtSloSerOpenClose(bool open){
 QString THWDriverThread::DoRS485Direction(bool TempCtrler, uint size){
     QString trace;
     QTime rtstimer;
+
     if (TempCtrler){//lets keep the direction pin low -> controller will toggle direction
-       serial->setRts(true);
+        LastAction  = "DoRS485Direction(tempctrler)";
+        serial->setRts(true);
        trace = "RTS cleared; ";
     }else{//for motion controll we have to controll direction pin
+        LastAction  = "DoRS485Direction(motioncontroller)";
         serial->setRts(true);
         char activateDirection = (uint8_t)(0xF0 | size);
         if(serial->bytesAvailable() > 0)
@@ -333,6 +349,7 @@ bool THWDriverThread::sendBuffer(char *TXBuffer,char *RXBuffer,uint size,uint ti
     QTime rtstimer;
     if (serial){
         if (serial->isOpen()){
+            LastAction  = "ser sendBuffer";
             if ((!MOT_ENABLED && TempCtrler) || (MOT_ENABLED)){
                 // serial->setRts(false);//for sending
                 TXBuffer[size-1] = crc8(TXBuffer,size-1);
@@ -367,6 +384,7 @@ bool THWDriverThread::waitForAnswer(char *TXBuffer,char *RXBuffer,uint size,int 
     bool firsttimeout = true;
     uint RetransmissionCounter = 0;
     if (serial){
+        LastAction  = "ser waitForAnswer";
         uint BufferIndex = 0;
 //        if (!TempCtrler){//for motion controller we have to controll dir pin
 //            rtstimer.start();
@@ -633,6 +651,7 @@ void THWDriverThread::hwdtSloAskTiltConfig(){
 
 QPoint THWDriverThread::hwdtGetLastRawTilt(){
     QPoint result;
+    LastAction = "spectr hwdtGetLastRawTilt MutexRawTiltPoint.lockForRead";
     MutexRawTiltPoint.lockForRead();
     {
         result = TiltRaw;
@@ -726,6 +745,7 @@ void THWDriverThread::hwdtSloAskScannerStatus(){
         usiTemperature |= (uint8_t)rxBuffer[P2]<<8;
         siTemperature = usiTemperature;
         QString s="Closed",e="OK";
+        LastAction = "spectr hwdtSloAskScannerStatus MutexSpectrBuffer.lockForWrite";
         MutexSpectrBuffer.lockForWrite();
         {
             ScannerTemperature =  sensorTempToCelsius(siTemperature);
@@ -1037,7 +1057,7 @@ bool THWDriverThread::hwdtSloSetShutterPWM(int ShutterPWMClosing, int ShutterPWM
     const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
-    int32_t PosShutter = Shutterposition;
+
 
     for (uint i = 0; i < Bufferlength;i++){
         txBuffer[i] =  0;
@@ -1128,6 +1148,7 @@ void THWDriverThread::hwdtSloAskTiltMinValue(){
             uliTiltY |= 0xFF000000;
         liTiltX = uliTiltX;
         liTiltY = uliTiltY;
+        LastAction = "spectr hwdtSloAskTiltMinValue MutexRawTiltPoint.lockForWrite";
         MutexRawTiltPoint.lockForWrite();
         {
             TiltRawMin_byDevice.setX(liTiltX);
@@ -1170,6 +1191,7 @@ void THWDriverThread::hwdtSloAskTiltMaxValue(){
             uliTiltY |= 0xFF000000;
         liTiltX = uliTiltX;
         liTiltY = uliTiltY;
+        LastAction = "spectr hwdtSloAskTiltMaxValue MutexRawTiltPoint.lockForWrite";
         MutexRawTiltPoint.lockForWrite();
         {
             TiltRawMax_byDevice.setX(liTiltX);
@@ -1215,6 +1237,7 @@ void THWDriverThread::hwdtSloAskTiltZenithValue(){
             uliTiltY |= 0xFF000000;
         liTiltX = uliTiltX;
         liTiltY = uliTiltY;
+        LastAction = "spectr hwdtSloAskTiltZenithValue MutexRawTiltPoint.lockForWrite";
         MutexRawTiltPoint.lockForWrite();
         {
             TiltRawZenith_byDevice.setX(liTiltX);
@@ -1262,7 +1285,7 @@ void THWDriverThread::hwdtSloAskTilt()
             liTiltX = uliTiltX;
             liTiltY = uliTiltY;
 
-
+            LastAction = "spectr hwdtSloAskTilt MutexRawTiltPoint.lockForWrite";
             MutexRawTiltPoint.lockForWrite();
             {
                 TiltRaw.setX(liTiltX);
@@ -1279,6 +1302,7 @@ void THWDriverThread::hwdtSloAskTilt()
             emit hwdtSigGotTilt(TiltCalibrated.x(),TiltCalibrated.y(),TiltADC_Steps,TiltADC_Gain);
         }
     }else{
+        LastAction = "spectr hwdtSloAskTilt2 MutexRawTiltPoint.lockForWrite";
         MutexRawTiltPoint.lockForWrite();
         {
             TiltRaw.setX(100);
@@ -1510,6 +1534,7 @@ void THWDriverThread::hwdtGetLastSpectrumBuffer(double *Spectrum,
     uint i = NumOfPixels;
     if (size < i)
         i = size;
+    LastAction = "spectr hwdtGetLastSpectrumBuffer MutexSpectrBuffer.lockForRead";
     MutexSpectrBuffer.lockForRead();
     {
         *avg = SpectrAvgCount;
@@ -1530,6 +1555,7 @@ void THWDriverThread::hwdtGetLastSpectrumBuffer(double *Spectrum,
             memcpy(Spectrum,LastSpectr,sizeof(double)*i);
             *MaxPossibleValue = SpectrMaxIntensity;
             *Integrationtime = LastSpectrIntegTime;
+            LastAction = "spectr hwdtGetLastSpectrumBuffer MutexSpectrSerial.lockForRead";
             MutexSpectrSerial.lockForRead();
             {
                 *SpectrSerial = SpectrometerSerial;
@@ -1559,7 +1585,7 @@ bool THWDriverThread::CalcAndSetAutoIntegTime(){
     float m = 0;
     float TargetVal;
     float TargetCorridor;
-
+LastAction = "CalcAndSetAutoIntegTime MutexintegTime.lockForRead";
     MutexintegTime.lockForRead();
     {
         //MutexSpectrBuffer.lockForRead();called withing a lockforwrite(from takespectrum())
@@ -1575,12 +1601,14 @@ bool THWDriverThread::CalcAndSetAutoIntegTime(){
                 LastSpectrIntegTime = round(TargetVal/m);
                 if (LastSpectrIntegTime > IntegTimeConf.maxIntegTime)
                     LastSpectrIntegTime = IntegTimeConf.maxIntegTime;
+                LastAction  = "spectr setIntegrationTime";
                 wrapper->setIntegrationTime(SpectrometerIndex,LastSpectrIntegTime);
                 ret = true;
             }
         }else{
             if (LastSpectrIntegTime != IntegTimeConf.fixedIntegtime){
                 LastSpectrIntegTime = IntegTimeConf.fixedIntegtime;
+                LastAction  = "spectr setIntegrationTime";
                 wrapper->setIntegrationTime(SpectrometerIndex,LastSpectrIntegTime);
                 ret = true;
             }else{
@@ -1599,6 +1627,7 @@ void THWDriverThread::TakeSpectrum(int avg, uint IntegrTime){
 
     JString s;
     //logger()->debug("Fetch Spectra");
+    LastAction = "TakeSpectrum MutexSpectrBuffer.lockForRead";
     MutexSpectrBuffer.lockForWrite();
     {
         SpectrAvgCount = avg;
@@ -1607,16 +1636,19 @@ void THWDriverThread::TakeSpectrum(int avg, uint IntegrTime){
 
     double *spectrpointer;
     int i,n;//,m;
-
+    LastAction  = "spectr getLastException";
     s = wrapper->getLastException();
     if (s.getLength()==0)
         SpectrometerIndex=0;
     if (SpectrometerIndex > -1){
-         if ((LastSpectrIntegTime != IntegrTime) && (IntegrTime != 0))
+         if ((LastSpectrIntegTime != IntegrTime) && (IntegrTime != 0)){
+             LastAction  = "spectr setIntegrationTime";
              wrapper->setIntegrationTime(SpectrometerIndex,IntegrTime);
-         if (IntegrTime == 0)
+         }
+         if (IntegrTime == 0){
+             LastAction  = "spectr getIntegrationTime";
              LastSpectrIntegTime = wrapper->getIntegrationTime(SpectrometerIndex);
-         else
+         }else
              LastSpectrIntegTime = IntegrTime;
 //        for (m = 1;m<2;m++){
 //            if (m == 0){
@@ -1626,13 +1658,14 @@ void THWDriverThread::TakeSpectrum(int avg, uint IntegrTime){
 //                    integtimetest = 1;
 //            }else
 //                wrapper->setIntegrationTime(SpectrometerIndex,wrapper->getMinimumIntegrationTime(SpectrometerIndex)*400);
-
+LastAction = "TakeSpectrum2 MutexSpectrBuffer.lockForWrite";
             MutexSpectrBuffer.lockForWrite();
             {
                 bool alreadyAutoCalced = false;
                 for (i=0;i<avg;i++){
                     {
                         DoubleArray Spectrbuf;
+                        LastAction  = "spectr getSpectrum";
                         Spectrbuf = wrapper->getSpectrum(SpectrometerIndex,0);
                         spectrpointer = Spectrbuf.getDoubleValues();
                         if (i == 0){
@@ -1799,6 +1832,7 @@ void THWDriverThread::hwdtSloMeasureSpectrum(uint avg, uint integrTime,THWShutte
 
 //called from other threads!!!
 void THWDriverThread::hwdtSetIntegrationConfiguration(TAutoIntegConf *autoIntConf){
+    LastAction = "hwdtSetIntegrationConfiguration MutexintegTime.lockForWrite";
     MutexintegTime.lockForWrite();
     {
         memcpy(&this->IntegTimeConf,autoIntConf,sizeof(TAutoIntegConf));
@@ -1808,6 +1842,7 @@ void THWDriverThread::hwdtSetIntegrationConfiguration(TAutoIntegConf *autoIntCon
 
 QList<QString> THWDriverThread::hwdtGetSpectrometerList(){
     QList<QString> tmp;
+    LastAction = "hwdtGetSpectrometerList MutexSpectrList.lockForWrite";
     MutexSpectrList.lockForRead();
     {
         tmp = *SpectrometerList;
@@ -1819,12 +1854,16 @@ QList<QString> THWDriverThread::hwdtGetSpectrometerList(){
 void THWDriverThread::hwdtSloDiscoverSpectrometers(){
     #if OMNI_ENABLED
     newOmniWrapper();
+    LastAction = "spectr closeAllSpectrometers";
     wrapper->closeAllSpectrometers();
+    LastAction = "spectr openAllSpectrometers";
     NumberOfSpectrometers = wrapper->openAllSpectrometers();
+    LastAction = "hwdtSloDiscoverSpectrometers MutexSpectrList.lockForWrite";
     MutexSpectrList.lockForWrite();
     {
         SpectrometerList->clear();
         for ( int i=0; i < NumberOfSpectrometers; i++){
+            LastAction = "spectr getSerialNumber";
             QString s(wrapper->getSerialNumber(i).getASCII());
             SpectrometerList->append(s);
             logger()->debug("Spectrometer "+s+" found.");
@@ -1837,6 +1876,7 @@ void THWDriverThread::hwdtSloDiscoverSpectrometers(){
 
 uint THWDriverThread::hwdtGetMinimumIntegrationTime(){
     uint minintegtime;
+    LastAction = "hwdtGetMinimumIntegrationTime MutexMinIntegrationTime.lockForRead";
     MutexMinIntegrationTime.lockForRead();
     {
         minintegtime = SpectrMinIntegTime;
@@ -1847,6 +1887,7 @@ uint THWDriverThread::hwdtGetMinimumIntegrationTime(){
 }
 QString THWDriverThread::getSpectrSerial(){
     QString result;
+    LastAction = "getSpectrSerial MutexSpectrSerial.lockForRead";
     MutexSpectrSerial.lockForRead();{
         result = SpectrometerSerial;
     }
@@ -1857,8 +1898,10 @@ void THWDriverThread::hwdtSloOpenSpectrometer(QString Serialnumber)
 {
 #if OMNI_ENABLED
     newOmniWrapper();
+    LastAction = "hwdtSloOpenSpectrometer MutexSpectrBuffer.lockForWrite";
     MutexSpectrBuffer.lockForWrite();
     {
+        LastAction = "hwdtSloOpenSpectrometer MutexMinIntegrationTime.lockForWrite";
         MutexMinIntegrationTime.lockForWrite();
         {
         SpectrMinIntegTime = -1;
@@ -1872,21 +1915,28 @@ void THWDriverThread::hwdtSloOpenSpectrometer(QString Serialnumber)
         hwdtSloDiscoverSpectrometers();
     SpectrometerIndex = SpectrometerList->indexOf(Serialnumber);
     if (SpectrometerIndex > -1){
+        LastAction = "hwdtSloOpenSpectrometer MutexSpectrSerial.lockForWrite";
         MutexSpectrSerial.lockForWrite();
         {
             SpectrometerSerial = Serialnumber;
         }MutexSpectrSerial.unlock();
         Coefficients Coef;
         LastSpectrIntegTime = -1;
+        LastAction = "hwdtSloOpenSpectrometer2 MutexSpectrSerial.lockForWrite";
         MutexSpectrBuffer.lockForWrite();
         {
+            LastAction = "spectr getNumberOfPixels";
             NumOfPixels = wrapper->getNumberOfPixels(SpectrometerIndex,0);
+            LastAction = "spectr getMaximumIntensity";
             SpectrMaxIntensity = wrapper->getMaximumIntensity(SpectrometerIndex);
+            LastAction = "hwdtSloOpenSpectrometer2 MutexMinIntegrationTime.lockForWrite";
             MutexMinIntegrationTime.lockForWrite();
             {
-            SpectrMinIntegTime = wrapper->getMinimumIntegrationTime(SpectrometerIndex);
+                LastAction = "spectr getMinimumIntegrationTime";
+                SpectrMinIntegTime = wrapper->getMinimumIntegrationTime(SpectrometerIndex);
             }
             MutexMinIntegrationTime.unlock();
+            LastAction = "spectr getCalibrationCoefficientsFromBuffer";
             Coef = wrapper->getCalibrationCoefficientsFromBuffer(SpectrometerIndex);
             SpectrCoefficients.Offset = Coef.getWlIntercept();
             SpectrCoefficients.Coeff1 = Coef.getWlFirst() ;
@@ -1909,14 +1959,17 @@ void THWDriverThread::hwdtSloOpenSpectrometer(QString Serialnumber)
 
 void THWDriverThread::hwdtSloCloseSpectrometer()
 {
+    LastAction = "hwdtSloCloseSpectrometer MutexSpectrSerial.lockForWrite";
     MutexSpectrSerial.lockForWrite();
     {
     SpectrometerSerial = "closed";
     }MutexSpectrSerial.unlock();
+    LastAction = "hwdtSloCloseSpectrometer MutexSpectrBuffer.lockForWrite";
     MutexSpectrBuffer.lockForWrite();
     {
         LastSpectrIntegTime = -1;
         SpectrometerIndex = -1;
+        LastAction = "hwdtSloCloseSpectrometer MutexMinIntegrationTime.lockForWrite";
         MutexMinIntegrationTime.lockForWrite();
         {
         SpectrMinIntegTime = -1;
@@ -1926,8 +1979,10 @@ void THWDriverThread::hwdtSloCloseSpectrometer()
     }
     MutexSpectrBuffer.unlock();
 #if OMNI_ENABLED
-    if (wrapper)
+    if (wrapper){
+        LastAction = "spectr closeAllSpectrometers";
         wrapper->closeAllSpectrometers();
+    }
 #endif
 }
 
@@ -1937,13 +1992,14 @@ THWDriver::THWDriver()
 {
     TemperatureTimer = new QTimer();
     TiltTimer  = new QTimer();
+    WatchDogTimer =   new QTimer();
     GetScannerConfigTimer = new QTimer();
     ActualTilt = new QPointF(0,0);
     TiltMin = new QPoint(0,0);
     TiltMax = new QPoint(0,0);
     TiltZenith = new QPoint(0,0);
     ScannerStepPos = QPoint(0,0);
-
+    watchDogCounter = 0;
     GotTiltConfig = false;
     this->ScannerTemperature = 0.0;
     this->ShutterOpenedBySwitch = sssUnknown;
@@ -2096,6 +2152,9 @@ THWDriver::THWDriver()
         connect(HWDriverObject,SIGNAL(hwdtSigGotDeviceInfo(int, int,int )),
                     this,SIGNAL (hwdSigGotDeviceInfo( int, int,int)),Qt::QueuedConnection);
 
+        connect(HWDriverObject,SIGNAL(Watchdogsignal( )),
+                    this,SLOT (hwdtSloWatchdogreceiver( )),Qt::QueuedConnection);
+
     }
     //for messages giong from this to thread..
     {
@@ -2225,6 +2284,11 @@ THWDriver::THWDriver()
         connect(TiltTimer,SIGNAL(timeout()),
                     this,SLOT (hwdSlotTiltTimer()));
 
+        connect(WatchDogTimer,SIGNAL(timeout()),
+                    this,SLOT (hwdtSloWatchdogTimer()));
+
+
+
         connect(GetScannerConfigTimer,SIGNAL(timeout()),
                     this,SLOT (hwdSlotScannerConfigTimer()));
 
@@ -2238,6 +2302,7 @@ THWDriver::THWDriver()
     connect(HWDriverThread,SIGNAL(finished()),this,SLOT(hwdSlothreadFinished()));
     TemperatureTimer->start(5000);
     TiltTimer->start(5000);
+    WatchDogTimer->start(1000);
     FetchScannerInfos();
     GetScannerConfigTimer->start(500);
    // hwdSetComPort("/dev/ttyUSB0");
@@ -2252,6 +2317,7 @@ THWDriver::THWDriver()
 THWDriver::~THWDriver(){
     //hopefully stop() was called for not deleting a running thread
     delete TiltTimer;
+    delete WatchDogTimer;
     delete TemperatureTimer;
     delete GetScannerConfigTimer;
     delete ActualTilt;
@@ -2262,6 +2328,19 @@ THWDriver::~THWDriver(){
     HWDriverThread->deleteLater();
     delete m_sde;
     delete ComPortList;
+}
+
+void THWDriver::hwdtSloWatchdogreceiver(){
+    watchDogCounter = 0;
+}
+
+void THWDriver::hwdtSloWatchdogTimer(){
+    watchDogCounter++;
+    if (watchDogCounter>30){
+        logger()->error( "Watchdog activated: Lastaction "+HWDriverObject->LastAction );
+        watchDogCounter=0;
+    }
+
 }
 
 void THWDriver::hwdSetTiltInterval(int ms){

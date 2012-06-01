@@ -76,6 +76,8 @@ public:
     uint hwdtGetMinimumIntegrationTime();
     QPoint hwdtGetLastRawTilt();
     QString getSpectrSerial();
+
+        QString LastAction;
 public slots:
 
     void hwdtSloSetComPort(QString name);
@@ -141,6 +143,7 @@ private slots:
 signals:
     void hwdtSigTransferDone(THWTransferState TransferState, uint ErrorParameter);
 
+    void Watchdogsignal();
     void hwdtSigGotTemperature(THWTempSensorID sensorID, float TemperaturePeltier,float TemperatureSpectr,float TemperatureHeatsink, bool byTimer);
     void hwdtSigGotTiltConfig();
     void hwdtSigGotTilt(float TiltX, float TiltY, int Gain, int Resolution);
@@ -233,6 +236,7 @@ private:
     TMirrorCoordinate *mc;
     QPoint ScannerStepPos;
     QTime LastMotMovement;
+    QTimer* Watchdogtimer;
 
 
 };
@@ -243,6 +247,7 @@ private:
 class THWDriver : public QObject
 {
         Q_OBJECT
+        LOG4QT_DECLARE_QCLASS_LOGGER
 public:
     THWDriver();
     ~THWDriver();
@@ -322,6 +327,8 @@ public:
     QString getSpectrSerial();
     QPoint getStepperPos();
 private slots:  //coming from thread
+    void hwdtSloWatchdogreceiver();
+    void hwdtSloWatchdogTimer();
     void hwdSloGotTemperature(THWTempSensorID sensorID, float TemperaturePeltier, float TemperatureSpectr,float TemperatureHeatsink,bool byTimer);
     void hwdSloGotTilt(float TiltX, float TiltY, int Resolution, int Gain);
     void hwdtSloGotTiltConfig();
@@ -443,6 +450,7 @@ private:
     QTimer *TemperatureTimer;
     QTimer *TiltTimer;
     QTimer *GetScannerConfigTimer;
+    QTimer *WatchDogTimer;
     TCOMPortConf ComPortConf;
     TWavelengthbuffer *WavelengthBuffer; //for storing inside TSpectrum
     THWTempSensorID LastSensorID;
@@ -486,6 +494,8 @@ private:
     bool GotTiltMaxValue;
     bool GotTiltMinValue;
     bool GotTiltZenithValue;
+
+    int watchDogCounter;
 
 };
 

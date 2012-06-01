@@ -87,6 +87,7 @@ private:
     TScriptWrapper *scriptWrapper;
     Ui::MainWindow *ui;
     bool HWThreadIsFinished;
+    void startScript(QString filename);
 
 };
 
