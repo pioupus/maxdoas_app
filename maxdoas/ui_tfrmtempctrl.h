@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'tfrmtempctrl.ui'
 **
-** Created: Tue May 1 20:25:11 2012
+** Created: Sat Jun 2 00:53:34 2012
 **      by: Qt User Interface Compiler version 4.8.1
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -244,6 +244,7 @@ public:
 
         tabWidget = new QTabWidget(TfrmTempctrl);
         tabWidget->setObjectName(QString::fromUtf8("tabWidget"));
+        tabWidget->setEnabled(true);
         tab = new QWidget();
         tab->setObjectName(QString::fromUtf8("tab"));
         gridLayout_5 = new QGridLayout(tab);
@@ -779,6 +780,7 @@ public:
         spbLongitude = new QDoubleSpinBox(tab_2);
         spbLongitude->setObjectName(QString::fromUtf8("spbLongitude"));
         spbLongitude->setMinimum(-99.99);
+        spbLongitude->setValue(0.1);
 
         horizontalLayout_21->addWidget(spbLongitude);
 
@@ -921,6 +923,7 @@ public:
         tabWidget->addTab(tabTilt, QString());
         tabCompass = new QWidget();
         tabCompass->setObjectName(QString::fromUtf8("tabCompass"));
+        tabCompass->setEnabled(false);
         gridLayout_4 = new QGridLayout(tabCompass);
         gridLayout_4->setObjectName(QString::fromUtf8("gridLayout_4"));
         horizontalLayout_4 = new QHBoxLayout();
@@ -974,7 +977,7 @@ public:
         QObject::connect(buttonBox, SIGNAL(accepted()), TfrmTempctrl, SLOT(accept()));
         QObject::connect(buttonBox, SIGNAL(rejected()), TfrmTempctrl, SLOT(reject()));
 
-        tabWidget->setCurrentIndex(0);
+        tabWidget->setCurrentIndex(1);
 
 
         QMetaObject::connectSlotsByName(TfrmTempctrl);

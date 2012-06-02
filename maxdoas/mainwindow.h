@@ -52,6 +52,7 @@ private slots:
     void on_BtnStop_clicked();
     void HWThreadFinished();
     void on_actionTempctrler_triggered();
+    void on_actionInfo_triggered();
     void on_actionConfigSpectrometer_triggered();
     void on_actionClose_triggered();
     void on_actionOpen_triggered();

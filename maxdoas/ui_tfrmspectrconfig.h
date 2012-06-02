@@ -1,8 +1,8 @@
 /********************************************************************************
 ** Form generated from reading UI file 'tfrmspectrconfig.ui'
 **
-** Created: Fri Aug 26 20:41:59 2011
-**      by: Qt User Interface Compiler version 4.6.2
+** Created: Sat Jun 2 00:53:34 2012
+**      by: Qt User Interface Compiler version 4.8.1
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -53,7 +53,7 @@ public:
     QVBoxLayout *verticalLayout_2;
     QHBoxLayout *horizontalLayout_2;
     QRadioButton *rbtnAuto;
-    QSpacerItem *horizontalSpacer_3;
+    QSpacerItem *horizontalSpacer__3;
     QLabel *label_4;
     QSpinBox *sbTargetIntensity;
     QHBoxLayout *horizontalLayout_5;
@@ -162,9 +162,9 @@ public:
 
         horizontalLayout_2->addWidget(rbtnAuto);
 
-        horizontalSpacer_3 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+        horizontalSpacer__3 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
-        horizontalLayout_2->addItem(horizontalSpacer_3);
+        horizontalLayout_2->addItem(horizontalSpacer__3);
 
         label_4 = new QLabel(groupBox);
         label_4->setObjectName(QString::fromUtf8("label_4"));

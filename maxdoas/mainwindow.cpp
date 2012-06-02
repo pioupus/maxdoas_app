@@ -3,7 +3,7 @@
 #include "tfrmtempctrl.h"
 #include "thwdriver.h"
 #include "tspectrumplotter.h"
-
+#include "tinfowin.h"
 #include <qfiledialog.h>
 #include <qimagewriter.h>
 #include <QSettings>
@@ -233,6 +233,13 @@ void MainWindow::on_actionConfigSpectrometer_triggered(){
 void MainWindow::on_actionTempctrler_triggered(){
     TfrmTempctrl *frmtempctrler = new TfrmTempctrl(HWDriver);
     frmtempctrler->show();
+
+
+}
+
+void MainWindow::on_actionInfo_triggered(){
+    TInfoWin *frmInfowin = new TInfoWin(this);
+    frmInfowin->show();
 
 }
 

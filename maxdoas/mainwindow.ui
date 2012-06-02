@@ -17,9 +17,8 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>DOAS Operator</string>
+   <string>DOAS Commander</string>
   </property>
-
   <widget class="QWidget" name="centralWidget">
    <property name="sizePolicy">
     <sizepolicy hsizetype="Ignored" vsizetype="Ignored">
@@ -181,7 +180,7 @@
      <x>0</x>
      <y>0</y>
      <width>919</width>
-     <height>25</height>
+     <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -198,8 +197,15 @@
     <addaction name="actionTempctrler"/>
     <addaction name="actionConfigSpectrometer"/>
    </widget>
+   <widget class="QMenu" name="menuInfo">
+    <property name="title">
+     <string>Info</string>
+    </property>
+    <addaction name="actionInfo"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuConfiguration"/>
+   <addaction name="menuInfo"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <action name="actionTempctrler">
@@ -210,7 +216,6 @@
     <bool>true</bool>
    </property>
   </action>
-
   <action name="actionClose">
    <property name="text">
     <string>Close</string>
@@ -224,6 +229,11 @@
   <action name="actionOpen">
    <property name="text">
     <string>Open Script</string>
+   </property>
+  </action>
+  <action name="actionInfo">
+   <property name="text">
+    <string>About</string>
    </property>
   </action>
  </widget>

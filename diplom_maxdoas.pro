@@ -72,10 +72,15 @@ HEADERS += maxdoas/mainwindow.h \
     maxdoas/tvectorsolver.h \
     maxdoas/vectorsolverservice.h \
     maxdoas/matrixoutputs.h \
-    maxdoas/temissionrate.h
+    maxdoas/temissionrate.h \
+    maxdoas/ttimeline.h \
+    maxdoas/tinfowin.h \
+    maxdoas/vc.h
+
 FORMS += maxdoas/mainwindow.ui \
     maxdoas/tfrmtempctrl.ui \
-    maxdoas/tfrmspectrconfig.ui
+    maxdoas/tfrmspectrconfig.ui \
+    maxdoas/tinfowin.ui
 SOURCES += maxdoas/main.cpp \
     maxdoas/mainwindow.cpp \
     maxdoas/tfrmspectrconfig.cpp \
@@ -102,5 +107,7 @@ SOURCES += maxdoas/main.cpp \
     maxdoas/tvectorsolver.cpp \
     maxdoas/vectorsolverservice.cpp \
     maxdoas/vectorsolverservicetester.cpp \
-    maxdoas/temissionrate.cpp
+    maxdoas/temissionrate.cpp \
+    maxdoas/ttimeline.cpp \
+    maxdoas/tinfowin.cpp
 
