@@ -57,6 +57,7 @@ public slots:
     void setMeanDistance(float Distance);
     int getTime();
     void setSpeedCorrection(float correctionfactor);
+    float getClosestZenithValue();
 private:
     void inibuffer(int width, int height, TRetrievalImage *other);
     //TEmissionrate* emissionrate_(float TimeStep, float ScanPixelsize);

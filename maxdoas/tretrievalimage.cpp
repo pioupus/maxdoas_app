@@ -473,6 +473,23 @@ void TRetrievalImage::setSpeedCorrection(float correctionfactor){
     }
 }
 
+float TRetrievalImage::getClosestZenithValue()
+{
+    float minzenithvalue= 100;
+    float result = 0;
+    for(int row=0;row<getHeight();row++){
+        for (int col = 0; col<getWidth();col++){
+            QPointF p;
+            p = valueBuffer[row][col]->mirrorCoordinate->getZenithCoordinate();
+            if (fabs(p.y()) < fabs(minzenithvalue)){
+                minzenithvalue = fabs(p.y());
+                result = valueBuffer[row][col]->val;
+            }
+        }
+    }
+    return result;
+}
+
 QScriptValue TRetrievalImage::emissionrate(float TimeStep){
     TEmissionrate* result = new TEmissionrate();
     result->setMeanDistance(meanDistance);

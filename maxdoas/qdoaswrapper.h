@@ -46,6 +46,8 @@ public slots:
 
     bool saveWorkingCopy(QString Directory,QString Filename, QString inDirectory);
 
+    //void setSiteName(QString name);
+
 private:
     QDomDocument *qdoasfile;
 };

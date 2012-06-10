@@ -16,6 +16,7 @@
 #include "tspectralimage.h"
 #include "qwtmarkerarrow.h"
 #include "temissionrate.h"
+#include "ttimeline.h"
 
 using namespace Eigen;
 
@@ -68,6 +69,7 @@ public:
     void plotSpectrum(TSpectrum *spectrum,int plotIndex);
     void plotVectorField(TRetrievalImage *img,int plotIndex,int average,bool normalize,bool excludeZero);
     void plotRetrievalImage(TRetrievalImage *img,int plotIndex, int Pixelsize=10);
+    void plotTimeLine(ttimeline *tl,int plotIndex);
     void plotSpectralImage(TSpectralImage *img,int plotIndex, int Pixelsize=10);
     void plotDenseMatrix(const MatrixXd& values,int plotIndex, int Pixelsize=10);
     void oplotEmissionRaster(TEmissionrate *emissionrate,int plotIndex);
