@@ -20,8 +20,25 @@ void ttimeline::setYAxisName(QString name)
     xAxisName = name;
 }
 
-void ttimeline::addPoint(QDateTime time, double val)
+int ttimeline::getEntryCount()
 {
-    timeLine.append(QPair<QDateTime,float>(time,val));
+
+    return timeLine.count();
 }
+
+void ttimeline::addPoint(double ms, double val)
+{
+    timeLine.append(QPair<QDateTime,float>(QDateTime::fromMSecsSinceEpoch(ms),val));
+}
+
+double ttimeline::getEntryX(int i)
+{
+    return timeLine[i].first.toMSecsSinceEpoch();
+}
+
+double ttimeline::getEntryY(int i)
+{
+    return timeLine[i].second;
+}
+
 

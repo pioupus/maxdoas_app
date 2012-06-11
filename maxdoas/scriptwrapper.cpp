@@ -151,6 +151,13 @@ QScriptValue TScriptStringListConstructor(QScriptContext *context, QScriptEngine
     return engine->newQObject(object, QScriptEngine::ScriptOwnership);
 }
 
+QScriptValue TTimeLineConstructor(QScriptContext *context, QScriptEngine *engine)
+{
+    (void)context;
+    QObject *object = new ttimeline();
+    return engine->newQObject(object, QScriptEngine::ScriptOwnership);
+}
+
 QScriptValue TDirListConstructor(QScriptContext *context, QScriptEngine *engine)
 {
     QObject *slo = context->argument(0).toQObject();
@@ -575,6 +582,13 @@ QScriptValue getSpectSerialNo(QScriptContext *context, QScriptEngine *engine){
     return scanner->getSpectSerialNo();
 }
 
+QScriptValue msSinceEpoch(QScriptContext *context, QScriptEngine *engine){
+    (void)context;
+    (void)engine;
+    double result = QDateTime::currentMSecsSinceEpoch();
+    return result;
+}
+
 TScriptWrapper::TScriptWrapper(THWDriver* hwdriver)
 {
     scanner = TScanner::instance(hwdriver);
@@ -591,9 +605,11 @@ TScriptWrapper::TScriptWrapper(THWDriver* hwdriver)
     QScriptValue isAbortingFree = ScriptEngine->newFunction(FreeObject);
     ScriptEngine->globalObject().setProperty("free", isAbortingFree);
 
+    QScriptValue msSinceEpochFun = ScriptEngine->newFunction(msSinceEpoch);
+    ScriptEngine->globalObject().setProperty("msSinceEpoch", msSinceEpochFun);
+
     QScriptValue leadingZeroFun = ScriptEngine->newFunction(leadingZero);
     ScriptEngine->globalObject().setProperty("leadingZero", leadingZeroFun);
-
 
     QScriptValue SetAutoIntegrationTimeFun = ScriptEngine->newFunction(SetAutoIntegrationTime);
     ScriptEngine->globalObject().setProperty("SetAutoIntegrationTime", SetAutoIntegrationTimeFun);
@@ -700,6 +716,10 @@ TScriptWrapper::TScriptWrapper(THWDriver* hwdriver)
     QScriptValue qdsl = ScriptEngine->newFunction(TScriptStringListConstructor);
     QScriptValue metasl = ScriptEngine->newQMetaObject(&QObject::staticMetaObject, qdsl);
     ScriptEngine->globalObject().setProperty("TStringList", metasl);
+
+    QScriptValue qdtl = ScriptEngine->newFunction(TTimeLineConstructor);
+    QScriptValue metatl = ScriptEngine->newQMetaObject(&QObject::staticMetaObject, qdtl);
+    ScriptEngine->globalObject().setProperty("TTimeLine", metatl);
 
     QScriptValue plotobj = ScriptEngine->newQObject(TSpectrumPlotter::instance(0),QScriptEngine::ScriptOwnership);
     ScriptEngine->globalObject().setProperty("plot", plotobj);

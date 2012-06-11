@@ -16,9 +16,15 @@ public:
 
 public slots:
     void plot(int plotIndex);
-    void addPoint(QDateTime time,double val);
+    //void addPoint(QDateTime time,double val);
+    void addPoint(double ms,double val);
     void setXAxisName(QString name);
     void setYAxisName(QString name);
+
+public:
+    int getEntryCount();
+    double getEntryX(int i);
+    double getEntryY(int i);
 
 private:
     QString xAxisName;

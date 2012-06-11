@@ -18,6 +18,22 @@
 #include <qwt_color_map.h>
 #include <qwt_interval.h>
 
+class DateTimeScaleDraw: public QwtScaleDraw
+{
+public:
+    DateTimeScaleDraw()
+    {
+    }
+
+    virtual QwtText label(double v) const
+    {
+        QDateTime upTime;
+        upTime.setMSecsSinceEpoch((qint64)v);
+        return upTime.toString("dd.MM.yy hh:mm");
+    }
+};
+
+
 class ColorMap: public QwtLinearColorMap
 {
 public:
@@ -635,53 +651,48 @@ void TSpectrumPlotter::plotVectorField(TRetrievalImage *img,int plotIndex,int av
 void TSpectrumPlotter::plotTimeLine(ttimeline *tl,int plotIndex){
     TPlot *plot = getPlot(plotIndex);
     QwtPlotSpectroCurve * s = plot->getImgPlot();
-//    QVector< QwtPoint3D > * vec = new  QVector< QwtPoint3D >(img->getHeight()*img->getWidth());
-//    double minval=0,maxval=0,val;
-//    for(int y =0; y<img->getHeight();y++){
-//        for(int x =0; x<img->getWidth();x++){
-//            QwtPoint3D  p3d;// = new QwtPoint3D();
-//            TMirrorCoordinate * mc;
-//            mc = img->valueBuffer[y][x]->mirrorCoordinate;
+    double xbuf[tl->getEntryCount()];
+    double ybuf[tl->getEntryCount()];
 
-//            p3d.setX(mc->getAngleCoordinate().x());
-//            p3d.setY(mc->getAngleCoordinate().y());
-//            val = img->valueBuffer[y][x]->val;
-//            p3d.setZ(val);
-//            if ((minval > val)||((y+x)==0)){
-//                minval = val;
-//            }
-//            if ((maxval < val)||((y+x)==0)){
-//                maxval = val;
-//            }
-//            vec->replace(y*img->getWidth()+x,p3d);
-//        }
-//    }
-//    s->setPenWidth(Pixelsize);
-//    QwtInterval interval;
-//    if (nextColorbarMin == nextColorbarMax)
-//        interval.setInterval(minval,maxval);
-//    else
-//        interval.setInterval(nextColorbarMin,nextColorbarMax);
-//    s->setColorRange(interval);
-//    s->setSamples(*vec);
+    for(int i=0;i<tl->getEntryCount();i++){
+            xbuf[i] = tl->getEntryX(i);
+            ybuf[i] = tl->getEntryY(i);
+    }
+    QwtPlot * p = plot->getPlot();
+    QwtPlotCurve * c = plot->getCurve(0);
+    QPen pe;
 
-//    plot->getPlot()->enableAxis(QwtPlot::xTop,true);
-//    QwtScaleWidget *rightAxis = plot->getPlot()->axisWidget(QwtPlot::xTop);
-//    //rightAxis->setTitle("Intensity");
-//    rightAxis->setColorBarEnabled(true);
-//    rightAxis->setColorMap( interval, new ColorMap());
-//    plot->getPlot()->setAxisScale(QwtPlot::xTop,interval.minValue(),interval.maxValue());
-//    rightAxis->setColorBarWidth(20);
-//    plot->getPlot()->replot();
-//    if(!nextTitle.isEmpty())
-//        plot->getPlot()->setTitle(nextTitle);
-//    nextTitle = "";
-//    if(!nextXTitle.isEmpty())
-//        plot->getPlot()->setAxisTitle(QwtPlot::xBottom,nextXTitle);
-//    nextXTitle = "";
-//    if(!nextYTitle.isEmpty())
-//        plot->getPlot()->setAxisTitle(QwtPlot::yLeft,nextYTitle);
-//    nextYTitle = "";
+    c->setSamples(xbuf,ybuf,tl->getEntryCount());
+    c->setPen(pe);
+
+    if(!nextTitle.isEmpty())
+        p->setTitle(nextTitle);
+    nextTitle = "";
+    if(!nextXTitle.isEmpty())
+        p->setAxisTitle(QwtPlot::xBottom,nextXTitle);
+    nextXTitle = "";
+    if(!nextYTitle.isEmpty())
+        p->setAxisTitle(QwtPlot::yLeft,nextYTitle);
+    nextYTitle = "";
+    if(nextXRange.first != nextXRange.second)
+        p->setAxisScale(QwtPlot::xBottom,nextXRange.first,nextXRange.second);
+
+
+    p->setAxisScaleDraw(QwtPlot::xBottom, new DateTimeScaleDraw());
+    p->setAxisLabelRotation(QwtPlot::xBottom, -50.0);
+    p->setAxisLabelAlignment(QwtPlot::xBottom, Qt::AlignLeft | Qt::AlignBottom);
+    nextXRange.first = 0;
+    nextXRange.second = 0;
+    if(nextYRange.first != nextYRange.second)
+        p->setAxisScale(QwtPlot::yLeft,nextYRange.first,nextYRange.second);
+    nextYRange.first = 0;
+    nextYRange.second = 0;
+    if(nextColor != NULL)
+        c->setPen(*nextColor);
+    delete nextColor;
+    nextColor = NULL;
+
+    p->replot();
 }
 
 
