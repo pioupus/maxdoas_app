@@ -84,6 +84,12 @@ QwtPlot::LegendPosition intToLegendPos(int i){
 
 TPlot::TPlot(QBoxLayout *parent){
     plot = new QwtPlot();
+
+    plot->setAutoFillBackground( false );
+    QPalette p = plot->palette();
+    p.setColor(QPalette::Window, Qt::white);
+    plot->setPalette(p);
+
     parent->addWidget(plot);
     legend = NULL;
     AutoIntegMarkerTop=NULL;

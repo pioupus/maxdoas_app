@@ -589,6 +589,13 @@ QScriptValue msSinceEpoch(QScriptContext *context, QScriptEngine *engine){
     return result;
 }
 
+QScriptValue getSiteName(QScriptContext *context, QScriptEngine *engine){
+    (void)context;
+    (void)engine;
+    TMaxdoasSettings *ms = TMaxdoasSettings::instance();
+    return ms->getSiteName();
+}
+
 TScriptWrapper::TScriptWrapper(THWDriver* hwdriver)
 {
     scanner = TScanner::instance(hwdriver);
@@ -607,6 +614,9 @@ TScriptWrapper::TScriptWrapper(THWDriver* hwdriver)
 
     QScriptValue msSinceEpochFun = ScriptEngine->newFunction(msSinceEpoch);
     ScriptEngine->globalObject().setProperty("msSinceEpoch", msSinceEpochFun);
+
+    QScriptValue getSiteNameFun = ScriptEngine->newFunction(getSiteName);
+    ScriptEngine->globalObject().setProperty("getSiteName", getSiteNameFun);
 
     QScriptValue leadingZeroFun = ScriptEngine->newFunction(leadingZero);
     ScriptEngine->globalObject().setProperty("leadingZero", leadingZeroFun);
