@@ -73,28 +73,37 @@ QPointF TMirrorCoordinate::getAngleCoordinate(){
     return AngleCoordinate;
 }
 
-QPointF TMirrorCoordinate::getZenithCoordinate(){
+QPointF TMirrorCoordinate::getElevationCoordinate(){
     //X -> Azimuth
     //Y -> Zenith
     QPointF result;
     double Zenith;
     double Azimuth;
+    double Elevation;
     //Zenith = 90+(MirrorMotorAngle-90)*cos(StationaryMotorAngle)
     //Azimuth = (90-MirrorMotorAngle)*sin(StationaryMotorAngle) for MirrorMotorAngle a => 0
     //Azimuth = 180 - (90+MirrorMotorAngle)*sin(StationaryMotorAngle) for MirrorMotorAngle a < 0
 
-    Zenith = 90.0+(AngleCoordinate.y()-90.0);
-    Zenith *= cos(AngleCoordinate.x()*M_PI/180.0);
 
-    if (AngleCoordinate.y() >= 0){
-        Azimuth = 90-AngleCoordinate.y();
-    }else{
-        Azimuth = 180 - (90+AngleCoordinate.y());
-    }
+    Elevation = 90 - fabs(AngleCoordinate.y());
+    Elevation *= cos(AngleCoordinate.x()*M_PI/180.0);
+
+
+
+
+    Azimuth = 90-fabs(AngleCoordinate.y());
     Azimuth *= sin(AngleCoordinate.x()*M_PI/180.0);
 
+    if (AngleCoordinate.y() >= 0){
+    }else{
+        if (AngleCoordinate.x() > 0)
+            Azimuth = 180-Azimuth;
+        else
+            Azimuth = -180-Azimuth;
+    }
+
     result.setX(Azimuth);
-    result.setY(Zenith);
+    result.setY(Elevation);
 
     return result;
 }

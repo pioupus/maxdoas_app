@@ -7,7 +7,7 @@ ttimeline::ttimeline()
 void ttimeline::plot(int plotIndex)
 {
     TSpectrumPlotter* SpectrumPlotter = TSpectrumPlotter::instance(0);
-    SpectrumPlotter->plotRetrievalImage(this,plotIndex,Pixelsize);
+    SpectrumPlotter->plotTimeLine(this,plotIndex);
 }
 
 void ttimeline::setXAxisName(QString name)

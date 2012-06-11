@@ -179,8 +179,8 @@ void TSpectrum::SaveSpectrum(QTextStream &file, QTextStream &meta, bool DarkSpec
             file << -1 << ' ';
             file << -1 << ' ';
         }else{
-            file << MirrorCoordinate->getZenithCoordinate().x() << ' '; //Azimuth
-            file << 90.0-MirrorCoordinate->getZenithCoordinate().y() << ' '; //Elevation
+            file << MirrorCoordinate->getElevationCoordinate().x() << ' '; //Azimuth
+            file << MirrorCoordinate->getElevationCoordinate().y() << ' '; //Elevation
         }
         file << datetime.toString("dd/MM/yyyy")<< " ";
         file << (double)datetime.time().hour()+(double)(datetime.time().minute()*60+datetime.time().second())/3600 << " ";
