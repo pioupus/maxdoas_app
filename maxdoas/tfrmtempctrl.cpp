@@ -160,7 +160,7 @@ void TfrmTempctrl::showCurve(QwtPlotItem *item, bool on)
 bool TfrmTempctrl::get_position()
 {
 
-#if 0
+#if 1
 
     struct gps_data_t gps_data;
     int ret;
