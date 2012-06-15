@@ -10,19 +10,26 @@ TMaxdoasSettings* TMaxdoasSettings::m_Instance = 0;
 
 QString rawDataToSerialNumber(int guid, int devicetype){
     uint16_t year = guid >> 12; //select the 8 msbs
-    year += 2000;
+    //year += 2000;
     uint16_t serial = guid & 0xFFF; //select the 12 lsbs
-    QString ret=QString::number(year)+'.'+QString::number(devicetype)+'.'+QString::number(serial);
+    int i = devicetype;
+    if (devicetype == 2)
+        i = 0;
+    else if (devicetype == 0 )
+        i = 2;
+    QString ret=QString::number(year)+QString::number(i)+QString::number(serial);
     if(devicetype < 0)
         ret=QString::number(year)+".x."+QString::number(serial);
     else
-        ret=QString::number(year)+'.'+QString::number(devicetype)+'.'+QString::number(serial);
+        ret=QString::number(year)+'.'+QString::number(i)+'.'+QString::number(serial);
     return ret;
 }
 
 void serialNumberToRawData(QString serial, int* guid, int* devicetype){
-    QStringList items = serial.split(".");
-
+    QStringList items ;//= serial.split(".");
+    items.append(serial.mid(0,2));
+    items.append(serial.mid(2,1));
+    items.append(serial.mid(3,1));
     uint16_t year = items[0].toInt();
     if (items[1].compare("x",Qt::CaseInsensitive) == 0)
         *devicetype = -1;

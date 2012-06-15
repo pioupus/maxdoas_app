@@ -29,7 +29,7 @@ public:
     {
         QDateTime upTime;
         upTime.setMSecsSinceEpoch((qint64)v);
-        return upTime.toString("dd.MM.yy hh:mm");
+        return upTime.toString("hh:mm");
     }
 };
 

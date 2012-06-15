@@ -2304,7 +2304,7 @@ THWDriver::THWDriver()
     TiltTimer->start(5000);
     WatchDogTimer->start(1000);
     FetchScannerInfos();
-    GetScannerConfigTimer->start(500);
+    GetScannerConfigTimer->start(3000);
    // hwdSetComPort("/dev/ttyUSB0");
     WavelengthBuffer = TWavelengthbuffer::instance();
 
