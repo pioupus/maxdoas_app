@@ -173,7 +173,7 @@ void TMaxdoasSettings::setZenithSteps(QPoint ZenithPosition){
 }
 
 QPoint TMaxdoasSettings::getMicrostepping(){
-     return settings->value(serialnum+"/Axis/Microsteps",QPoint(32,32)).toPoint();
+     return settings->value(serialnum+"/Axis/Microsteps",QPoint(16,16)).toPoint()*2;
 }
 
 void TMaxdoasSettings::setMicrostepping(QPoint Microsteps){
