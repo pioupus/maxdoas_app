@@ -98,7 +98,7 @@
 
 #define OMNI_ENABLED 1
 #define MOT_ENABLED 1
-#define TILT_AFTER_MOTMOVE_TIME_OUT 1000
+#define TILT_AFTER_MOTMOVE_TIME_OUT 2000
 const uint TimeOutData  =  3000; //ms
 const uint TimeOutMotion  =  15000; //ms
 

@@ -21,7 +21,7 @@ QString rawDataToSerialNumber(int guid, int devicetype){
     if(devicetype < 0)
         ret=QString::number(year)+".x."+QString::number(serial);
     else
-        ret=QString::number(year)+'.'+QString::number(i)+'.'+QString::number(serial);
+        ret=QString::number(year)+QString::number(i)+QString::number(serial);
     return ret;
 }
 
