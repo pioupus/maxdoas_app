@@ -50,6 +50,8 @@ private:
     bool tiltcalibration;
     bool ScannerConfigModified;
     bool get_position();
+    QWidget * tabTilt;
+    QWidget * tabCompass;
 private slots:
     void on_btnSetZenithPos_clicked();
     void on_btnSetShutterClosePos_clicked();

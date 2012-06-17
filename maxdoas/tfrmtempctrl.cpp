@@ -34,6 +34,8 @@ TfrmTempctrl::TfrmTempctrl(THWDriver *hwdriver, QWidget *parent) :
     ui->spbLatitude->setValue(ms->getSiteLatitude());
     ui->spbLongitude->setValue(ms->getSiteLongitude());
     ui->spbScannerdirection->setValue(ms->getScannerDirection());
+    tabTilt = ui->tabTilt;
+    tabCompass = ui->tabCompass;
 
     if (ms->isInConfigMode()){
         ui->btnMotHome->setVisible(true);
@@ -63,7 +65,7 @@ TfrmTempctrl::TfrmTempctrl(THWDriver *hwdriver, QWidget *parent) :
         ui->spbIncrementBy->setVisible(false);
     }
     if (ms->getAttachedScanningDevice()==sdtMAXDOAS){
-
+//if (true){
         ui->loScannerTemperature->setEnabled(true);
         ui->loShutterPosition->setEnabled(true);
         ui->loTiltDirection->setEnabled(true);
@@ -73,8 +75,8 @@ TfrmTempctrl::TfrmTempctrl(THWDriver *hwdriver, QWidget *parent) :
         ui->loincrementby->setEnabled(true);
         ui->loEndswitch->setEnabled(true);
         ui->loEndswitch_dsfsdf->setEnabled(true);
-        ui->tabTilt->setVisible(false);
-        ui->tabCompass->setVisible(false);
+        ui->tabWidget->removeTab(3);
+        ui->tabWidget->removeTab(3);
     }else{
         ui->loScannerTemperature->setEnabled(false);
         ui->loShutterPosition->setEnabled(false);
@@ -87,6 +89,8 @@ TfrmTempctrl::TfrmTempctrl(THWDriver *hwdriver, QWidget *parent) :
         ui->loEndswitch_dsfsdf->setEnabled(false);
         ui->tabTilt->setVisible(true);
         ui->tabCompass->setVisible(true);
+        //ui->tabWidget->insertTab(4,tabTilt)
+        //ui->tabWidget->insertTab(4,tabCompass)
     }
 
     startTimer(1000);
