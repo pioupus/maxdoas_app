@@ -305,6 +305,11 @@ QScriptValue FreeObject(QScriptContext *context, QScriptEngine *engine)
                            TScriptStringList *sl = dynamic_cast<TScriptStringList*>(obj);
                            if(sl != NULL){
                                 delete sl;
+                           }else{
+                               ttimeline *tl = dynamic_cast<ttimeline*>(obj);
+                               if(tl != NULL){
+                                   delete tl;
+                               }
                            }
                        }
                    }
