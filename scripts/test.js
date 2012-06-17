@@ -1,6 +1,6 @@
 Sum = 0
 tl = TTimeLine();
-
+tl.scaleTimeAxis(1);
 plot.setTitle("NO2 VCD at "+getSiteName());
 plot.setXAxisTitle("Time")
 plot.setYAxisTitle("molec/cm2")

@@ -680,17 +680,18 @@ void TSpectrumPlotter::plotTimeLine(ttimeline *tl,int plotIndex){
     if(!nextYTitle.isEmpty())
         p->setAxisTitle(QwtPlot::yLeft,nextYTitle);
     nextYTitle = "";
-    if(nextXRange.first != nextXRange.second)
-        p->setAxisScale(QwtPlot::xBottom,nextXRange.first,nextXRange.second);
-
+    if(tl->getmsTimeRange() > 0){
+        p->setAxisScale(QwtPlot::xBottom,xbuf[0],xbuf[0]+tl->getmsTimeRange());
+    }
 
     p->setAxisScaleDraw(QwtPlot::xBottom, new DateTimeScaleDraw());
     p->setAxisLabelRotation(QwtPlot::xBottom, -50.0);
     p->setAxisLabelAlignment(QwtPlot::xBottom, Qt::AlignLeft | Qt::AlignBottom);
     nextXRange.first = 0;
     nextXRange.second = 0;
-    if(nextYRange.first != nextYRange.second)
+    if(nextYRange.first != nextYRange.second){
         p->setAxisScale(QwtPlot::yLeft,nextYRange.first,nextYRange.second);
+    }
     nextYRange.first = 0;
     nextYRange.second = 0;
     if(nextColor != NULL)
