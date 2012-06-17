@@ -487,6 +487,20 @@ int TScanPath::AddLine(){
     return res;
 }
 
+int TScanPath::InsertPoint(){
+    QPointF p(argument(0).toNumber(),argument(1).toNumber());
+    int index = argument(2).toNumber();
+    TMirrorCoordinate *coord = new TMirrorCoordinate(p);
+    coord->pixelIndexX = 0;
+    coord->pixelIndexY = 0;
+    coord->pixelIndex = index;
+    pointlist.insert(index,coord);
+    for (int i= index+1; i<pointlist.count();i++){
+        coord = pointlist[i];
+        coord->pixelIndex++;
+    }
+}
+
 int TScanPath::AddEllipseOutline(QPointF center,float MinorAxis, float MajorAxis, float angle, uint Divisions){
     TPatternType *pt = new TPatternType();
     pt->setEllipse(center,MinorAxis, MajorAxis, angle, Divisions);

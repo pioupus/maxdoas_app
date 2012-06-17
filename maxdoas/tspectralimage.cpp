@@ -708,6 +708,7 @@ QScriptValue TSpectralImage::getMaxRMSPos(){
     return engine()->newQObject(MirrorCoordinate);
 }
 
+
 double TSpectralImage::getMaxRMSVal(){
     getMaxRMSPos();
     return maxRMSVal;
@@ -732,19 +733,3 @@ void TSpectralImage::plot(int plotIndex,int Pixelsize){
     SpectrumPlotter->plotSpectralImage(this,plotIndex,Pixelsize);
 }
 
-int TSpectralImage::getZenithIndex()
-{
-    float maxelevationvalue= 0;
-    float result = 0;
-    for(int row=0;row<spectrumlist.count();row++){
-
-        QPointF p;
-        p = spectrumlist[row]->getMirrorCoordinate()->getElevationCoordinate();
-        if (p.y() > fabs(maxelevationvalue)){
-            maxelevationvalue = p.y();
-            result = row;
-        }
-
-    }
-    return result;
-}

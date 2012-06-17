@@ -30,6 +30,7 @@ public:
     void setEllipse(QPointF center,float MinorAxis, float MajorAxis, float angle, uint Divisions);
 
 
+
     TPatternStyle Patternstyle;
     QPointF edge1;
     QPointF edge2;
@@ -86,6 +87,7 @@ public:
 public slots:
    // QScriptValue  AddRect(QScriptContext *context, QScriptEngine *engine);
     int AddLine();
+    int InsertPoint();
     int AddRect();
     int AddEllipseOutline();
     void clear();

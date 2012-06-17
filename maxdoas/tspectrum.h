@@ -79,8 +79,10 @@ public slots:
     void SaveSpectrumDark(QString fn);
     void SaveSpectrumDefName(QString Directory, QString BaseName,int seqnumber);
     void SaveSpectrumDefNameDark(QString Directory, QString BaseName,int seqnumber);
-
+    void SaveSpectrumDefRef(QString calib,QString Directory, QString BaseName, int seqnumber);
     bool Load(QString fn);
+
+    float getTiltDirection();
    // bool LoadSpectrDefaultName(QString Directory, QString SearchBaseName,QString FileBaseName,int seqnumber,uint startindex, uint groupindex );
 
     QString getSpectSerialNo();

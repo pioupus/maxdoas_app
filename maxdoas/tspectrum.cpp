@@ -721,6 +721,11 @@ bool TSpectrum::Load(QString fn){
     return LoadSpectrum_(fn,false);
 }
 
+float TSpectrum::getTiltDirection()
+{
+    return TiltDirection;
+}
+
 #if 0
 bool TSpectrum::LoadSpectrDefaultName(QString Directory, QString SearchBaseName,QString FileBaseName,int seqnumber,uint startindex, uint groupindex){
     SequenceNumber = seqnumber;
