@@ -714,7 +714,7 @@ double TSpectralImage::getMaxRMSVal(){
 }
 
 int TSpectralImage::count(){
-    return spectrumtable.count();
+    return spectrumlist.count();
 }
 
 TMirrorCoordinate * TSpectralImage::getMirrorCoordinate(int index){
