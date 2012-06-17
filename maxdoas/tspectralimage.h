@@ -75,11 +75,16 @@ public slots:
     void interpolatePixel(int Pixelindex);
 
     int count();
+
+
+
     QScriptValue getMean();
     QScriptValue getRms();
     QScriptValue getStdDev();
 
     QScriptValue getMaxRMSPos();
+
+
 
     QScriptValue getIntensityArray();
 

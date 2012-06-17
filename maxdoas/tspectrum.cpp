@@ -390,6 +390,10 @@ void TSpectrum::SaveSpectrumDefNameDark(QString Directory, QString BaseName,int 
     SaveSpectrum_(getDefaultFileName( Directory, BaseName, seqnumber)+".spe",true,false);
 }
 
+void TSpectrum::SaveSpectrumDefRef(QString calib, QString Directory, QString BaseName,int seqnumber){
+    SaveSpectrumRef(calib,getDefaultFileName( Directory, BaseName, seqnumber)+".ref");
+}
+
 void TSpectrum::SaveSpectrumDefName(QString Directory, QString BaseName,int seqnumber){
     bool Dark = type==stDarkOrRef;
     SaveSpectrum_(getDefaultFileName( Directory, BaseName, seqnumber)+".spe",Dark,false);

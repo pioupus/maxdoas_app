@@ -717,6 +717,8 @@ int TSpectralImage::count(){
     return spectrumlist.count();
 }
 
+
+
 TMirrorCoordinate * TSpectralImage::getMirrorCoordinate(int index){
     return spectrumlist[index]->getMirrorCoordinate();
 }
@@ -728,4 +730,21 @@ TSpectrum * TSpectralImage::getSpectrum(int index){
 void TSpectralImage::plot(int plotIndex,int Pixelsize){
     TSpectrumPlotter* SpectrumPlotter = TSpectrumPlotter::instance(0);
     SpectrumPlotter->plotSpectralImage(this,plotIndex,Pixelsize);
+}
+
+int TSpectralImage::getZenithIndex()
+{
+    float maxelevationvalue= 0;
+    float result = 0;
+    for(int row=0;row<spectrumlist.count();row++){
+
+        QPointF p;
+        p = spectrumlist[row]->getMirrorCoordinate()->getElevationCoordinate();
+        if (p.y() > fabs(maxelevationvalue)){
+            maxelevationvalue = p.y();
+            result = row;
+        }
+
+    }
+    return result;
 }
