@@ -2,7 +2,7 @@
 #include "tspectrumplotter.h"
 ttimeline::ttimeline()
 {
-    timeAxisScaleMinutes =-1;
+    timeAxisScalems =-1;
 }
 
 void ttimeline::plot(int plotIndex)
@@ -11,9 +11,12 @@ void ttimeline::plot(int plotIndex)
     SpectrumPlotter->plotTimeLine(this,plotIndex);
 }
 
-void ttimeline::scaleTimeAxis(int minutes)
+void ttimeline::scaleTimeAxis(int hour, int minutes)
 {
-    timeAxisScaleMinutes = minutes;
+    qint64 hourms = hour*60*60*1000;;
+    qint64 min = minutes*60*1000;
+    qint64 scale = hourms*min - QDateTime::currentMSecsSinceEpoch();
+    timeAxisScalems = scale;
 }
 
 void ttimeline::setXAxisName(QString name)
@@ -49,8 +52,8 @@ double ttimeline::getEntryY(int i)
 
 double ttimeline::getmsTimeRange()
 {
-    if (timeAxisScaleMinutes != -1){
-        return timeAxisScaleMinutes*60*1000;
+    if (timeAxisScalems != -1){
+        return timeAxisScalems;
     }
     else
         return -1;

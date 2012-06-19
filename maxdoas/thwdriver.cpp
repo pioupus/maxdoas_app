@@ -610,6 +610,7 @@ static int TiltGainToConfBit(TTiltConfigGain Gain){
 
 
 void THWDriverThread::hwdtSloConfigTilt(TTiltConfigRes Resolution,TTiltConfigGain Gain){
+#if MOT_ENABLED
     const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
@@ -628,9 +629,11 @@ void THWDriverThread::hwdtSloConfigTilt(TTiltConfigRes Resolution,TTiltConfigGai
         TiltADC_Gain = (int) Gain;
         TiltADC_Steps = 1 << (int) Resolution;
     }
+#endif
 }
 
 void THWDriverThread::hwdtSloAskTiltConfig(){
+#if MOT_ENABLED
     const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
@@ -647,6 +650,9 @@ void THWDriverThread::hwdtSloAskTiltConfig(){
         logger()->debug(QString("Got Tilt Sensor Configuration. Resolution: %1 bits, Gain: %2").arg((int)TiltADC_Steps).arg((int)TiltADC_Gain));
         emit hwdtSigGotTiltConfig();
     }
+#else
+    logger()->debug(QString("Due to compile option asking for tilt conf failed"));
+#endif
 }
 
 QPoint THWDriverThread::hwdtGetLastRawTilt(){
@@ -725,6 +731,7 @@ void THWDriverThread::hwdtSloTiltSetZenith(){
 // CMD_GET_TEMPERATURE_SHUTTER_ERROR		0x73
 
 void THWDriverThread::hwdtSloAskScannerStatus(){
+#if MOT_ENABLED
     const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
@@ -768,11 +775,15 @@ void THWDriverThread::hwdtSloAskScannerStatus(){
         logger()->debug(QString("Got Scannerstatus: Temperature: %1 C, ShutterSwitch: %2, EndPosSwitch: %3").arg(ScannerTemperature).arg(s).arg(e));
         emit hwdtSigGotScannerStatus(ScannerTemperature,ShutterIsOpenBySwitch==sssOpened,EndSwitchErrorState==eseERROR);
     }
+#else
+    logger()->debug(QString("Due to compile option asking for Scannerstatus failed"));
+#endif
 }
 
 // CMD_GET_MOT_SETUP				0x74
 
 void THWDriverThread::hwdtSloAskMotorSetup(){
+#if MOT_ENABLED
     const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
@@ -841,11 +852,15 @@ uint32_t maxdoaszenith=ee_getMaxdoasZenithPos();
         logger()->debug(QString("Got Scannermotorsetup: ZenithPos: %1 , ShutterClosePos: %2, MaxDoasMicrosteps: %3, ShutterMicrosteps: %4, Shuttertype: %5").arg(MaxDoasZenithPos).arg(ShutterClosePos).arg(MaxDoasMicrosteps).arg(ShutterMicrosteps).arg(rxBuffer[P6]));
         emit hwdtSigGotMotorSetup(MaxDoasZenithPos,ShutterClosePos,MaxDoasMicrosteps,ShutterMicrosteps,rxBuffer[P6]);
     }
+#else
+    logger()->debug(QString("Due to compile option asking for Scannermotorsetup failed"));
+#endif
 }
 
 // CMD_GET_INFO					0x75
 
     void THWDriverThread::hwdtSloAskDeviceInfo(){
+#if MOT_ENABLED
         const uint Bufferlength = 10;
         char txBuffer[Bufferlength];
         char rxBuffer[Bufferlength];
@@ -906,6 +921,9 @@ uint32_t maxdoaszenith=ee_getMaxdoasZenithPos();
             logger()->debug(QString("Got Scannerinfo: Versionshash: %1, DeviceSerialNum: %2, DeviceType: %3").arg(QString::number(MaxdoasGitHash,16)).arg(rawDataToSerialNumber(guid,devicetype)).arg(devicetype));
             emit hwdtSigGotDeviceInfo(MaxdoasGitHash,guid, devicetype);
         }
+#else
+        logger()->error(QString("Due to compile option asking for Scannerinfo failed"));
+#endif
     }
 
 // CMD_SET_GUID					0x76
@@ -940,6 +958,7 @@ void THWDriverThread::hwdtSloSetGUID(int guid){
 }
 
 void THWDriverThread::hwdtSloSetMotAccVel(int MaxDoasAcc, int MaxDoasVel, int ShutterAcc, int ShutterVel){
+#if MOT_ENABLED
     const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
@@ -977,6 +996,8 @@ void THWDriverThread::hwdtSloSetMotAccVel(int MaxDoasAcc, int MaxDoasVel, int Sh
     if (sendBuffer(txBuffer,rxBuffer,Bufferlength,TimeOutData,false,true)){
 
     }
+#else
+#endif
 }
 
 
@@ -1117,6 +1138,7 @@ QPointF DoTiltMinMaxCalCalculation(QPoint TiltRaw, QPoint Minv,QPoint Maxv,int G
 
 
 void THWDriverThread::hwdtSloAskTiltMinValue(){
+#if MOT_ENABLED
     const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
@@ -1157,9 +1179,13 @@ void THWDriverThread::hwdtSloAskTiltMinValue(){
         logger()->debug(QString("Tilt Sensor min val X: %1 Y: %2").arg(liTiltX).arg(liTiltY));
         emit hwdtSigGotTiltMinVal(liTiltX,liTiltY,TiltADC_Steps,TiltADC_Gain);
     }
+#else
+    logger()->error(QString("Due to compile option asking tilt min failed"));
+#endif
 }
 // CMD_GET_DECL_MAX_U		0x84
 void THWDriverThread::hwdtSloAskTiltMaxValue(){
+#if MOT_ENABLED
     const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
@@ -1200,12 +1226,16 @@ void THWDriverThread::hwdtSloAskTiltMaxValue(){
         logger()->debug(QString("Tilt Sensor max val X: %1 Y: %2").arg(liTiltX).arg(liTiltY));
         emit hwdtSigGotTiltMaxVal(liTiltX,liTiltY,TiltADC_Steps,TiltADC_Gain);
     }
+#else
+    logger()->error(QString("Due to compile option asking tilt min failed"));
+#endif
 }
 
 
 
 // CMD_GET_DECL_ZENITH_U                   	0x85
 void THWDriverThread::hwdtSloAskTiltZenithValue(){
+#if MOT_ENABLED
     const uint Bufferlength = 10;
     char txBuffer[Bufferlength];
     char rxBuffer[Bufferlength];
@@ -1246,10 +1276,13 @@ void THWDriverThread::hwdtSloAskTiltZenithValue(){
         logger()->debug(QString("Tilt Sensor zenith val X: %1 Y: %2").arg(liTiltX).arg(liTiltY));
         emit hwdtSigGotTiltZenith(liTiltX,liTiltY,TiltADC_Steps,TiltADC_Gain);
     }
+#else
+#endif
 }
 
 void THWDriverThread::hwdtSloAskTilt()
 {
+#if MOT_ENABLED
 #if 1
     if ((LastMotMovement.elapsed()>TILT_AFTER_MOTMOVE_TIME_OUT)||(ScannerDeviceType != sdtMAXDOAS)){
         const uint Bufferlength = 10;
@@ -1313,6 +1346,8 @@ void THWDriverThread::hwdtSloAskTilt()
         MutexRawTiltPoint.unlock();
         emit hwdtSigGotTilt(100,100,TiltADC_Steps,TiltADC_Gain);
     }
+#else
+#endif
 #else
 #endif
 }

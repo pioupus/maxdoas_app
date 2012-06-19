@@ -16,7 +16,7 @@ public:
 
 public slots:
     void plot(int plotIndex);
-    void scaleTimeAxis(int minutes);
+    void scaleTimeAxis(int hour, int minutes);
     //void addPoint(QDateTime time,double val);
     void addPoint(double ms,double val);
     void setXAxisName(QString name);
@@ -32,7 +32,7 @@ private:
     QString xAxisName;
     QString yAxisName;
     QList<QPair<QDateTime,float> > timeLine;
-    int timeAxisScaleMinutes;
+    qint64 timeAxisScalems;
 };
 
 #endif // TTIMELINE_H
