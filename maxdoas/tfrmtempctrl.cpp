@@ -38,6 +38,8 @@ TfrmTempctrl::TfrmTempctrl(THWDriver *hwdriver, QWidget *parent) :
     tabTilt = ui->tabTilt;
     tabCompass = ui->tabCompass;
     gpsd = new Gpsd();
+    if (!gpsd->isConnected())
+        gpsd->connectToServer();
     if (ms->isInConfigMode()){
         ui->btnMotHome->setVisible(true);
         ui->btnSetSerialNumber->setVisible(true);
@@ -165,7 +167,6 @@ void TfrmTempctrl::showCurve(QwtPlotItem *item, bool on)
 bool TfrmTempctrl::get_position()
 {
 
-    gpsd->connectToServer();
     double latitude = gpsd->gpsData()->fix.latitude;
     double longitude = gpsd->gpsData()->fix.longitude;
 
