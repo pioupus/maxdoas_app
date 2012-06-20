@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'tfrmtempctrl.ui'
 **
-** Created: Sat Jun 2 00:53:34 2012
+** Created: Wed Jun 20 01:15:16 2012
 **      by: Qt User Interface Compiler version 4.8.1
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -759,7 +759,9 @@ public:
 
         spbLatitude = new QDoubleSpinBox(tab_2);
         spbLatitude->setObjectName(QString::fromUtf8("spbLatitude"));
-        spbLatitude->setMinimum(-99.99);
+        spbLatitude->setDecimals(6);
+        spbLatitude->setMinimum(-99001);
+        spbLatitude->setMaximum(99001);
 
         horizontalLayout_18->addWidget(spbLatitude);
 
@@ -779,7 +781,9 @@ public:
 
         spbLongitude = new QDoubleSpinBox(tab_2);
         spbLongitude->setObjectName(QString::fromUtf8("spbLongitude"));
-        spbLongitude->setMinimum(-99.99);
+        spbLongitude->setDecimals(6);
+        spbLongitude->setMinimum(-99001);
+        spbLongitude->setMaximum(99001);
         spbLongitude->setValue(0.1);
 
         horizontalLayout_21->addWidget(spbLongitude);

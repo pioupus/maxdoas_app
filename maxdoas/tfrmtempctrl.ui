@@ -927,8 +927,14 @@
            </item>
            <item>
             <widget class="QDoubleSpinBox" name="spbLatitude">
+             <property name="decimals">
+              <number>6</number>
+             </property>
              <property name="minimum">
-              <double>-99.989999999999995</double>
+              <double>-99000.990000000005239</double>
+             </property>
+             <property name="maximum">
+              <double>99000.990000000005239</double>
              </property>
             </widget>
            </item>
@@ -958,8 +964,14 @@
            </item>
            <item>
             <widget class="QDoubleSpinBox" name="spbLongitude">
+             <property name="decimals">
+              <number>6</number>
+             </property>
              <property name="minimum">
-              <double>-99.989999999999995</double>
+              <double>-99000.990000000005239</double>
+             </property>
+             <property name="maximum">
+              <double>99000.990000000005239</double>
              </property>
              <property name="value">
               <double>0.100000000000000</double>

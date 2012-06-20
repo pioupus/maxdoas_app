@@ -15,6 +15,8 @@
 #include "maxdoassettings.h"
 #include "bubblewidget.h"
 
+#include "gpsd.h"
+
 #define TEMPERAT_BUFFER_SIZE 100
 
 namespace Ui {
@@ -52,6 +54,7 @@ private:
     bool get_position();
     QWidget * tabTilt;
     QWidget * tabCompass;
+    Gpsd * gpsd;
 private slots:
     void on_btnSetZenithPos_clicked();
     void on_btnSetShutterClosePos_clicked();

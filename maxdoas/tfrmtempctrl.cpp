@@ -5,6 +5,7 @@
 #include <gps.h>
 
 
+
 TfrmTempctrl::TfrmTempctrl(THWDriver *hwdriver, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::TfrmTempctrl)
@@ -36,7 +37,7 @@ TfrmTempctrl::TfrmTempctrl(THWDriver *hwdriver, QWidget *parent) :
     ui->spbScannerdirection->setValue(ms->getScannerDirection());
     tabTilt = ui->tabTilt;
     tabCompass = ui->tabCompass;
-
+    gpsd = new Gpsd();
     if (ms->isInConfigMode()){
         ui->btnMotHome->setVisible(true);
         ui->btnSetSerialNumber->setVisible(true);
@@ -164,16 +165,31 @@ void TfrmTempctrl::showCurve(QwtPlotItem *item, bool on)
 bool TfrmTempctrl::get_position()
 {
 
-#if 1
+    gpsd->connectToServer();
+    double latitude = gpsd->gpsData()->fix.latitude;
+    double longitude = gpsd->gpsData()->fix.longitude;
+
+    if (isnan(latitude) || isnan(longitude)) {
+        ui->spbLatitude->setValue(0);
+        ui->spbLongitude->setValue(0);
+    } else {
+        ui->spbLatitude->setValue(latitude);
+        ui->spbLongitude->setValue(longitude);
+    }
+
+
+//    ui.latitude->setText(Gpsd::convertLatLon(true, latitude, latLonUnits));
+//    ui.longitude->setText(Gpsd::convertLatLon(false, longitude, latLonUnits));
+#if 0
 
     struct gps_data_t gps_data;
     int ret;
     ret = gps_open("localhost", DEFAULT_GPSD_PORT, &gps_data);
     if (ret == 0){
-        (void) gps_stream(&gps_data, WATCH_ENABLE | WATCH_JSON, NULL);
+        (void) gps_stream(&gps_data, WATCH_ENABLE | WATCH_OLDSTYLE, NULL);
 
         /* Put this in a loop with a call to a high resolution sleep () in it. */
-        if (gps_waiting (&gps_data, 500)) {
+        if (gps_waiting (&gps_data, 5000)) {
 
             if (gps_read (&gps_data) == -1) {
 
@@ -338,6 +354,7 @@ TfrmTempctrl::~TfrmTempctrl()
     delete m_sde;
     delete bubblewidget;
     delete ui;
+    delete gpsd;
 }
 
 void TfrmTempctrl::on_cbCOMPort_activated(QString s)

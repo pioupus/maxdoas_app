@@ -75,7 +75,8 @@ HEADERS += maxdoas/mainwindow.h \
     maxdoas/temissionrate.h \
     maxdoas/ttimeline.h \
     maxdoas/tinfowin.h \
-    maxdoas/vc.h
+    maxdoas/vc.h \
+    maxdoas/gpsd.h
 
 FORMS += maxdoas/mainwindow.ui \
     maxdoas/tfrmtempctrl.ui \
@@ -109,5 +110,6 @@ SOURCES += maxdoas/main.cpp \
     maxdoas/vectorsolverservicetester.cpp \
     maxdoas/temissionrate.cpp \
     maxdoas/ttimeline.cpp \
-    maxdoas/tinfowin.cpp
+    maxdoas/tinfowin.cpp \
+    maxdoas/gpsd.cpp
 
