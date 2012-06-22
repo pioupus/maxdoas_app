@@ -103,7 +103,7 @@ public slots:
     double mean();
     double stddev();
     double max();
-
+    int getIntegrationTime();
 private:
     void SaveSpectrum_(QString fn,bool Dark,bool istmp);
     bool LoadSpectrum_(QString fn,bool istmp);

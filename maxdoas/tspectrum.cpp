@@ -896,6 +896,11 @@ double TSpectrum::max(){
     return maxval;
 }
 
+int TSpectrum::getIntegrationTime()
+{
+    return IntegTime;
+}
+
 double TSpectrum::mean(){
     isSpectrumChanged();
     if (meanval == -1){

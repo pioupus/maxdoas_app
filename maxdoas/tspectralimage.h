@@ -41,7 +41,7 @@ public:
     TRetrievalImage* getIntensityImage();
 
     int getPixelIndex(TMirrorCoordinate* mc);
-    QString getFileName();
+
     QDateTime getDateTime();
 private:
     int test;
@@ -76,7 +76,7 @@ public slots:
 
     int count();
 
-
+   QString getFileName();
 
     QScriptValue getMean();
     QScriptValue getRms();
