@@ -29,6 +29,8 @@
 #define HW_TRANSMISSION_TIMEOUT_FINAL_PARAMETER 100
 #define TEMPERATURE_BUFFER_COUNT 100
 
+#define TILT_AFTER_MOTMOVE_TIME_OUT 2500
+
 enum THWTempSensorID {tsNone,tsPeltier=0,tsHeatSink=1,tsSpectrometer=2};
 Q_DECLARE_METATYPE(THWTempSensorID);
 enum THWDriverState {tsIDLE,tsGettingSensorData,tsMotorsCalibrating,tsMeasuringScanPixel,tsMeasuringSpectrum};
@@ -76,7 +78,7 @@ public:
     uint hwdtGetMinimumIntegrationTime();
     QPoint hwdtGetLastRawTilt();
     QString getSpectrSerial();
-
+    uint getLastIntegrTime();
         QString LastAction;
 public slots:
 
@@ -215,6 +217,7 @@ private:
     QReadWriteLock MutexMinIntegrationTime;
     QReadWriteLock MutexRawTiltPoint;
     QReadWriteLock MutexSpectrSerial;
+    QReadWriteLock MutexLastIntegrationTime;
     double LastSpectr[MAXWAVELEGNTH_BUFFER_ELEMTENTS];
 
     uint SpectrAvgCount;
@@ -325,6 +328,7 @@ public:
     double TempBufferHeatSink[TEMPERATURE_BUFFER_COUNT];
     int TempBufferPointer;
     QString getSpectrSerial();
+    uint getLastSpectrIntegrationTime();
     QPoint getStepperPos();
 private slots:  //coming from thread
     void hwdtSloWatchdogreceiver();

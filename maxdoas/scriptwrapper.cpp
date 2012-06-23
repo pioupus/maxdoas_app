@@ -87,14 +87,25 @@ void TScanner::on_MotTimeOut(THWTransferState TransferState, uint ErrorParameter
         MotMoved = true;
 }
 
+bool DoSleep_(int ms){
+    bool result=true;
+    for(int i = 0;i<ms;i+=2){
+        if (ScriptAborting){
+            result = false;
+            break;
+        }
+        QTest::qWait(2);
+    }
+    return result;
+}
+
 QScriptValue DoSleep(QScriptContext *context, QScriptEngine *engine)
 {
-    if (ScriptAborting){
+    QScriptValue ms = context->argument(0);
+    if (!DoSleep_(ms.toNumber())){
         engine->abortEvaluation();
         return 0;
     }
-    QScriptValue ms = context->argument(0);
-    QTest::qWait(ms.toNumber());
     return 0;
 }
 
@@ -244,6 +255,28 @@ QScriptValue SetAutoIntegrationTime(QScriptContext *context, QScriptEngine *engi
     AutoConf.targetCorridor = targetCorridor;
     hwDriver->setIntegrationConfiguration(&AutoConf);
     return 0;
+}
+
+QScriptValue CalcAvgByScanTime(QScriptContext *context, QScriptEngine *engine)
+{
+    (void)engine;
+    int avg = 1;
+    TScanner* scanner = TScanner::instance(NULL);
+    THWDriver* hwDriver = scanner->getHWDriver();
+
+    uint time = context->argument(0).toNumber()*1000; //in ms
+    uint minavg = context->argument(1).toNumber();
+
+    int lastintegtime=hwDriver->getLastSpectrIntegrationTime();
+
+    if (time == 0)
+        time = TILT_AFTER_MOTMOVE_TIME_OUT*1000;
+    avg = time / lastintegtime;
+    avg++;
+    if (minavg > 0)
+        if (avg < minavg)
+            avg = minavg;
+    return avg;
 }
 
 QScriptValue SetFixedIntegrationTime(QScriptContext *context, QScriptEngine *engine)
@@ -542,6 +575,7 @@ QScriptValue WaitUntilTomorrow(QScriptContext *context, QScriptEngine *engine)
     uint hour = context->argument(0).toInteger();
     uint minute = context->argument(1).toInteger();
     WaitUntilToday_raw(23,59);
+    DoSleep_(90*1000);
     result = WaitUntilToday_raw(hour,minute);
 
     return result;
@@ -650,6 +684,10 @@ TScriptWrapper::TScriptWrapper(THWDriver* hwdriver)
 
     QScriptValue GetMinimumIntegrationTimeFun = ScriptEngine->newFunction(GetMinimumIntegrationTime);
     ScriptEngine->globalObject().setProperty("GetMinimumIntegrationTime", GetMinimumIntegrationTimeFun);
+
+    QScriptValue CalcAvgByScanTimeFun = ScriptEngine->newFunction(CalcAvgByScanTime);
+    ScriptEngine->globalObject().setProperty("CalcAvgByScanTime", CalcAvgByScanTimeFun);
+
 
     QScriptValue isMaxdoasFun = ScriptEngine->newFunction(isMaxDOAS);
     ScriptEngine->globalObject().setProperty("isMaxDOAS", isMaxdoasFun);

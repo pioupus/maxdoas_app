@@ -98,7 +98,7 @@
 
 #define OMNI_ENABLED 1
 #define MOT_ENABLED 1
-#define TILT_AFTER_MOTMOVE_TIME_OUT 2500
+
 const uint TimeOutData  =  3000; //ms
 const uint TimeOutMotion  =  15000; //ms
 
@@ -1589,7 +1589,9 @@ void THWDriverThread::hwdtGetLastSpectrumBuffer(double *Spectrum,
         #else
             memcpy(Spectrum,LastSpectr,sizeof(double)*i);
             *MaxPossibleValue = SpectrMaxIntensity;
+            MutexLastIntegrationTime.lockForRead();
             *Integrationtime = LastSpectrIntegTime;
+            MutexLastIntegrationTime.unlock();
             LastAction = "spectr hwdtGetLastSpectrumBuffer MutexSpectrSerial.lockForRead";
             MutexSpectrSerial.lockForRead();
             {
@@ -1620,6 +1622,7 @@ bool THWDriverThread::CalcAndSetAutoIntegTime(){
     float m = 0;
     float TargetVal;
     float TargetCorridor;
+    int inttlc;
 LastAction = "CalcAndSetAutoIntegTime MutexintegTime.lockForRead";
     MutexintegTime.lockForRead();
     {
@@ -1629,27 +1632,35 @@ LastAction = "CalcAndSetAutoIntegTime MutexintegTime.lockForRead";
             TargetCorridor= SpectrMaxIntensity*IntegTimeConf.targetCorridor/100;
         }
         //MutexSpectrBuffer.unlock();
+        MutexLastIntegrationTime.lockForRead();
+        inttlc = LastSpectrIntegTime;
+        MutexLastIntegrationTime.unlock();
+
         if (IntegTimeConf.autoenabled){
             PeakVal = getMaxIntensityOfLastSpect();
+
             if ((PeakVal < TargetVal-TargetCorridor) || (PeakVal > TargetVal+TargetCorridor)){
-                m = PeakVal/(float)LastSpectrIntegTime;
-                LastSpectrIntegTime = round(TargetVal/m);
-                if (LastSpectrIntegTime > IntegTimeConf.maxIntegTime)
-                    LastSpectrIntegTime = IntegTimeConf.maxIntegTime;
+                m = PeakVal/(float)inttlc;
+                inttlc = round(TargetVal/m);
+                if (inttlc > IntegTimeConf.maxIntegTime)
+                    inttlc = IntegTimeConf.maxIntegTime;
                 LastAction  = "spectr setIntegrationTime";
-                wrapper->setIntegrationTime(SpectrometerIndex,LastSpectrIntegTime);
+                wrapper->setIntegrationTime(SpectrometerIndex,inttlc);
                 ret = true;
             }
         }else{
-            if (LastSpectrIntegTime != IntegTimeConf.fixedIntegtime){
-                LastSpectrIntegTime = IntegTimeConf.fixedIntegtime;
+            if (inttlc != IntegTimeConf.fixedIntegtime){
+                inttlc = IntegTimeConf.fixedIntegtime;
                 LastAction  = "spectr setIntegrationTime";
-                wrapper->setIntegrationTime(SpectrometerIndex,LastSpectrIntegTime);
+                wrapper->setIntegrationTime(SpectrometerIndex,inttlc);
                 ret = true;
             }else{
                 ret = false;
             }
         }
+        MutexLastIntegrationTime.lockForWrite();
+        LastSpectrIntegTime = inttlc;
+        MutexLastIntegrationTime.unlock();
     }
     MutexintegTime.unlock();
     return ret;
@@ -1659,7 +1670,7 @@ LastAction = "CalcAndSetAutoIntegTime MutexintegTime.lockForRead";
 
 void THWDriverThread::TakeSpectrum(int avg, uint IntegrTime){
 
-
+    int inttimelc;
     JString s;
     //logger()->debug("Fetch Spectra");
     LastAction = "TakeSpectrum MutexSpectrBuffer.lockForRead";
@@ -1676,15 +1687,21 @@ void THWDriverThread::TakeSpectrum(int avg, uint IntegrTime){
     if (s.getLength()==0)
         SpectrometerIndex=0;
     if (SpectrometerIndex > -1){
-         if ((LastSpectrIntegTime != IntegrTime) && (IntegrTime != 0)){
+        MutexLastIntegrationTime.lockForRead();
+           inttimelc = LastSpectrIntegTime;
+        MutexLastIntegrationTime.unlock();
+         if ((inttimelc != IntegrTime) && (IntegrTime != 0)){
              LastAction  = "spectr setIntegrationTime";
              wrapper->setIntegrationTime(SpectrometerIndex,IntegrTime);
          }
          if (IntegrTime == 0){
              LastAction  = "spectr getIntegrationTime";
-             LastSpectrIntegTime = wrapper->getIntegrationTime(SpectrometerIndex);
+             inttimelc = wrapper->getIntegrationTime(SpectrometerIndex);
          }else
-             LastSpectrIntegTime = IntegrTime;
+             inttimelc = IntegrTime;
+         MutexLastIntegrationTime.lockForWrite();
+            LastSpectrIntegTime=inttimelc;
+         MutexLastIntegrationTime.unlock();
 //        for (m = 1;m<2;m++){
 //            if (m == 0){
 //                wrapper->setIntegrationTime(SpectrometerIndex,wrapper->getMinimumIntegrationTime(SpectrometerIndex)*integtimetest);
@@ -1929,6 +1946,15 @@ QString THWDriverThread::getSpectrSerial(){
     return result;
 }
 
+uint THWDriverThread::getLastIntegrTime()
+{
+    int i;
+    MutexLastIntegrationTime.lockForRead();
+    i = LastSpectrIntegTime;
+    MutexLastIntegrationTime.unlock();
+    return i;
+}
+
 void THWDriverThread::hwdtSloOpenSpectrometer(QString Serialnumber)
 {
 #if OMNI_ENABLED
@@ -1956,7 +1982,9 @@ void THWDriverThread::hwdtSloOpenSpectrometer(QString Serialnumber)
             SpectrometerSerial = Serialnumber;
         }MutexSpectrSerial.unlock();
         Coefficients Coef;
+        MutexLastIntegrationTime.lockForWrite();
         LastSpectrIntegTime = -1;
+        MutexLastIntegrationTime.unlock();
         LastAction = "hwdtSloOpenSpectrometer2 MutexSpectrSerial.lockForWrite";
         MutexSpectrBuffer.lockForWrite();
         {
@@ -2002,7 +2030,9 @@ void THWDriverThread::hwdtSloCloseSpectrometer()
     LastAction = "hwdtSloCloseSpectrometer MutexSpectrBuffer.lockForWrite";
     MutexSpectrBuffer.lockForWrite();
     {
+        MutexLastIntegrationTime.lockForWrite();
         LastSpectrIntegTime = -1;
+        MutexLastIntegrationTime.unlock();
         SpectrometerIndex = -1;
         LastAction = "hwdtSloCloseSpectrometer MutexMinIntegrationTime.lockForWrite";
         MutexMinIntegrationTime.lockForWrite();
@@ -3004,6 +3034,11 @@ void THWDriver::hwdDiscoverSpectrometers()
 
 QString THWDriver::getSpectrSerial(){
     return HWDriverObject->getSpectrSerial();
+}
+
+uint THWDriver::getLastSpectrIntegrationTime()
+{
+    return HWDriverObject->getLastIntegrTime();
 }
 
 QList<QString> THWDriver::hwdGetListSpectrometer()
