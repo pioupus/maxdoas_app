@@ -719,6 +719,7 @@ void TSpectrumPlotter::plotRetrievalImage(TRetrievalImage *img,int plotIndex, in
             p3d.setY(mc->getAngleCoordinate().y());
             val = img->valueBuffer[y][x]->val;
             p3d.setZ(val);
+
             if ((minval > val)||((y+x)==0)){
                 minval = val;
             }
@@ -879,8 +880,10 @@ void TSpectrumPlotter::setCurveColor(int color,int plotindex){
 }
 
 void TSpectrumPlotter::setColorbarMinMax(float Min,float Max){
-    nextColorbarMin = Min;
-    nextColorbarMax = Max;
+    if (!isinf(Min) && ! isinf(Max)){
+        nextColorbarMin = Min;
+        nextColorbarMax = Max;
+    }
 }
 
 void TSpectrumPlotter::plotVMarker(double x,QString title,int plotindex){
