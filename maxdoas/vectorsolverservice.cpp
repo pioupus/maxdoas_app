@@ -1211,13 +1211,23 @@ VectorXd getAKDiag(SparseMatrix<double,RowMajor>  sainv,SparseMatrix<double,RowM
         std::cout << "decomposition failed" << std::endl;
     }
 
+
+
     if (ok){
+        QFile data("AK_transposed.txt");
+        data.open(QFile::WriteOnly | QFile::Truncate);
+        QTextStream datastream(&data);
+
         for(int c=0;c<KTSK.cols();c++){
             VectorXd KTSKcol(KTSK.rows());
             for(int r = 0;r<KTSK.rows();r++){
                 KTSKcol(r) = KTSK.coeff(r,c);
             }
             VectorXd AKCol = solver.solve(KTSKcol);
+            for(int r = 0;r<AKCol.rows();r++){
+                datastream << QString::number(AKCol.coeff(r)) << "\t";
+            }
+            datastream << "\n";
             double v = AKCol(c);
             AKDiag(c) = v;
             //*DOF += v;
@@ -1228,6 +1238,7 @@ VectorXd getAKDiag(SparseMatrix<double,RowMajor>  sainv,SparseMatrix<double,RowM
                 break;
             }
         }
+        data.close();
         //std::cout << "DOF:" << DOF << std::endl;
     }
 
